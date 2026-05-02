@@ -1,0 +1,8 @@
+uploads = []
+outputs = []
+
+[[generated]]
+id = "_mjqY3c4QFOlJr--xAWcx"
+uri = "file://artifacts/smartboss/assets/images/icon.png"
+type = "image"
+title = "smartboss app icon"

@@ -3,13 +3,17 @@ info:
   # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: API specification for SMARTBOSScontrol
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: products
+    description: Product management
+  - name: dashboard
+    description: Dashboard statistics
 paths:
   /healthz:
     get:
@@ -24,6 +28,86 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+  /products:
+    get:
+      operationId: getProducts
+      tags: [products]
+      summary: Get all products
+      responses:
+        "200":
+          description: List of products
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Product"
+    post:
+      operationId: createProduct
+      tags: [products]
+      summary: Create a product
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateProduct"
+      responses:
+        "201":
+          description: Created product
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Product"
+  /products/{id}:
+    put:
+      operationId: updateProduct
+      tags: [products]
+      summary: Update a product
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateProduct"
+      responses:
+        "200":
+          description: Updated product
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Product"
+    delete:
+      operationId: deleteProduct
+      tags: [products]
+      summary: Delete a product
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted successfully
+  /dashboard/stats:
+    get:
+      operationId: getDashboardStats
+      tags: [dashboard]
+      summary: Get dashboard statistics
+      responses:
+        "200":
+          description: Dashboard stats
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DashboardStats"
 components:
   schemas:
     HealthStatus:
@@ -33,4 +117,66 @@ components:
           type: string
       required:
         - status
-
+    Product:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        brand:
+          type: string
+        costPrice:
+          type: number
+        salePrice:
+          type: number
+        quantity:
+          type: integer
+        createdAt:
+          type: string
+      required:
+        - id
+        - name
+        - brand
+        - costPrice
+        - salePrice
+        - quantity
+        - createdAt
+    CreateProduct:
+      type: object
+      properties:
+        name:
+          type: string
+        brand:
+          type: string
+        costPrice:
+          type: number
+        salePrice:
+          type: number
+        quantity:
+          type: integer
+      required:
+        - name
+        - brand
+        - costPrice
+        - salePrice
+        - quantity
+    DashboardStats:
+      type: object
+      properties:
+        totalProducts:
+          type: integer
+        totalItems:
+          type: integer
+        totalCostValue:
+          type: number
+        totalSaleValue:
+          type: number
+        lowStockCount:
+          type: integer
+      required:
+        - totalProducts
+        - totalItems
+        - totalCostValue
+        - totalSaleValue
+        - lowStockCount

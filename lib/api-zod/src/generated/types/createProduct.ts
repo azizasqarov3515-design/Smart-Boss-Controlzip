@@ -6,7 +6,10 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export * from "./createProduct";
-export * from "./dashboardStats";
-export * from "./healthStatus";
-export * from "./product";
+export interface CreateProduct {
+  name: string;
+  brand: string;
+  costPrice: number;
+  salePrice: number;
+  quantity: number;
+}
