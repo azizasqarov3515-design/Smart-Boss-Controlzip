@@ -13,16 +13,15 @@ import {
   type BarcodeScanningResult,
 } from "expo-camera";
 import * as Haptics from "expo-haptics";
-import React, { useCallback, useRef, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
   Animated,
   FlatList,
+  KeyboardAvoidingView,
   Modal,
   Platform,
-  Pressable,
-  ScrollView,
   StyleSheet,
   Text,
   TextInput,
@@ -42,18 +41,268 @@ function formatMoney(n: number) {
   return n.toLocaleString("uz-UZ") + " UZS";
 }
 
+// ─── Scanner Modal ──────────────────────────────────────────────────────────
+function ScannerModal({
+  visible,
+  onClose,
+  onScanned,
+}: {
+  visible: boolean;
+  onClose: () => void;
+  onScanned: (barcode: string) => void;
+}) {
+  const isWeb = Platform.OS === "web";
+  const [permission, requestPermission] = useCameraPermissions();
+  const [scanned, setScanned] = useState(false);
+  const [manualBarcode, setManualBarcode] = useState("");
+  const [permissionAsked, setPermissionAsked] = useState(false);
+  const [camError, setCamError] = useState(false);
+  const lineAnim = useRef(new Animated.Value(0)).current;
+
+  // Reset state each time modal opens
+  useEffect(() => {
+    if (visible) {
+      setScanned(false);
+      setManualBarcode("");
+      setCamError(false);
+      setPermissionAsked(false);
+    }
+  }, [visible]);
+
+  // Request permission when modal opens
+  useEffect(() => {
+    if (!visible || permissionAsked) return;
+    if (permission === null || permission?.status === "undetermined") {
+      setPermissionAsked(true);
+      requestPermission();
+    } else {
+      setPermissionAsked(true);
+    }
+  }, [visible, permission, permissionAsked, requestPermission]);
+
+  // Animate scan line
+  useEffect(() => {
+    if (!visible) return;
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(lineAnim, { toValue: 1, duration: 1800, useNativeDriver: true }),
+        Animated.timing(lineAnim, { toValue: 0, duration: 1800, useNativeDriver: true }),
+      ])
+    );
+    loop.start();
+    return () => loop.stop();
+  }, [visible, lineAnim]);
+
+  const handleBarcodeScanned = useCallback(
+    ({ data }: BarcodeScanningResult) => {
+      if (scanned) return;
+      setScanned(true);
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+      setTimeout(() => {
+        onScanned(data);
+        setScanned(false);
+      }, 400);
+    },
+    [scanned, onScanned]
+  );
+
+  const handleManualSubmit = () => {
+    const code = manualBarcode.trim();
+    if (!code) return;
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    onScanned(code);
+    setManualBarcode("");
+  };
+
+  const showCamera = !isWeb && !camError && permission?.granted;
+  const showPermissionDenied = !isWeb && !camError && permission?.granted === false;
+
+  return (
+    <Modal
+      visible={visible}
+      animationType="slide"
+      statusBarTranslucent
+      onRequestClose={onClose}
+    >
+      <KeyboardAvoidingView
+        style={styles.scannerRoot}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+      >
+        {/* Header */}
+        <View style={styles.scannerHeader}>
+          <TouchableOpacity
+            style={styles.scannerCloseBtn}
+            onPress={onClose}
+            activeOpacity={0.8}
+          >
+            <MaterialIcons name="close" size={24} color="#fff" />
+          </TouchableOpacity>
+          <Text style={styles.scannerHeaderTitle}>Barcode skaner</Text>
+          <View style={{ width: 44 }} />
+        </View>
+
+        {/* Camera area */}
+        {showCamera && (
+          <View style={styles.cameraWrap}>
+            <CameraView
+              style={StyleSheet.absoluteFill}
+              facing="back"
+              barcodeScannerSettings={{
+                barcodeTypes: [
+                  "ean13", "ean8", "qr", "code128",
+                  "code39", "upc_a", "upc_e", "itf14",
+                  "codabar", "code93", "datamatrix",
+                ],
+              }}
+              onBarcodeScanned={scanned ? undefined : handleBarcodeScanned}
+              onCameraReady={() => setCamError(false)}
+            />
+
+            {/* Dark overlay with scan frame cutout */}
+            <View style={styles.overlayTop} />
+            <View style={styles.overlayMiddleRow}>
+              <View style={styles.overlaySide} />
+              <View style={styles.scanFrame}>
+                {/* Corners */}
+                <View style={[styles.corner, styles.cTL]} />
+                <View style={[styles.corner, styles.cTR]} />
+                <View style={[styles.corner, styles.cBL]} />
+                <View style={[styles.corner, styles.cBR]} />
+
+                {/* Scan line */}
+                {!scanned && (
+                  <Animated.View
+                    style={[
+                      styles.scanLine,
+                      {
+                        transform: [
+                          {
+                            translateY: lineAnim.interpolate({
+                              inputRange: [0, 1],
+                              outputRange: [0, 180],
+                            }),
+                          },
+                        ],
+                      },
+                    ]}
+                  />
+                )}
+
+                {scanned && (
+                  <View style={styles.scannedBox}>
+                    <ActivityIndicator size="small" color="#fff" />
+                    <Text style={styles.scannedLabel}>Tekshirilmoqda...</Text>
+                  </View>
+                )}
+              </View>
+              <View style={styles.overlaySide} />
+            </View>
+            <View style={styles.overlayBottom} />
+
+            <Text style={styles.scanHint}>
+              Barkodni ramka ichiga to'g'rilang
+            </Text>
+          </View>
+        )}
+
+        {/* Permission loading */}
+        {!isWeb && !permission && (
+          <View style={styles.permWrap}>
+            <ActivityIndicator size="large" color="#1565C0" />
+            <Text style={styles.permText}>Kamera ruxsati so'ralmoqda...</Text>
+          </View>
+        )}
+
+        {/* Permission denied */}
+        {showPermissionDenied && (
+          <View style={styles.permWrap}>
+            <MaterialIcons name="camera-off" size={56} color="#EF5350" />
+            <Text style={styles.permTitle}>Kamera ruxsati yo'q</Text>
+            <Text style={styles.permText}>
+              Telefon sozlamalarida kamera ruxsatini bering, keyin qayta urinib ko'ring.
+            </Text>
+            <TouchableOpacity
+              style={styles.permBtn}
+              onPress={() => requestPermission()}
+              activeOpacity={0.85}
+            >
+              <Text style={styles.permBtnText}>Ruxsat so'rash</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
+        {/* Camera error fallback */}
+        {!isWeb && camError && (
+          <View style={styles.permWrap}>
+            <MaterialIcons name="error-outline" size={48} color="#FF9800" />
+            <Text style={styles.permTitle}>Kamera ishlamadi</Text>
+            <Text style={styles.permText}>Qo'lda barcode kiriting</Text>
+          </View>
+        )}
+
+        {/* Web: no native camera API → show instructions */}
+        {isWeb && (
+          <View style={styles.webCamWrap}>
+            <MaterialIcons name="qr-code-scanner" size={72} color="#1565C0" />
+            <Text style={styles.webCamTitle}>Barcode skanerlash</Text>
+            <Text style={styles.webCamSub}>
+              Quyida barcode raqamini kiriting yoki mahsulot ID sini yozing
+            </Text>
+          </View>
+        )}
+
+        {/* Manual barcode input — always available */}
+        <View style={styles.manualWrap}>
+          <Text style={styles.manualLabel}>
+            {isWeb
+              ? "Barcode / mahsulot ID raqamini kiriting:"
+              : "Yoki qo'lda barcode kiriting:"}
+          </Text>
+          <View style={styles.manualRow}>
+            <TextInput
+              style={styles.manualInput}
+              value={manualBarcode}
+              onChangeText={setManualBarcode}
+              placeholder="Barcode yoki ID..."
+              placeholderTextColor="#9E9E9E"
+              keyboardType="default"
+              returnKeyType="search"
+              autoFocus={isWeb}
+              onSubmitEditing={handleManualSubmit}
+              autoCapitalize="none"
+              autoCorrect={false}
+            />
+            <TouchableOpacity
+              style={[
+                styles.manualBtn,
+                { backgroundColor: manualBarcode.trim() ? "#1565C0" : "#B0BEC5" },
+              ]}
+              onPress={handleManualSubmit}
+              disabled={!manualBarcode.trim()}
+              activeOpacity={0.85}
+            >
+              <MaterialIcons name="search" size={22} color="#fff" />
+            </TouchableOpacity>
+          </View>
+          <Text style={styles.manualHint}>
+            Tip: Mahsulot ID raqamini ham kiritsa bo'ladi (masalan: 12)
+          </Text>
+        </View>
+      </KeyboardAvoidingView>
+    </Modal>
+  );
+}
+
+// ─── Main POS Screen ─────────────────────────────────────────────────────────
 export default function POSScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const queryClient = useQueryClient();
-  const isWeb = Platform.OS === "web";
 
   const [cart, setCart] = useState<Map<number, CartItem>>(new Map());
   const [scannerOpen, setScannerOpen] = useState(false);
-  const [scanned, setScanned] = useState(false);
   const [search, setSearch] = useState("");
   const [tab, setTab] = useState<"cart" | "products">("cart");
-  const [permission, requestPermission] = useCameraPermissions();
   const [checkoutSuccess, setCheckoutSuccess] = useState(false);
   const successAnim = useRef(new Animated.Value(0)).current;
 
@@ -70,7 +319,7 @@ export default function POSScreen() {
         setCheckoutSuccess(true);
         Animated.sequence([
           Animated.timing(successAnim, { toValue: 1, duration: 300, useNativeDriver: true }),
-          Animated.delay(1500),
+          Animated.delay(1600),
           Animated.timing(successAnim, { toValue: 0, duration: 300, useNativeDriver: true }),
         ]).start(() => setCheckoutSuccess(false));
       },
@@ -81,24 +330,27 @@ export default function POSScreen() {
     },
   });
 
-  const addToCart = useCallback((product: Product, qty = 1) => {
-    if (product.quantity <= 0) {
-      Alert.alert("Stok yo'q", `"${product.name}" mahsulotida stok qolmagan`);
-      return;
-    }
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    setCart((prev) => {
-      const next = new Map(prev);
-      const existing = next.get(product.id);
-      const newQty = (existing?.quantity ?? 0) + qty;
-      if (newQty > product.quantity) {
-        Alert.alert("Stok yetarli emas", `Faqat ${product.quantity} dona mavjud`);
-        return prev;
+  const addToCart = useCallback(
+    (product: Product, qty = 1) => {
+      if (product.quantity <= 0) {
+        Alert.alert("Stok yo'q", `"${product.name}" mahsulotida stok qolmagan`);
+        return;
       }
-      next.set(product.id, { product, quantity: newQty });
-      return next;
-    });
-  }, []);
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      setCart((prev) => {
+        const next = new Map(prev);
+        const existing = next.get(product.id);
+        const newQty = (existing?.quantity ?? 0) + qty;
+        if (newQty > product.quantity) {
+          Alert.alert("Stok yetarli emas", `Faqat ${product.quantity} dona mavjud`);
+          return prev;
+        }
+        next.set(product.id, { product, quantity: newQty });
+        return next;
+      });
+    },
+    []
+  );
 
   const setQty = useCallback((productId: number, qty: number) => {
     setCart((prev) => {
@@ -125,63 +377,46 @@ export default function POSScreen() {
     });
   }, []);
 
-  const cartItems = Array.from(cart.values());
-  const total = cartItems.reduce((s, i) => s + i.product.salePrice * i.quantity, 0);
-  const totalItems = cartItems.reduce((s, i) => s + i.quantity, 0);
+  // Called by scanner modal when a barcode is found
+  const handleScanned = useCallback(
+    (data: string) => {
+      // Try exact barcode match first
+      let found = products?.find((p) => p.barcode === data);
 
-  const handleBarcodeScanned = useCallback(
-    ({ data }: BarcodeScanningResult) => {
-      if (scanned) return;
-      setScanned(true);
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+      // If not found by barcode, try matching as numeric product ID
+      if (!found) {
+        const asId = parseInt(data, 10);
+        if (!isNaN(asId)) {
+          found = products?.find((p) => p.id === asId);
+        }
+      }
 
-      const found = products?.find((p) => p.barcode === data);
       if (found) {
         setScannerOpen(false);
         addToCart(found);
-        setTimeout(() => setScanned(false), 1500);
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       } else {
         Alert.alert(
           "Topilmadi",
-          `Barcode: ${data}\n\nBu mahsulot bazada yo'q yoki barcode biriktirilmagan.`,
+          `"${data}" — bu barcode yoki ID bazada yo'q.\n\nMahsulotda barcode biriktirilganini tekshiring.`,
           [
-            {
-              text: "Qayta skaner",
-              onPress: () => setScanned(false),
-            },
+            { text: "Qayta urinish", onPress: () => {} },
             {
               text: "Yopish",
-              onPress: () => {
-                setScannerOpen(false);
-                setScanned(false);
-              },
+              style: "destructive",
+              onPress: () => setScannerOpen(false),
             },
           ]
         );
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       }
     },
-    [scanned, products, addToCart]
+    [products, addToCart]
   );
 
-  const openScanner = async () => {
-    if (isWeb) {
-      Alert.alert("Kamera", "Barcode skanerlash faqat Android/iOS qurilmalarida ishlaydi");
-      return;
-    }
-    if (!permission?.granted) {
-      const result = await requestPermission();
-      if (!result.granted) {
-        Alert.alert(
-          "Ruxsat kerak",
-          "Barcode skanerlash uchun kamera ruxsatini bering",
-          [{ text: "OK" }]
-        );
-        return;
-      }
-    }
-    setScanned(false);
-    setScannerOpen(true);
-  };
+  const cartItems = Array.from(cart.values());
+  const total = cartItems.reduce((s, i) => s + i.product.salePrice * i.quantity, 0);
+  const totalItems = cartItems.reduce((s, i) => s + i.quantity, 0);
 
   const handleCheckout = () => {
     if (cartItems.length === 0) return;
@@ -191,7 +426,7 @@ export default function POSScreen() {
       [
         { text: "Bekor qilish", style: "cancel" },
         {
-          text: "Sotish",
+          text: "✓ Sotish",
           onPress: () => {
             createSale({
               data: {
@@ -210,52 +445,21 @@ export default function POSScreen() {
   const filteredProducts = (products ?? []).filter((p) => {
     if (!search.trim()) return true;
     const q = search.toLowerCase();
-    return p.name.toLowerCase().includes(q) || p.brand.toLowerCase().includes(q) || p.barcode?.includes(q);
+    return (
+      p.name.toLowerCase().includes(q) ||
+      p.brand.toLowerCase().includes(q) ||
+      p.barcode?.includes(q) ||
+      String(p.id).includes(q)
+    );
   });
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      {/* Barcode Scanner Modal */}
-      <Modal visible={scannerOpen} animationType="slide" onRequestClose={() => setScannerOpen(false)}>
-        <View style={styles.scannerModal}>
-          <CameraView
-            style={StyleSheet.absoluteFill}
-            facing="back"
-            barcodeScannerSettings={{ barcodeTypes: ["ean13", "ean8", "qr", "code128", "code39", "upc_a", "upc_e", "itf14"] }}
-            onBarcodeScanned={scanned ? undefined : handleBarcodeScanned}
-          />
-          {/* Scanner overlay */}
-          <View style={styles.scannerOverlay}>
-            <View style={styles.scannerTop}>
-              <TouchableOpacity
-                style={styles.closeBtn}
-                onPress={() => { setScannerOpen(false); setScanned(false); }}
-              >
-                <MaterialIcons name="close" size={26} color="#fff" />
-              </TouchableOpacity>
-              <Text style={styles.scannerTitle}>Barcode skanerlang</Text>
-              <View style={{ width: 44 }} />
-            </View>
-
-            <View style={styles.scanFrame}>
-              <View style={[styles.corner, styles.cornerTL]} />
-              <View style={[styles.corner, styles.cornerTR]} />
-              <View style={[styles.corner, styles.cornerBL]} />
-              <View style={[styles.corner, styles.cornerBR]} />
-              {scanned && (
-                <View style={styles.scannedIndicator}>
-                  <ActivityIndicator size="small" color="#fff" />
-                  <Text style={styles.scannedText}>Tekshirilmoqda...</Text>
-                </View>
-              )}
-            </View>
-
-            <Text style={styles.scanHint}>
-              Mahsulot barkodini ramka ichiga to'g'rilang
-            </Text>
-          </View>
-        </View>
-      </Modal>
+      <ScannerModal
+        visible={scannerOpen}
+        onClose={() => setScannerOpen(false)}
+        onScanned={handleScanned}
+      />
 
       {/* Success overlay */}
       {checkoutSuccess && (
@@ -266,42 +470,77 @@ export default function POSScreen() {
           ]}
         >
           <View style={[styles.successCard, { backgroundColor: colors.card }]}>
-            <MaterialIcons name="check-circle" size={56} color={colors.success} />
-            <Text style={[styles.successTitle, { color: colors.foreground }]}>Sotuv amalga oshdi!</Text>
-            <Text style={[styles.successSub, { color: colors.mutedForeground }]}>Ombor yangilandi</Text>
+            <MaterialIcons name="check-circle" size={60} color={colors.success} />
+            <Text style={[styles.successTitle, { color: colors.foreground }]}>
+              Sotuv amalga oshdi!
+            </Text>
+            <Text style={[styles.successSub, { color: colors.mutedForeground }]}>
+              Ombor yangilandi
+            </Text>
           </View>
         </Animated.View>
       )}
 
-      {/* Tab switcher */}
-      <View style={[styles.tabBar, { backgroundColor: colors.card, borderBottomColor: colors.border }]}>
+      {/* Top bar */}
+      <View
+        style={[
+          styles.topBar,
+          { backgroundColor: colors.card, borderBottomColor: colors.border },
+        ]}
+      >
         <TouchableOpacity
-          style={[styles.tabItem, tab === "cart" && { borderBottomColor: colors.primary, borderBottomWidth: 2.5 }]}
+          style={[
+            styles.topTab,
+            tab === "cart" && { borderBottomColor: colors.primary, borderBottomWidth: 2.5 },
+          ]}
           onPress={() => setTab("cart")}
           activeOpacity={0.8}
         >
-          <MaterialIcons name="shopping-cart" size={18} color={tab === "cart" ? colors.primary : colors.mutedForeground} />
-          <Text style={[styles.tabLabel, { color: tab === "cart" ? colors.primary : colors.mutedForeground }]}>
-            Savat {cartItems.length > 0 ? `(${cartItems.length})` : ""}
-          </Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.tabItem, tab === "products" && { borderBottomColor: colors.primary, borderBottomWidth: 2.5 }]}
-          onPress={() => setTab("products")}
-          activeOpacity={0.8}
-        >
-          <MaterialIcons name="inventory-2" size={18} color={tab === "products" ? colors.primary : colors.mutedForeground} />
-          <Text style={[styles.tabLabel, { color: tab === "products" ? colors.primary : colors.mutedForeground }]}>
-            Mahsulotlar
+          <MaterialIcons
+            name="shopping-cart"
+            size={18}
+            color={tab === "cart" ? colors.primary : colors.mutedForeground}
+          />
+          <Text
+            style={[
+              styles.topTabLabel,
+              { color: tab === "cart" ? colors.primary : colors.mutedForeground },
+            ]}
+          >
+            Savat{cartItems.length > 0 ? ` (${cartItems.length})` : ""}
           </Text>
         </TouchableOpacity>
 
         <TouchableOpacity
-          style={styles.scanBtn}
-          onPress={openScanner}
-          activeOpacity={0.85}
+          style={[
+            styles.topTab,
+            tab === "products" && { borderBottomColor: colors.primary, borderBottomWidth: 2.5 },
+          ]}
+          onPress={() => setTab("products")}
+          activeOpacity={0.8}
         >
-          <MaterialIcons name="qr-code-scanner" size={22} color="#fff" />
+          <MaterialIcons
+            name="inventory-2"
+            size={18}
+            color={tab === "products" ? colors.primary : colors.mutedForeground}
+          />
+          <Text
+            style={[
+              styles.topTabLabel,
+              { color: tab === "products" ? colors.primary : colors.mutedForeground },
+            ]}
+          >
+            Mahsulotlar
+          </Text>
+        </TouchableOpacity>
+
+        {/* Scanner button — always active */}
+        <TouchableOpacity
+          style={styles.scanBtn}
+          onPress={() => setScannerOpen(true)}
+          activeOpacity={0.82}
+        >
+          <MaterialIcons name="qr-code-scanner" size={20} color="#fff" />
           <Text style={styles.scanBtnText}>Skaner</Text>
         </TouchableOpacity>
       </View>
@@ -314,7 +553,7 @@ export default function POSScreen() {
               <MaterialIcons name="shopping-cart" size={64} color={colors.border} />
               <Text style={[styles.emptyTitle, { color: colors.foreground }]}>Savat bo'sh</Text>
               <Text style={[styles.emptySub, { color: colors.mutedForeground }]}>
-                Mahsulotlar yorlig'idan yoki barkod orqali qo'shing
+                Mahsulotlar bo'limidan yoki barkod orqali qo'shing
               </Text>
               <View style={styles.emptyActions}>
                 <TouchableOpacity
@@ -327,11 +566,13 @@ export default function POSScreen() {
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={[styles.emptyBtnOutline, { borderColor: colors.primary }]}
-                  onPress={openScanner}
+                  onPress={() => setScannerOpen(true)}
                   activeOpacity={0.85}
                 >
                   <MaterialIcons name="qr-code-scanner" size={18} color={colors.primary} />
-                  <Text style={[styles.emptyBtnOutlineText, { color: colors.primary }]}>Barkod skaner</Text>
+                  <Text style={[styles.emptyBtnOutlineText, { color: colors.primary }]}>
+                    Barkod skaner
+                  </Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -340,7 +581,7 @@ export default function POSScreen() {
               <FlatList
                 data={cartItems}
                 keyExtractor={(item) => String(item.product.id)}
-                contentContainerStyle={{ padding: 14, paddingBottom: 180 }}
+                contentContainerStyle={{ padding: 14, paddingBottom: 200 }}
                 renderItem={({ item }) => (
                   <CartCard
                     item={item}
@@ -374,7 +615,11 @@ export default function POSScreen() {
                 <TouchableOpacity
                   style={[
                     styles.checkoutBtn,
-                    { backgroundColor: checkingOut ? colors.mutedForeground : colors.success },
+                    {
+                      backgroundColor: checkingOut
+                        ? colors.mutedForeground
+                        : colors.success,
+                    },
                   ]}
                   onPress={handleCheckout}
                   disabled={checkingOut}
@@ -385,7 +630,9 @@ export default function POSScreen() {
                   ) : (
                     <>
                       <MaterialIcons name="check-circle" size={22} color="#fff" />
-                      <Text style={styles.checkoutBtnText}>Sotish — {formatMoney(total)}</Text>
+                      <Text style={styles.checkoutBtnText}>
+                        Sotish — {formatMoney(total)}
+                      </Text>
                     </>
                   )}
                 </TouchableOpacity>
@@ -398,24 +645,30 @@ export default function POSScreen() {
       {/* Products tab */}
       {tab === "products" && (
         <View style={styles.flex}>
-          <View style={[styles.searchWrap, { paddingHorizontal: 14, paddingTop: 12 }]}>
+          <View style={styles.searchWrap}>
             <View
               style={[
                 styles.searchBar,
-                { backgroundColor: colors.card, borderColor: search ? colors.primary : colors.border },
+                {
+                  backgroundColor: colors.card,
+                  borderColor: search ? colors.primary : colors.border,
+                },
               ]}
             >
               <MaterialIcons name="search" size={18} color={colors.mutedForeground} />
               <TextInput
-                style={[styles.searchInput, { color: colors.foreground, fontFamily: "Inter_400Regular" }]}
-                placeholder="Tovar qidirish..."
+                style={[
+                  styles.searchInput,
+                  { color: colors.foreground, fontFamily: "Inter_400Regular" },
+                ]}
+                placeholder="Nom, brend, barcode, ID..."
                 placeholderTextColor={colors.mutedForeground}
                 value={search}
                 onChangeText={setSearch}
                 autoCapitalize="none"
               />
               {search.length > 0 && (
-                <TouchableOpacity onPress={() => setSearch("")}>
+                <TouchableOpacity onPress={() => setSearch("")} activeOpacity={0.7}>
                   <MaterialIcons name="close" size={16} color={colors.mutedForeground} />
                 </TouchableOpacity>
               )}
@@ -430,7 +683,10 @@ export default function POSScreen() {
             <FlatList
               data={filteredProducts}
               keyExtractor={(p) => String(p.id)}
-              contentContainerStyle={{ padding: 14, paddingBottom: insets.bottom + 80 }}
+              contentContainerStyle={{
+                padding: 14,
+                paddingBottom: insets.bottom + 80,
+              }}
               renderItem={({ item: p }) => {
                 const inCart = cart.get(p.id);
                 return (
@@ -448,25 +704,54 @@ export default function POSScreen() {
                   >
                     <View style={styles.productCardLeft}>
                       <View style={styles.productNameRow}>
-                        <View style={[styles.idChip, { backgroundColor: colors.surfaceVariant }]}>
-                          <Text style={[styles.idChipText, { color: colors.mutedForeground }]}>#{p.id}</Text>
+                        <View
+                          style={[
+                            styles.idChip,
+                            { backgroundColor: colors.surfaceVariant },
+                          ]}
+                        >
+                          <Text
+                            style={[
+                              styles.idChipText,
+                              { color: colors.mutedForeground },
+                            ]}
+                          >
+                            #{p.id}
+                          </Text>
                         </View>
                         <Text
                           style={[
                             styles.productName,
-                            { color: p.quantity === 0 ? colors.mutedForeground : colors.foreground },
+                            {
+                              color:
+                                p.quantity === 0
+                                  ? colors.mutedForeground
+                                  : colors.foreground,
+                            },
                           ]}
                           numberOfLines={1}
                         >
                           {p.name}
                         </Text>
                       </View>
-                      <Text style={[styles.productBrand, { color: colors.mutedForeground }]}>{p.brand}</Text>
-                      {p.barcode && (
-                        <Text style={[styles.barcodeText, { color: colors.mutedForeground }]}>
-                          <MaterialIcons name="qr-code" size={11} color={colors.mutedForeground} /> {p.barcode}
+                      <Text
+                        style={[
+                          styles.productBrand,
+                          { color: colors.mutedForeground },
+                        ]}
+                      >
+                        {p.brand}
+                      </Text>
+                      {p.barcode ? (
+                        <Text
+                          style={[
+                            styles.barcodeText,
+                            { color: colors.mutedForeground },
+                          ]}
+                        >
+                          {p.barcode}
                         </Text>
-                      )}
+                      ) : null}
                     </View>
                     <View style={styles.productCardRight}>
                       <Text style={[styles.productPrice, { color: colors.primary }]}>
@@ -475,7 +760,14 @@ export default function POSScreen() {
                       <View
                         style={[
                           styles.stockChip,
-                          { backgroundColor: p.quantity === 0 ? colors.destructive : p.quantity < 5 ? colors.warning : colors.success },
+                          {
+                            backgroundColor:
+                              p.quantity === 0
+                                ? colors.destructive
+                                : p.quantity < 5
+                                ? colors.warning
+                                : colors.success,
+                          },
                         ]}
                       >
                         <Text style={styles.stockText}>
@@ -483,12 +775,28 @@ export default function POSScreen() {
                         </Text>
                       </View>
                       {inCart ? (
-                        <View style={[styles.inCartChip, { backgroundColor: colors.primary }]}>
-                          <Text style={styles.inCartText}>Savat: {inCart.quantity}</Text>
+                        <View
+                          style={[
+                            styles.inCartChip,
+                            { backgroundColor: colors.primary },
+                          ]}
+                        >
+                          <Text style={styles.inCartText}>
+                            Savat: {inCart.quantity}
+                          </Text>
                         </View>
                       ) : p.quantity > 0 ? (
-                        <View style={[styles.addChip, { backgroundColor: colors.secondary }]}>
-                          <MaterialIcons name="add" size={14} color={colors.primary} />
+                        <View
+                          style={[
+                            styles.addChip,
+                            { backgroundColor: colors.secondary },
+                          ]}
+                        >
+                          <MaterialIcons
+                            name="add"
+                            size={14}
+                            color={colors.primary}
+                          />
                         </View>
                       ) : null}
                     </View>
@@ -497,7 +805,10 @@ export default function POSScreen() {
               }}
               ListEmptyComponent={
                 <View style={styles.emptyProducts}>
-                  <Text style={[styles.emptySub, { color: colors.mutedForeground }]}>Mahsulot topilmadi</Text>
+                  <MaterialIcons name="search-off" size={40} color={colors.border} />
+                  <Text style={[styles.emptySub, { color: colors.mutedForeground }]}>
+                    Mahsulot topilmadi
+                  </Text>
                 </View>
               }
               showsVerticalScrollIndicator={false}
@@ -510,6 +821,7 @@ export default function POSScreen() {
   );
 }
 
+// ─── Cart Card ───────────────────────────────────────────────────────────────
 function CartCard({
   item,
   colors,
@@ -523,22 +835,21 @@ function CartCard({
 }) {
   const subtotal = item.product.salePrice * item.quantity;
   return (
-    <View
-      style={[
-        styles.cartCard,
-        { backgroundColor: colors.card, borderColor: colors.border },
-      ]}
-    >
+    <View style={[styles.cartCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
       <View style={styles.cartCardTop}>
         <View style={styles.cartCardInfo}>
           <View style={[styles.idChip, { backgroundColor: colors.surfaceVariant }]}>
-            <Text style={[styles.idChipText, { color: colors.mutedForeground }]}>#{item.product.id}</Text>
+            <Text style={[styles.idChipText, { color: colors.mutedForeground }]}>
+              #{item.product.id}
+            </Text>
           </View>
           <View style={styles.cartNameBlock}>
             <Text style={[styles.cartName, { color: colors.foreground }]} numberOfLines={1}>
               {item.product.name}
             </Text>
-            <Text style={[styles.cartBrand, { color: colors.mutedForeground }]}>{item.product.brand}</Text>
+            <Text style={[styles.cartBrand, { color: colors.mutedForeground }]}>
+              {item.product.brand}
+            </Text>
           </View>
         </View>
         <TouchableOpacity onPress={() => onRemove(item.product.id)} style={styles.removeBtn}>
@@ -565,31 +876,211 @@ function CartCard({
             <MaterialIcons name="add" size={16} color="#fff" />
           </TouchableOpacity>
         </View>
-        <Text style={[styles.subtotal, { color: colors.primary }]}>{subtotal.toLocaleString()} UZS</Text>
+        <Text style={[styles.subtotal, { color: colors.primary }]}>
+          {subtotal.toLocaleString()} UZS
+        </Text>
       </View>
     </View>
   );
 }
 
+// ─── Styles ──────────────────────────────────────────────────────────────────
 const styles = StyleSheet.create({
   container: { flex: 1 },
   flex: { flex: 1 },
-  tabBar: {
+
+  // Scanner modal
+  scannerRoot: { flex: 1, backgroundColor: "#000" },
+  scannerHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 16,
+    paddingTop: Platform.OS === "android" ? 48 : 60,
+    paddingBottom: 14,
+    backgroundColor: "rgba(0,0,0,0.85)",
+    zIndex: 10,
+  },
+  scannerCloseBtn: {
+    width: 44,
+    height: 44,
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: 22,
+    backgroundColor: "rgba(255,255,255,0.15)",
+  },
+  scannerHeaderTitle: {
+    color: "#fff",
+    fontFamily: "Inter_700Bold",
+    fontSize: 17,
+  },
+  cameraWrap: { flex: 1, position: "relative", backgroundColor: "#000" },
+  overlayTop: {
+    position: "absolute",
+    top: 0, left: 0, right: 0,
+    height: 90,
+    backgroundColor: "rgba(0,0,0,0.62)",
+    zIndex: 2,
+  },
+  overlayMiddleRow: {
+    position: "absolute",
+    top: 90,
+    left: 0, right: 0,
+    height: 220,
+    flexDirection: "row",
+    zIndex: 2,
+  },
+  overlaySide: { flex: 1, backgroundColor: "rgba(0,0,0,0.62)" },
+  overlayBottom: {
+    position: "absolute",
+    top: 310,
+    left: 0, right: 0, bottom: 0,
+    backgroundColor: "rgba(0,0,0,0.62)",
+    zIndex: 2,
+  },
+  scanFrame: {
+    width: 220,
+    height: 220,
+    position: "relative",
+    overflow: "hidden",
+  },
+  corner: {
+    position: "absolute",
+    width: 26,
+    height: 26,
+    borderColor: "#2196F3",
+    borderWidth: 3.5,
+  },
+  cTL: { top: 0, left: 0, borderBottomWidth: 0, borderRightWidth: 0, borderTopLeftRadius: 4 },
+  cTR: { top: 0, right: 0, borderBottomWidth: 0, borderLeftWidth: 0, borderTopRightRadius: 4 },
+  cBL: { bottom: 0, left: 0, borderTopWidth: 0, borderRightWidth: 0, borderBottomLeftRadius: 4 },
+  cBR: { bottom: 0, right: 0, borderTopWidth: 0, borderLeftWidth: 0, borderBottomRightRadius: 4 },
+  scanLine: {
+    position: "absolute",
+    left: 6,
+    right: 6,
+    height: 2.5,
+    backgroundColor: "#2196F3",
+    shadowColor: "#2196F3",
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.9,
+    shadowRadius: 6,
+    elevation: 3,
+  },
+  scannedBox: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "rgba(0,0,0,0.55)",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+  },
+  scannedLabel: { color: "#fff", fontFamily: "Inter_600SemiBold", fontSize: 13 },
+  scanHint: {
+    position: "absolute",
+    bottom: 16,
+    left: 0,
+    right: 0,
+    textAlign: "center",
+    color: "rgba(255,255,255,0.8)",
+    fontFamily: "Inter_400Regular",
+    fontSize: 13,
+    zIndex: 10,
+    paddingHorizontal: 20,
+  },
+  permWrap: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 32,
+    gap: 14,
+    backgroundColor: "#111",
+  },
+  permTitle: { color: "#fff", fontFamily: "Inter_700Bold", fontSize: 18 },
+  permText: {
+    color: "rgba(255,255,255,0.65)",
+    fontFamily: "Inter_400Regular",
+    fontSize: 14,
+    textAlign: "center",
+  },
+  permBtn: {
+    backgroundColor: "#1565C0",
+    borderRadius: 12,
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    marginTop: 8,
+  },
+  permBtnText: { color: "#fff", fontFamily: "Inter_600SemiBold", fontSize: 14 },
+  webCamWrap: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#0A0A1A",
+    gap: 12,
+    paddingHorizontal: 32,
+  },
+  webCamTitle: { color: "#fff", fontFamily: "Inter_700Bold", fontSize: 22, marginTop: 8 },
+  webCamSub: {
+    color: "rgba(255,255,255,0.6)",
+    fontFamily: "Inter_400Regular",
+    fontSize: 14,
+    textAlign: "center",
+    lineHeight: 20,
+  },
+  manualWrap: {
+    backgroundColor: "#111827",
+    paddingHorizontal: 20,
+    paddingTop: 18,
+    paddingBottom: 24,
+    gap: 10,
+  },
+  manualLabel: {
+    color: "rgba(255,255,255,0.7)",
+    fontFamily: "Inter_500Medium",
+    fontSize: 13,
+  },
+  manualRow: { flexDirection: "row", gap: 10 },
+  manualInput: {
+    flex: 1,
+    backgroundColor: "#1E293B",
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 13,
+    color: "#fff",
+    fontFamily: "Inter_400Regular",
+    fontSize: 15,
+    borderWidth: 1.5,
+    borderColor: "#334155",
+  },
+  manualBtn: {
+    width: 52,
+    height: 52,
+    borderRadius: 12,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  manualHint: {
+    color: "rgba(255,255,255,0.35)",
+    fontFamily: "Inter_400Regular",
+    fontSize: 11,
+  },
+
+  // Top bar
+  topBar: {
     flexDirection: "row",
     alignItems: "center",
     borderBottomWidth: 1,
     paddingHorizontal: 14,
     paddingVertical: 6,
-    gap: 4,
+    gap: 2,
   },
-  tabItem: {
+  topTab: {
     flexDirection: "row",
     alignItems: "center",
     gap: 5,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 9,
   },
-  tabLabel: { fontFamily: "Inter_500Medium", fontSize: 13 },
+  topTabLabel: { fontFamily: "Inter_500Medium", fontSize: 13 },
   scanBtn: {
     flexDirection: "row",
     alignItems: "center",
@@ -597,14 +1088,32 @@ const styles = StyleSheet.create({
     marginLeft: "auto" as any,
     backgroundColor: "#1565C0",
     paddingHorizontal: 14,
-    paddingVertical: 8,
+    paddingVertical: 9,
     borderRadius: 10,
+    shadowColor: "#1565C0",
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+    elevation: 4,
   },
   scanBtnText: { fontFamily: "Inter_600SemiBold", fontSize: 13, color: "#fff" },
-  emptyCart: { flex: 1, alignItems: "center", justifyContent: "center", gap: 8, paddingHorizontal: 32 },
+
+  // Empty states
+  emptyCart: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    paddingHorizontal: 32,
+  },
   emptyTitle: { fontFamily: "Inter_700Bold", fontSize: 20, marginTop: 8 },
-  emptySub: { fontFamily: "Inter_400Regular", fontSize: 13, textAlign: "center" },
-  emptyActions: { flexDirection: "row", gap: 10, marginTop: 16 },
+  emptySub: {
+    fontFamily: "Inter_400Regular",
+    fontSize: 13,
+    textAlign: "center",
+    lineHeight: 20,
+  },
+  emptyActions: { flexDirection: "row", gap: 10, marginTop: 16, flexWrap: "wrap", justifyContent: "center" },
   emptyBtn: {
     flexDirection: "row",
     alignItems: "center",
@@ -624,7 +1133,9 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
   },
   emptyBtnOutlineText: { fontFamily: "Inter_600SemiBold", fontSize: 13 },
-  emptyProducts: { paddingTop: 40, alignItems: "center" },
+  emptyProducts: { paddingTop: 50, alignItems: "center", gap: 10 },
+
+  // Cart card
   cartCard: {
     borderRadius: 14,
     borderWidth: 1,
@@ -636,13 +1147,22 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 1,
   },
-  cartCardTop: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 10 },
+  cartCardTop: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 10,
+  },
   cartCardInfo: { flexDirection: "row", alignItems: "center", gap: 8, flex: 1 },
   cartNameBlock: { flex: 1 },
   cartName: { fontFamily: "Inter_600SemiBold", fontSize: 14 },
   cartBrand: { fontFamily: "Inter_400Regular", fontSize: 12, marginTop: 1 },
   removeBtn: { padding: 4 },
-  cartCardBottom: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
+  cartCardBottom: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
   unitPrice: { fontFamily: "Inter_400Regular", fontSize: 12, flex: 1 },
   qtyControls: { flexDirection: "row", alignItems: "center", gap: 8 },
   qtyBtn: {
@@ -653,8 +1173,20 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     borderWidth: 1,
   },
-  qtyText: { fontFamily: "Inter_700Bold", fontSize: 16, minWidth: 28, textAlign: "center" },
-  subtotal: { fontFamily: "Inter_700Bold", fontSize: 14, minWidth: 90, textAlign: "right" },
+  qtyText: {
+    fontFamily: "Inter_700Bold",
+    fontSize: 16,
+    minWidth: 28,
+    textAlign: "center",
+  },
+  subtotal: {
+    fontFamily: "Inter_700Bold",
+    fontSize: 14,
+    minWidth: 90,
+    textAlign: "right",
+  },
+
+  // Checkout
   checkoutPanel: {
     position: "absolute",
     bottom: 0,
@@ -669,35 +1201,38 @@ const styles = StyleSheet.create({
     shadowRadius: 12,
     elevation: 8,
   },
-  checkoutRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
+  checkoutRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
   checkoutLabel: { fontFamily: "Inter_400Regular", fontSize: 14 },
-  checkoutTotal: { fontFamily: "Inter_700Bold", fontSize: 20 },
+  checkoutTotal: { fontFamily: "Inter_700Bold", fontSize: 18 },
   checkoutBtn: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     gap: 8,
-    borderRadius: 14,
+    borderRadius: 16,
     paddingVertical: 16,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    elevation: 4,
   },
-  checkoutBtnText: { fontFamily: "Inter_700Bold", fontSize: 16, color: "#fff" },
-  searchWrap: { marginBottom: 4 },
-  searchBar: {
-    flexDirection: "row",
-    alignItems: "center",
-    borderRadius: 12,
-    borderWidth: 1.5,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    gap: 8,
+  checkoutBtnText: {
+    fontFamily: "Inter_700Bold",
+    fontSize: 16,
+    color: "#fff",
   },
-  searchInput: { flex: 1, fontSize: 14, padding: 0 },
-  loader: { flex: 1, alignItems: "center", justifyContent: "center" },
+
+  // Product card
   productCard: {
     flexDirection: "row",
     alignItems: "center",
     borderRadius: 14,
-    borderWidth: 1.5,
+    borderWidth: 1,
     padding: 12,
     marginBottom: 8,
     shadowColor: "#000",
@@ -706,87 +1241,59 @@ const styles = StyleSheet.create({
     shadowRadius: 3,
     elevation: 1,
   },
-  productCardLeft: { flex: 1, paddingRight: 8 },
-  productNameRow: { flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 2 },
+  productCardLeft: { flex: 1 },
+  productNameRow: { flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 3 },
+  idChip: { paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6 },
+  idChipText: { fontFamily: "Inter_500Medium", fontSize: 11 },
   productName: { fontFamily: "Inter_600SemiBold", fontSize: 14, flex: 1 },
-  productBrand: { fontFamily: "Inter_400Regular", fontSize: 12 },
-  barcodeText: { fontFamily: "Inter_400Regular", fontSize: 10, marginTop: 2 },
-  productCardRight: { alignItems: "flex-end", gap: 5 },
-  productPrice: { fontFamily: "Inter_700Bold", fontSize: 14 },
-  stockChip: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 7 },
-  stockText: { fontFamily: "Inter_600SemiBold", fontSize: 11, color: "#fff" },
-  inCartChip: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 7 },
-  inCartText: { fontFamily: "Inter_600SemiBold", fontSize: 11, color: "#fff" },
-  addChip: { width: 26, height: 26, borderRadius: 7, alignItems: "center", justifyContent: "center" },
-  idChip: { paddingHorizontal: 5, paddingVertical: 1, borderRadius: 5 },
-  idChipText: { fontFamily: "Inter_500Medium", fontSize: 10 },
-  scannerModal: { flex: 1, backgroundColor: "#000" },
-  scannerOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingTop: 54,
-    paddingBottom: 60,
+  productBrand: { fontFamily: "Inter_400Regular", fontSize: 12, marginTop: 1 },
+  barcodeText: { fontFamily: "Inter_400Regular", fontSize: 11, marginTop: 2 },
+  productCardRight: {
+    alignItems: "flex-end",
+    gap: 5,
+    paddingLeft: 8,
   },
-  scannerTop: {
+  productPrice: { fontFamily: "Inter_700Bold", fontSize: 14 },
+  stockChip: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8 },
+  stockText: { fontFamily: "Inter_600SemiBold", fontSize: 11, color: "#fff" },
+  inCartChip: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8 },
+  inCartText: { fontFamily: "Inter_600SemiBold", fontSize: 11, color: "#fff" },
+  addChip: { width: 26, height: 26, borderRadius: 8, alignItems: "center", justifyContent: "center" },
+
+  // Search
+  searchWrap: { paddingHorizontal: 14, paddingTop: 12, paddingBottom: 4 },
+  searchBar: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
-    width: "100%",
-    paddingHorizontal: 16,
+    gap: 8,
+    borderRadius: 12,
+    borderWidth: 1.5,
+    paddingHorizontal: 12,
+    paddingVertical: 9,
   },
-  closeBtn: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: "rgba(0,0,0,0.5)",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  scannerTitle: { fontFamily: "Inter_700Bold", fontSize: 18, color: "#fff" },
-  scanFrame: {
-    width: 260,
-    height: 200,
-    position: "relative",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  corner: {
-    position: "absolute",
-    width: 28,
-    height: 28,
-    borderColor: "#fff",
-  },
-  cornerTL: { top: 0, left: 0, borderTopWidth: 3, borderLeftWidth: 3, borderTopLeftRadius: 4 },
-  cornerTR: { top: 0, right: 0, borderTopWidth: 3, borderRightWidth: 3, borderTopRightRadius: 4 },
-  cornerBL: { bottom: 0, left: 0, borderBottomWidth: 3, borderLeftWidth: 3, borderBottomLeftRadius: 4 },
-  cornerBR: { bottom: 0, right: 0, borderBottomWidth: 3, borderRightWidth: 3, borderBottomRightRadius: 4 },
-  scannedIndicator: { flexDirection: "row", alignItems: "center", gap: 8, backgroundColor: "rgba(0,0,0,0.6)", paddingHorizontal: 12, paddingVertical: 8, borderRadius: 20 },
-  scannedText: { fontFamily: "Inter_500Medium", fontSize: 13, color: "#fff" },
-  scanHint: {
-    fontFamily: "Inter_400Regular",
-    fontSize: 14,
-    color: "rgba(255,255,255,0.8)",
-    textAlign: "center",
-    paddingHorizontal: 40,
-  },
+  searchInput: { flex: 1, fontSize: 14, padding: 0 },
+
+  // Loader
+  loader: { flex: 1, alignItems: "center", justifyContent: "center" },
+
+  // Success overlay
   successOverlay: {
     ...StyleSheet.absoluteFillObject,
+    zIndex: 99,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "rgba(0,0,0,0.4)",
-    zIndex: 100,
+    backgroundColor: "rgba(0,0,0,0.45)",
   },
   successCard: {
-    borderRadius: 20,
-    padding: 32,
+    borderRadius: 24,
+    padding: 40,
     alignItems: "center",
-    gap: 10,
+    gap: 12,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.2,
+    shadowOpacity: 0.18,
     shadowRadius: 20,
-    elevation: 12,
+    elevation: 10,
   },
   successTitle: { fontFamily: "Inter_700Bold", fontSize: 20 },
   successSub: { fontFamily: "Inter_400Regular", fontSize: 14 },
