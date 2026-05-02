@@ -28,9 +28,18 @@ localPort = 8081
 externalPort = 8081
 
 [[ports]]
+localPort = 8082
+externalPort = 3003
+
+[[ports]]
 localPort = 23043
 externalPort = 3000
 
 [[ports]]
 localPort = 23044
 externalPort = 3002
+
+[userenv]
+
+[userenv.shared]
+ADMIN_USERNAME = "admin"

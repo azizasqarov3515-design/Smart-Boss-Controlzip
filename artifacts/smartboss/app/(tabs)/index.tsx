@@ -3,10 +3,14 @@ import {
   useGetProducts,
   useGetSales,
 } from "@workspace/api-client-react";
+import * as FileSystem from "expo-file-system";
 import * as Haptics from "expo-haptics";
 import { useRouter } from "expo-router";
-import React, { useEffect, useRef } from "react";
+import * as Sharing from "expo-sharing";
+import React, { useEffect, useRef, useState } from "react";
 import {
+  ActivityIndicator,
+  Alert,
   Animated,
   Platform,
   RefreshControl,
@@ -15,12 +19,12 @@ import {
   Text,
   TouchableOpacity,
   View,
-  ActivityIndicator,
 } from "react-native";
 import { MaterialIcons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useColors } from "@/hooks/useColors";
 import { StatCard } from "@/components/StatCard";
+import { useAuth } from "@/contexts/AuthContext";
 
 function formatMoney(amount: number) {
   if (amount >= 1_000_000_000) return (amount / 1_000_000_000).toFixed(1) + " mlrd UZS";
@@ -52,6 +56,8 @@ export default function DashboardScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const isWeb = Platform.OS === "web";
+  const { username, downloadBackup } = useAuth();
+  const [backupLoading, setBackupLoading] = useState(false);
 
   const { data: stats, isLoading: statsLoading, refetch: refetchStats, isRefetching: r1 } = useGetDashboardStats();
   const { data: products, isLoading: productsLoading, refetch: refetchProducts, isRefetching: r2 } = useGetProducts();
@@ -63,6 +69,46 @@ export default function DashboardScreen() {
   const onRefresh = () => {
     Haptics.selectionAsync();
     refetchStats(); refetchProducts(); refetchSales();
+  };
+
+  const handleBackup = async () => {
+    setBackupLoading(true);
+    Haptics.selectionAsync();
+    try {
+      const json = await downloadBackup();
+      const filename = `smartboss-backup-${new Date().toISOString().slice(0, 10)}.json`;
+
+      if (Platform.OS === "web") {
+        const blob = new Blob([json], { type: "application/json" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = filename;
+        a.click();
+        URL.revokeObjectURL(url);
+        Alert.alert("Muvaffaqiyat", "Backup fayli yuklab olindi.");
+        return;
+      }
+
+      const fileUri = (FileSystem.cacheDirectory ?? "") + filename;
+      await FileSystem.writeAsStringAsync(fileUri, json, { encoding: FileSystem.EncodingType.UTF8 });
+
+      const canShare = await Sharing.isAvailableAsync();
+      if (canShare) {
+        await Sharing.shareAsync(fileUri, {
+          mimeType: "application/json",
+          dialogTitle: "Backup faylini saqlang",
+          UTI: "public.json",
+        });
+      } else {
+        Alert.alert("Muvaffaqiyat", `Backup saqlandi:\n${fileUri}`);
+      }
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : "Xato yuz berdi";
+      Alert.alert("Xato", msg);
+    } finally {
+      setBackupLoading(false);
+    }
   };
 
   const lowStockProducts = (products ?? []).filter((p) => p.quantity < 5).sort((a, b) => a.quantity - b.quantity);
@@ -81,7 +127,7 @@ export default function DashboardScreen() {
     >
       <View style={styles.header}>
         <View>
-          <Text style={[styles.greeting, { color: colors.mutedForeground }]}>Boshqaruv paneli</Text>
+          <Text style={[styles.greeting, { color: colors.mutedForeground }]}>Xush kelibsiz, {username ?? "Admin"}</Text>
           <Text style={[styles.title, { color: colors.foreground }]}>SMARTBOSScontrol</Text>
         </View>
         <TouchableOpacity style={[styles.posBtn, { backgroundColor: colors.primary }]} onPress={() => router.push("/(tabs)/pos")} activeOpacity={0.85}>
@@ -94,7 +140,6 @@ export default function DashboardScreen() {
         <View style={styles.loader}><ActivityIndicator size="large" color={colors.primary} /><Text style={[styles.loadingText, { color: colors.mutedForeground }]}>Yuklanmoqda...</Text></View>
       ) : (
         <>
-          {/* Today stats */}
           <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Bugungi savdo</Text>
           <View style={styles.statsGrid}>
             <StatCard label="Bugungi sotuv" value={String(todaySales.length) + " ta"} icon="point-of-sale" variant="primary" />
@@ -111,7 +156,6 @@ export default function DashboardScreen() {
             <StatCard label="Sotuv (jami)" value={formatMoney(stats?.totalSaleValue ?? 0)} icon="monetization-on" variant="default" subtitle="Potentsial tushum" />
           </View>
 
-          {/* Low stock alert */}
           {lowStockProducts.length > 0 && (
             <View style={[styles.alertCard, { backgroundColor: "#FFF8E1", borderColor: "#FFB300" }]}>
               <View style={styles.alertHeader}>
@@ -143,7 +187,6 @@ export default function DashboardScreen() {
             </View>
           )}
 
-          {/* Recent sales */}
           {recentSales.length > 0 && (
             <>
               <Text style={[styles.sectionTitle, { color: colors.foreground }]}>So'nggi savdolar</Text>
@@ -164,7 +207,6 @@ export default function DashboardScreen() {
             </>
           )}
 
-          {/* Top profitable */}
           {topProfitProducts.length > 0 && (
             <>
               <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Eng foydali tovarlar</Text>
@@ -199,6 +241,25 @@ export default function DashboardScreen() {
               </TouchableOpacity>
             </View>
           )}
+
+          <View style={[styles.backupSection, { borderTopColor: colors.border }]}>
+            <Text style={[styles.backupLabel, { color: colors.mutedForeground }]}>Ma'lumotlar zaxirasi</Text>
+            <TouchableOpacity
+              style={[styles.backupBtn, { backgroundColor: colors.card, borderColor: colors.border }]}
+              onPress={handleBackup}
+              activeOpacity={0.82}
+              disabled={backupLoading}
+            >
+              {backupLoading ? (
+                <ActivityIndicator size="small" color={colors.primary} />
+              ) : (
+                <MaterialIcons name="cloud-download" size={20} color={colors.primary} />
+              )}
+              <Text style={[styles.backupBtnText, { color: colors.primary }]}>
+                {backupLoading ? "Tayyorlanmoqda..." : "Backup yuklab olish"}
+              </Text>
+            </TouchableOpacity>
+          </View>
         </>
       )}
     </ScrollView>
@@ -252,4 +313,8 @@ const styles = StyleSheet.create({
   emptySub: { fontFamily: "Inter_400Regular", fontSize: 13, textAlign: "center", paddingHorizontal: 30 },
   emptyBtn: { flexDirection: "row", alignItems: "center", gap: 6, marginTop: 14, paddingHorizontal: 28, paddingVertical: 13, borderRadius: 14 },
   emptyBtnText: { fontFamily: "Inter_600SemiBold", fontSize: 14, color: "#fff" },
+  backupSection: { marginTop: 28, paddingTop: 20, borderTopWidth: 1 },
+  backupLabel: { fontFamily: "Inter_500Medium", fontSize: 12, marginBottom: 10 },
+  backupBtn: { flexDirection: "row", alignItems: "center", gap: 10, borderRadius: 14, borderWidth: 1.5, paddingHorizontal: 18, paddingVertical: 14 },
+  backupBtnText: { fontFamily: "Inter_600SemiBold", fontSize: 14 },
 });

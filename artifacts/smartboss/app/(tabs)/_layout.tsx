@@ -1,10 +1,11 @@
 import { BlurView } from "expo-blur";
-import { Tabs } from "expo-router";
+import { Tabs, useRouter } from "expo-router";
 import { MaterialIcons } from "@expo/vector-icons";
 import React from "react";
-import { Platform, StyleSheet, View } from "react-native";
+import { Alert, Platform, StyleSheet, TouchableOpacity, View } from "react-native";
 import { useColorScheme } from "react-native";
 import { useColors } from "@/hooks/useColors";
+import { useAuth } from "@/contexts/AuthContext";
 
 export default function TabLayout() {
   const colors = useColors();
@@ -12,6 +13,32 @@ export default function TabLayout() {
   const isDark = colorScheme === "dark";
   const isIOS = Platform.OS === "ios";
   const isWeb = Platform.OS === "web";
+  const { logout } = useAuth();
+  const router = useRouter();
+
+  const handleLogout = () => {
+    Alert.alert(
+      "Chiqish",
+      "Tizimdan chiqishni xohlaysizmi?",
+      [
+        { text: "Bekor", style: "cancel" },
+        {
+          text: "Chiqish",
+          style: "destructive",
+          onPress: async () => {
+            await logout();
+            router.replace("/login");
+          },
+        },
+      ]
+    );
+  };
+
+  const logoutButton = (
+    <TouchableOpacity onPress={handleLogout} style={styles.logoutBtn} activeOpacity={0.7}>
+      <MaterialIcons name="logout" size={22} color={colors.headerText} />
+    </TouchableOpacity>
+  );
 
   return (
     <Tabs
@@ -22,6 +49,7 @@ export default function TabLayout() {
         headerStyle: { backgroundColor: colors.headerBg },
         headerTintColor: colors.headerText,
         headerTitleStyle: { fontFamily: "Inter_700Bold", fontSize: 18 },
+        headerRight: () => logoutButton,
         tabBarStyle: {
           position: "absolute",
           backgroundColor: isIOS ? "transparent" : colors.card,
@@ -91,3 +119,7 @@ export default function TabLayout() {
     </Tabs>
   );
 }
+
+const styles = StyleSheet.create({
+  logoutBtn: { marginRight: 14, padding: 4 },
+});
