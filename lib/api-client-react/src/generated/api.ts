@@ -18,9 +18,12 @@ import type {
 
 import type {
   CreateProduct,
+  CreateSale,
   DashboardStats,
   HealthStatus,
+  NotFound,
   Product,
+  SaleWithItems,
 } from "./api.schemas";
 
 import { customFetch } from "../custom-fetch";
@@ -33,7 +36,6 @@ type Awaited<O> = O extends AwaitedInput<infer T> ? T : never;
 type SecondParameter<T extends (...args: never) => unknown> = Parameters<T>[1];
 
 /**
- * Returns server health status
  * @summary Health check
  */
 export const getHealthCheckUrl = () => {
@@ -441,7 +443,7 @@ export const useDeleteProduct = <
 };
 
 /**
- * @summary Get dashboard statistics
+ * @summary Dashboard statistics
  */
 export const getGetDashboardStatsUrl = () => {
   return `/api/dashboard/stats`;
@@ -492,7 +494,7 @@ export type GetDashboardStatsQueryResult = NonNullable<
 export type GetDashboardStatsQueryError = ErrorType<unknown>;
 
 /**
- * @summary Get dashboard statistics
+ * @summary Dashboard statistics
  */
 
 export function useGetDashboardStats<
@@ -507,6 +509,248 @@ export function useGetDashboardStats<
   request?: SecondParameter<typeof customFetch>;
 }): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
   const queryOptions = getGetDashboardStatsQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Get all sales (transaction history)
+ */
+export const getGetSalesUrl = () => {
+  return `/api/sales`;
+};
+
+export const getSales = async (
+  options?: RequestInit,
+): Promise<SaleWithItems[]> => {
+  return customFetch<SaleWithItems[]>(getGetSalesUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetSalesQueryKey = () => {
+  return [`/api/sales`] as const;
+};
+
+export const getGetSalesQueryOptions = <
+  TData = Awaited<ReturnType<typeof getSales>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<Awaited<ReturnType<typeof getSales>>, TError, TData>;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetSalesQueryKey();
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getSales>>> = ({
+    signal,
+  }) => getSales({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getSales>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetSalesQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getSales>>
+>;
+export type GetSalesQueryError = ErrorType<unknown>;
+
+/**
+ * @summary Get all sales (transaction history)
+ */
+
+export function useGetSales<
+  TData = Awaited<ReturnType<typeof getSales>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<Awaited<ReturnType<typeof getSales>>, TError, TData>;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetSalesQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Create a sale (checkout cart, decrement stock)
+ */
+export const getCreateSaleUrl = () => {
+  return `/api/sales`;
+};
+
+export const createSale = async (
+  createSale: CreateSale,
+  options?: RequestInit,
+): Promise<SaleWithItems> => {
+  return customFetch<SaleWithItems>(getCreateSaleUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(createSale),
+  });
+};
+
+export const getCreateSaleMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createSale>>,
+    TError,
+    { data: BodyType<CreateSale> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof createSale>>,
+  TError,
+  { data: BodyType<CreateSale> },
+  TContext
+> => {
+  const mutationKey = ["createSale"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof createSale>>,
+    { data: BodyType<CreateSale> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return createSale(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CreateSaleMutationResult = NonNullable<
+  Awaited<ReturnType<typeof createSale>>
+>;
+export type CreateSaleMutationBody = BodyType<CreateSale>;
+export type CreateSaleMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Create a sale (checkout cart, decrement stock)
+ */
+export const useCreateSale = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createSale>>,
+    TError,
+    { data: BodyType<CreateSale> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof createSale>>,
+  TError,
+  { data: BodyType<CreateSale> },
+  TContext
+> => {
+  return useMutation(getCreateSaleMutationOptions(options));
+};
+
+/**
+ * @summary Find product by barcode
+ */
+export const getGetProductByBarcodeUrl = (barcode: string) => {
+  return `/api/products/barcode/${barcode}`;
+};
+
+export const getProductByBarcode = async (
+  barcode: string,
+  options?: RequestInit,
+): Promise<Product> => {
+  return customFetch<Product>(getGetProductByBarcodeUrl(barcode), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetProductByBarcodeQueryKey = (barcode: string) => {
+  return [`/api/products/barcode/${barcode}`] as const;
+};
+
+export const getGetProductByBarcodeQueryOptions = <
+  TData = Awaited<ReturnType<typeof getProductByBarcode>>,
+  TError = ErrorType<NotFound>,
+>(
+  barcode: string,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getProductByBarcode>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getGetProductByBarcodeQueryKey(barcode);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getProductByBarcode>>
+  > = ({ signal }) =>
+    getProductByBarcode(barcode, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: !!barcode,
+    ...queryOptions,
+  } as UseQueryOptions<
+    Awaited<ReturnType<typeof getProductByBarcode>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetProductByBarcodeQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getProductByBarcode>>
+>;
+export type GetProductByBarcodeQueryError = ErrorType<NotFound>;
+
+/**
+ * @summary Find product by barcode
+ */
+
+export function useGetProductByBarcode<
+  TData = Awaited<ReturnType<typeof getProductByBarcode>>,
+  TError = ErrorType<NotFound>,
+>(
+  barcode: string,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getProductByBarcode>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetProductByBarcodeQueryOptions(barcode, options);
 
   const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
     queryKey: QueryKey;

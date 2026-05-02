@@ -1,30 +1,12 @@
 import { BlurView } from "expo-blur";
-import { isLiquidGlassAvailable } from "expo-glass-effect";
 import { Tabs } from "expo-router";
-import { Icon, Label, NativeTabs } from "expo-router/unstable-native-tabs";
 import { MaterialIcons } from "@expo/vector-icons";
 import React from "react";
 import { Platform, StyleSheet, View } from "react-native";
 import { useColorScheme } from "react-native";
-
 import { useColors } from "@/hooks/useColors";
 
-function NativeTabLayout() {
-  return (
-    <NativeTabs>
-      <NativeTabs.Trigger name="index">
-        <Icon sf={{ default: "chart.bar", selected: "chart.bar.fill" }} />
-        <Label>Dashboard</Label>
-      </NativeTabs.Trigger>
-      <NativeTabs.Trigger name="products">
-        <Icon sf={{ default: "cube.box", selected: "cube.box.fill" }} />
-        <Label>Mahsulotlar</Label>
-      </NativeTabs.Trigger>
-    </NativeTabs>
-  );
-}
-
-function ClassicTabLayout() {
+export default function TabLayout() {
   const colors = useColors();
   const colorScheme = useColorScheme();
   const isDark = colorScheme === "dark";
@@ -50,11 +32,11 @@ function ClassicTabLayout() {
           shadowOffset: { width: 0, height: -2 },
           shadowOpacity: 0.06,
           shadowRadius: 8,
-          ...(isWeb ? { height: 84 } : {}),
+          height: isWeb ? 60 : 58,
         },
         tabBarLabelStyle: {
           fontFamily: "Inter_500Medium",
-          fontSize: 12,
+          fontSize: 11,
           marginBottom: 4,
         },
         tabBarBackground: () =>
@@ -64,11 +46,9 @@ function ClassicTabLayout() {
               tint={isDark ? "dark" : "light"}
               style={StyleSheet.absoluteFill}
             />
-          ) : isWeb ? (
-            <View
-              style={[StyleSheet.absoluteFill, { backgroundColor: colors.card }]}
-            />
-          ) : null,
+          ) : (
+            <View style={[StyleSheet.absoluteFill, { backgroundColor: colors.card }]} />
+          ),
       }}
     >
       <Tabs.Screen
@@ -81,21 +61,33 @@ function ClassicTabLayout() {
         }}
       />
       <Tabs.Screen
+        name="pos"
+        options={{
+          title: "Kassa",
+          headerTitle: "Kassa (POS)",
+          tabBarIcon: ({ color, size }) => (
+            <MaterialIcons name="point-of-sale" size={size} color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
         name="products"
         options={{
-          title: "Mahsulotlar",
+          title: "Tovarlar",
           tabBarIcon: ({ color, size }) => (
             <MaterialIcons name="inventory" size={size} color={color} />
           ),
         }}
       />
+      <Tabs.Screen
+        name="history"
+        options={{
+          title: "Tarix",
+          tabBarIcon: ({ color, size }) => (
+            <MaterialIcons name="receipt-long" size={size} color={color} />
+          ),
+        }}
+      />
     </Tabs>
   );
-}
-
-export default function TabLayout() {
-  if (isLiquidGlassAvailable()) {
-    return <NativeTabLayout />;
-  }
-  return <ClassicTabLayout />;
 }

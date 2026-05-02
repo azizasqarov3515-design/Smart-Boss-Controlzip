@@ -12,4 +12,6 @@ export interface DashboardStats {
   totalCostValue: number;
   totalSaleValue: number;
   lowStockCount: number;
+  todaySales: number;
+  todayTransactions: number;
 }

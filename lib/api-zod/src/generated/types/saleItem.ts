@@ -6,11 +6,12 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export interface CreateProduct {
-  name: string;
+export interface SaleItem {
+  id: number;
+  productId?: number | null;
+  productName: string;
   brand: string;
-  costPrice: number;
-  salePrice: number;
+  unitPrice: number;
   quantity: number;
-  barcode?: string | null;
+  totalPrice: number;
 }

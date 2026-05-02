@@ -8,7 +8,6 @@
 import * as zod from "zod";
 
 /**
- * Returns server health status
  * @summary Health check
  */
 export const HealthCheckResponse = zod.object({
@@ -25,6 +24,7 @@ export const GetProductsResponseItem = zod.object({
   costPrice: zod.number(),
   salePrice: zod.number(),
   quantity: zod.number(),
+  barcode: zod.string().nullish(),
   createdAt: zod.string(),
 });
 export const GetProductsResponse = zod.array(GetProductsResponseItem);
@@ -38,6 +38,7 @@ export const CreateProductBody = zod.object({
   costPrice: zod.number(),
   salePrice: zod.number(),
   quantity: zod.number(),
+  barcode: zod.string().nullish(),
 });
 
 /**
@@ -53,6 +54,7 @@ export const UpdateProductBody = zod.object({
   costPrice: zod.number(),
   salePrice: zod.number(),
   quantity: zod.number(),
+  barcode: zod.string().nullish(),
 });
 
 export const UpdateProductResponse = zod.object({
@@ -62,6 +64,7 @@ export const UpdateProductResponse = zod.object({
   costPrice: zod.number(),
   salePrice: zod.number(),
   quantity: zod.number(),
+  barcode: zod.string().nullish(),
   createdAt: zod.string(),
 });
 
@@ -73,7 +76,7 @@ export const DeleteProductParams = zod.object({
 });
 
 /**
- * @summary Get dashboard statistics
+ * @summary Dashboard statistics
  */
 export const GetDashboardStatsResponse = zod.object({
   totalProducts: zod.number(),
@@ -81,4 +84,63 @@ export const GetDashboardStatsResponse = zod.object({
   totalCostValue: zod.number(),
   totalSaleValue: zod.number(),
   lowStockCount: zod.number(),
+  todaySales: zod.number(),
+  todayTransactions: zod.number(),
+});
+
+/**
+ * @summary Get all sales (transaction history)
+ */
+export const GetSalesResponseItem = zod.object({
+  id: zod.number(),
+  totalAmount: zod.number(),
+  itemCount: zod.number(),
+  note: zod.string().nullish(),
+  createdAt: zod.string(),
+  items: zod.array(
+    zod.object({
+      id: zod.number(),
+      productId: zod.number().nullish(),
+      productName: zod.string(),
+      brand: zod.string(),
+      unitPrice: zod.number(),
+      quantity: zod.number(),
+      totalPrice: zod.number(),
+    }),
+  ),
+});
+export const GetSalesResponse = zod.array(GetSalesResponseItem);
+
+/**
+ * @summary Create a sale (checkout cart, decrement stock)
+ */
+
+export const CreateSaleBody = zod.object({
+  items: zod
+    .array(
+      zod.object({
+        productId: zod.number(),
+        quantity: zod.number(),
+      }),
+    )
+    .min(1),
+  note: zod.string().nullish(),
+});
+
+/**
+ * @summary Find product by barcode
+ */
+export const GetProductByBarcodeParams = zod.object({
+  barcode: zod.coerce.string(),
+});
+
+export const GetProductByBarcodeResponse = zod.object({
+  id: zod.number(),
+  name: zod.string(),
+  brand: zod.string(),
+  costPrice: zod.number(),
+  salePrice: zod.number(),
+  quantity: zod.number(),
+  barcode: zod.string().nullish(),
+  createdAt: zod.string(),
 });

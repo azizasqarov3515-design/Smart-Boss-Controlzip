@@ -1,6 +1,5 @@
 openapi: 3.1.0
 info:
-  # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
   description: API specification for SMARTBOSScontrol
@@ -9,18 +8,15 @@ servers:
     description: Base API path
 tags:
   - name: health
-    description: Health operations
   - name: products
-    description: Product management
   - name: dashboard
-    description: Dashboard statistics
+  - name: sales
 paths:
   /healthz:
     get:
       operationId: healthCheck
       tags: [health]
       summary: Health check
-      description: Returns server health status
       responses:
         "200":
           description: Healthy
@@ -95,19 +91,74 @@ paths:
             type: integer
       responses:
         "204":
-          description: Deleted successfully
+          description: Deleted
   /dashboard/stats:
     get:
       operationId: getDashboardStats
       tags: [dashboard]
-      summary: Get dashboard statistics
+      summary: Dashboard statistics
       responses:
         "200":
-          description: Dashboard stats
+          description: Stats
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/DashboardStats"
+  /sales:
+    get:
+      operationId: getSales
+      tags: [sales]
+      summary: Get all sales (transaction history)
+      responses:
+        "200":
+          description: List of sales
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/SaleWithItems"
+    post:
+      operationId: createSale
+      tags: [sales]
+      summary: Create a sale (checkout cart, decrement stock)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateSale"
+      responses:
+        "201":
+          description: Created sale
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SaleWithItems"
+  /products/barcode/{barcode}:
+    get:
+      operationId: getProductByBarcode
+      tags: [products]
+      summary: Find product by barcode
+      parameters:
+        - name: barcode
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Found product
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Product"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NotFound"
 components:
   schemas:
     HealthStatus:
@@ -115,8 +166,7 @@ components:
       properties:
         status:
           type: string
-      required:
-        - status
+      required: [status]
     Product:
       type: object
       properties:
@@ -132,16 +182,12 @@ components:
           type: number
         quantity:
           type: integer
+        barcode:
+          type: string
+          nullable: true
         createdAt:
           type: string
-      required:
-        - id
-        - name
-        - brand
-        - costPrice
-        - salePrice
-        - quantity
-        - createdAt
+      required: [id, name, brand, costPrice, salePrice, quantity, createdAt]
     CreateProduct:
       type: object
       properties:
@@ -155,12 +201,10 @@ components:
           type: number
         quantity:
           type: integer
-      required:
-        - name
-        - brand
-        - costPrice
-        - salePrice
-        - quantity
+        barcode:
+          type: string
+          nullable: true
+      required: [name, brand, costPrice, salePrice, quantity]
     DashboardStats:
       type: object
       properties:
@@ -174,9 +218,72 @@ components:
           type: number
         lowStockCount:
           type: integer
-      required:
-        - totalProducts
-        - totalItems
-        - totalCostValue
-        - totalSaleValue
-        - lowStockCount
+        todaySales:
+          type: number
+        todayTransactions:
+          type: integer
+      required: [totalProducts, totalItems, totalCostValue, totalSaleValue, lowStockCount, todaySales, todayTransactions]
+    SaleItem:
+      type: object
+      properties:
+        id:
+          type: integer
+        productId:
+          type: integer
+          nullable: true
+        productName:
+          type: string
+        brand:
+          type: string
+        unitPrice:
+          type: number
+        quantity:
+          type: integer
+        totalPrice:
+          type: number
+      required: [id, productName, brand, unitPrice, quantity, totalPrice]
+    SaleWithItems:
+      type: object
+      properties:
+        id:
+          type: integer
+        totalAmount:
+          type: number
+        itemCount:
+          type: integer
+        note:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/SaleItem"
+      required: [id, totalAmount, itemCount, createdAt, items]
+    CreateSaleItem:
+      type: object
+      properties:
+        productId:
+          type: integer
+        quantity:
+          type: integer
+      required: [productId, quantity]
+    CreateSale:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/CreateSaleItem"
+          minItems: 1
+        note:
+          type: string
+          nullable: true
+      required: [items]
+    NotFound:
+      type: object
+      properties:
+        error:
+          type: string
+      required: [error]

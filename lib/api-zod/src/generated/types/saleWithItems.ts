@@ -5,14 +5,13 @@
  * API specification for SMARTBOSScontrol
  * OpenAPI spec version: 0.1.0
  */
+import type { SaleItem } from "./saleItem";
 
-export interface Product {
+export interface SaleWithItems {
   id: number;
-  name: string;
-  brand: string;
-  costPrice: number;
-  salePrice: number;
-  quantity: number;
-  barcode?: string | null;
+  totalAmount: number;
+  itemCount: number;
+  note?: string | null;
   createdAt: string;
+  items: SaleItem[];
 }

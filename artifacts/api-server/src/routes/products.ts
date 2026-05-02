@@ -16,6 +16,7 @@ router.get("/products", async (req, res) => {
       costPrice: parseFloat(p.costPrice),
       salePrice: parseFloat(p.salePrice),
       quantity: p.quantity,
+      barcode: p.barcode ?? null,
       createdAt: p.createdAt.toISOString(),
     }));
     res.json(mapped);

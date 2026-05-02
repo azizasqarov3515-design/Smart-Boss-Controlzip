@@ -16,6 +16,7 @@ export interface Product {
   costPrice: number;
   salePrice: number;
   quantity: number;
+  barcode?: string | null;
   createdAt: string;
 }
 
@@ -25,6 +26,7 @@ export interface CreateProduct {
   costPrice: number;
   salePrice: number;
   quantity: number;
+  barcode?: string | null;
 }
 
 export interface DashboardStats {
@@ -33,4 +35,40 @@ export interface DashboardStats {
   totalCostValue: number;
   totalSaleValue: number;
   lowStockCount: number;
+  todaySales: number;
+  todayTransactions: number;
+}
+
+export interface SaleItem {
+  id: number;
+  productId?: number | null;
+  productName: string;
+  brand: string;
+  unitPrice: number;
+  quantity: number;
+  totalPrice: number;
+}
+
+export interface SaleWithItems {
+  id: number;
+  totalAmount: number;
+  itemCount: number;
+  note?: string | null;
+  createdAt: string;
+  items: SaleItem[];
+}
+
+export interface CreateSaleItem {
+  productId: number;
+  quantity: number;
+}
+
+export interface CreateSale {
+  /** @minItems 1 */
+  items: CreateSaleItem[];
+  note?: string | null;
+}
+
+export interface NotFound {
+  error: string;
 }
