@@ -11,14 +11,25 @@
     "splash": {
       "image": "./assets/images/icon.png",
       "resizeMode": "contain",
-      "backgroundColor": "#ffffff"
+      "backgroundColor": "#F4F6FB"
     },
     "ios": {
       "supportsTablet": false
     },
-    "android": {},
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/images/icon.png",
+        "backgroundColor": "#1565C0"
+      }
+    },
     "web": {
-      "favicon": "./assets/images/icon.png"
+      "favicon": "./assets/images/icon.png",
+      "name": "SMARTBOSScontrol",
+      "shortName": "SMARTBOSS",
+      "description": "Android mobil aksessuarlar do'koni boshqaruv tizimi",
+      "themeColor": "#1565C0",
+      "backgroundColor": "#F4F6FB",
+      "lang": "uz"
     },
     "plugins": [
       [
@@ -28,7 +39,13 @@
         }
       ],
       "expo-font",
-      "expo-web-browser"
+      "expo-web-browser",
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Kassa uchun kamera ruxsati kerak"
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,

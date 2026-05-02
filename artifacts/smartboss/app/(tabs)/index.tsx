@@ -24,6 +24,7 @@ import { MaterialIcons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useColors } from "@/hooks/useColors";
 import { StatCard } from "@/components/StatCard";
+import { LiveClock } from "@/components/LiveClock";
 import { useAuth } from "@/contexts/AuthContext";
 
 function formatMoney(amount: number) {
@@ -125,19 +126,30 @@ export default function DashboardScreen() {
       showsVerticalScrollIndicator={false}
       refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} tintColor={colors.primary} colors={[colors.primary]} />}
     >
+      {/* Header row: title | clock | kassa */}
       <View style={styles.header}>
-        <View>
+        <View style={styles.headerLeft}>
           <Text style={[styles.greeting, { color: colors.mutedForeground }]}>Xush kelibsiz, {username ?? "Admin"}</Text>
           <Text style={[styles.title, { color: colors.foreground }]}>SMARTBOSScontrol</Text>
         </View>
-        <TouchableOpacity style={[styles.posBtn, { backgroundColor: colors.primary }]} onPress={() => router.push("/(tabs)/pos")} activeOpacity={0.85}>
-          <MaterialIcons name="point-of-sale" size={20} color="#fff" />
-          <Text style={styles.posBtnText}>Kassa</Text>
-        </TouchableOpacity>
+        <View style={styles.headerRight}>
+          <LiveClock />
+          <TouchableOpacity
+            style={[styles.posBtn, { backgroundColor: colors.primary }]}
+            onPress={() => router.push("/(tabs)/pos")}
+            activeOpacity={0.85}
+          >
+            <MaterialIcons name="point-of-sale" size={18} color="#fff" />
+            <Text style={styles.posBtnText}>Kassa</Text>
+          </TouchableOpacity>
+        </View>
       </View>
 
       {isLoading ? (
-        <View style={styles.loader}><ActivityIndicator size="large" color={colors.primary} /><Text style={[styles.loadingText, { color: colors.mutedForeground }]}>Yuklanmoqda...</Text></View>
+        <View style={styles.loader}>
+          <ActivityIndicator size="large" color={colors.primary} />
+          <Text style={[styles.loadingText, { color: colors.mutedForeground }]}>Yuklanmoqda...</Text>
+        </View>
       ) : (
         <>
           <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Bugungi savdo</Text>
@@ -269,10 +281,35 @@ export default function DashboardScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   content: { paddingHorizontal: 16 },
-  header: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 18 },
-  greeting: { fontFamily: "Inter_400Regular", fontSize: 12 },
-  title: { fontFamily: "Inter_700Bold", fontSize: 22 },
-  posBtn: { flexDirection: "row", alignItems: "center", gap: 5, paddingHorizontal: 14, paddingVertical: 10, borderRadius: 12, shadowColor: "#1565C0", shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.28, shadowRadius: 6, elevation: 4 },
+  header: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 18,
+    gap: 8,
+  },
+  headerLeft: { flex: 1, minWidth: 0 },
+  headerRight: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    flexShrink: 0,
+  },
+  greeting: { fontFamily: "Inter_400Regular", fontSize: 11 },
+  title: { fontFamily: "Inter_700Bold", fontSize: 19 },
+  posBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    paddingHorizontal: 12,
+    paddingVertical: 9,
+    borderRadius: 12,
+    shadowColor: "#1565C0",
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.28,
+    shadowRadius: 6,
+    elevation: 4,
+  },
   posBtnText: { fontFamily: "Inter_600SemiBold", fontSize: 13, color: "#fff" },
   loader: { alignItems: "center", paddingTop: 60, gap: 12 },
   loadingText: { fontFamily: "Inter_400Regular", fontSize: 14 },

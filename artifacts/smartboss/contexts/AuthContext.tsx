@@ -1,5 +1,6 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { setAuthTokenGetter } from "@workspace/api-client-react";
+import type { QueryClient } from "@tanstack/react-query";
 import React, { createContext, useCallback, useContext, useEffect, useState } from "react";
 
 const BASE_URL = process.env.EXPO_PUBLIC_DOMAIN
@@ -20,7 +21,12 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | null>(null);
 
-export function AuthProvider({ children }: { children: React.ReactNode }) {
+interface AuthProviderProps {
+  children: React.ReactNode;
+  queryClient?: QueryClient;
+}
+
+export function AuthProvider({ children, queryClient }: AuthProviderProps) {
   const [token, setToken] = useState<string | null>(null);
   const [username, setUsername] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -70,7 +76,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     await AsyncStorage.setItem(TOKEN_KEY, data.token!);
     setToken(data.token!);
     setUsername(data.username!);
-  }, []);
+    queryClient?.clear();
+  }, [queryClient]);
 
   const logout = useCallback(async () => {
     try {
@@ -84,9 +91,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // ignore
     }
     await AsyncStorage.removeItem(TOKEN_KEY);
+    queryClient?.clear();
     setToken(null);
     setUsername(null);
-  }, [token]);
+  }, [token, queryClient]);
 
   const downloadBackup = useCallback(async (): Promise<string> => {
     const res = await fetch(`${BASE_URL}/api/backup/download`, {

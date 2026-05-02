@@ -9,7 +9,9 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { setBaseUrl } from "@workspace/api-client-react";
 import { Stack, useRouter, useSegments } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
+import { StatusBar } from "expo-status-bar";
 import React, { useEffect } from "react";
+import { ActivityIndicator, Platform, View } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { KeyboardProvider } from "react-native-keyboard-controller";
 import { SafeAreaProvider } from "react-native-safe-area-context";
@@ -23,7 +25,18 @@ if (process.env.EXPO_PUBLIC_DOMAIN) {
 
 SplashScreen.preventAutoHideAsync();
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      retry: (failureCount, error: unknown) => {
+        const status = (error as { status?: number })?.status;
+        if (status === 401 || status === 403) return false;
+        return failureCount < 2;
+      },
+      staleTime: 30_000,
+    },
+  },
+});
 
 function RootLayoutNav() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -39,6 +52,14 @@ function RootLayoutNav() {
       router.replace("/(tabs)");
     }
   }, [isAuthenticated, isLoading, segments, router]);
+
+  if (isLoading) {
+    return (
+      <View style={{ flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: "#F4F6FB" }}>
+        <ActivityIndicator size="large" color="#1565C0" />
+      </View>
+    );
+  }
 
   return (
     <Stack screenOptions={{ headerBackTitle: "Orqaga" }}>
@@ -67,6 +88,9 @@ export default function RootLayout() {
   useEffect(() => {
     if (fontsLoaded || fontError) {
       SplashScreen.hideAsync();
+      if (Platform.OS === "web" && typeof window !== "undefined") {
+        (window as Window & { __hideSplash?: () => void }).__hideSplash?.();
+      }
     }
   }, [fontsLoaded, fontError]);
 
@@ -74,11 +98,12 @@ export default function RootLayout() {
 
   return (
     <SafeAreaProvider>
+      <StatusBar style="light" backgroundColor="#1565C0" translucent={false} />
       <ErrorBoundary>
         <QueryClientProvider client={queryClient}>
-          <GestureHandlerRootView>
+          <GestureHandlerRootView style={{ flex: 1 }}>
             <KeyboardProvider>
-              <AuthProvider>
+              <AuthProvider queryClient={queryClient}>
                 <RootLayoutNav />
               </AuthProvider>
             </KeyboardProvider>
