@@ -1,8 +1,13 @@
 uploads = []
-outputs = []
 
 [[generated]]
 id = "_mjqY3c4QFOlJr--xAWcx"
 uri = "file://artifacts/smartboss/assets/images/icon.png"
 type = "image"
 title = "smartboss app icon"
+
+[[outputs]]
+id = "RAOLFEWx6rZivWlElmzWN"
+uri = "file://SMARTBOSScontrol.zip"
+type = "unspecified"
+title = "SMARTBOSScontrol — Manba kodi (ZIP, 0.7 MB)"
