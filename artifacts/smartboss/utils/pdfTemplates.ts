@@ -1,8 +1,13 @@
 import type { SaleWithItems } from "@workspace/api-client-react";
+import type { StoreSettings } from "@/hooks/useSettings";
+import { DEFAULT_SETTINGS } from "@/hooks/useSettings";
 
-const STORE_NAME = "SMARTBOSScontrol";
-const STORE_SUBTITLE = "Android mobil aksessuarlar do'koni";
-const STORE_ADDRESS = "O'zbekiston";
+export interface PdfCustomer {
+  name?: string | null;
+  phone?: string | null;
+  address?: string | null;
+}
+
 const PRIMARY = "#1565C0";
 const DARK = "#0D1117";
 
@@ -48,6 +53,7 @@ function baseStyles(): string {
     .meta-box { background: #F8FAFC; border-radius: 10px; padding: 12px 14px; }
     .meta-label { font-size: 10px; font-weight: 600; color: #9CA3AF; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; }
     .meta-val { font-size: 13px; font-weight: 600; color: ${DARK}; }
+    .meta-sub { font-size: 11px; color: #6B7280; margin-top: 3px; }
     table { width: 100%; border-collapse: collapse; margin-top: 4px; }
     thead tr { background: ${PRIMARY}; }
     thead th {
@@ -100,6 +106,11 @@ function baseStyles(): string {
     .waybill-key { color: #6B7280; font-weight: 500; }
     .waybill-val { color: ${DARK}; font-weight: 600; }
     .status-chip { display: inline-block; background: #D1FAE5; color: #065F46; border-radius: 6px; padding: 3px 10px; font-size: 11px; font-weight: 600; }
+    .customer-box { background: #F0F9FF; border: 1.5px solid #BAE6FD; border-radius: 10px; padding: 12px 14px; margin-bottom: 20px; }
+    .customer-title { font-size: 10px; font-weight: 600; color: #0369A1; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; }
+    .customer-row { display: flex; gap: 8px; font-size: 12px; padding: 2px 0; }
+    .customer-key { color: #6B7280; min-width: 80px; }
+    .customer-val { color: ${DARK}; font-weight: 600; }
     @media print {
       body { padding: 24px; }
       .no-print { display: none !important; }
@@ -107,8 +118,33 @@ function baseStyles(): string {
   `;
 }
 
+function sellerBlock(settings: StoreSettings): string {
+  const s = settings.sellers[0];
+  if (!s) return "";
+  return `
+    <div style="margin-top:4px">
+      <div class="store-sub">Sotuvchi: ${s.name}</div>
+      <div class="store-sub">Tel: ${s.phone}</div>
+    </div>`;
+}
+
+function customerBlock(customer?: PdfCustomer | null): string {
+  if (!customer || (!customer.name && !customer.phone && !customer.address)) return "";
+  return `
+    <div class="customer-box">
+      <div class="customer-title">📋 Xaridor ma'lumotlari</div>
+      ${customer.name ? `<div class="customer-row"><span class="customer-key">Ism:</span><span class="customer-val">${customer.name}</span></div>` : ""}
+      ${customer.phone ? `<div class="customer-row"><span class="customer-key">Telefon:</span><span class="customer-val">${customer.phone}</span></div>` : ""}
+      ${customer.address ? `<div class="customer-row"><span class="customer-key">Manzil:</span><span class="customer-val">${customer.address}</span></div>` : ""}
+    </div>`;
+}
+
 // ── Invoice (Hisob-faktura) ───────────────────────────────────────────────────
-export function buildInvoiceHtml(sale: SaleWithItems): string {
+export function buildInvoiceHtml(
+  sale: SaleWithItems,
+  settings: StoreSettings = DEFAULT_SETTINGS,
+  customer?: PdfCustomer | null
+): string {
   const rows = sale.items
     .map(
       (item, i) => `
@@ -125,6 +161,8 @@ export function buildInvoiceHtml(sale: SaleWithItems): string {
     )
     .join("");
 
+  const primarySeller = settings.sellers[0];
+
   return `<!DOCTYPE html>
 <html lang="uz">
 <head>
@@ -136,9 +174,10 @@ export function buildInvoiceHtml(sale: SaleWithItems): string {
 <body>
   <div class="header">
     <div>
-      <div class="store-name">${STORE_NAME}</div>
-      <div class="store-sub">${STORE_SUBTITLE}</div>
-      <div class="store-sub">${STORE_ADDRESS}</div>
+      <div class="store-name">${settings.storeName}</div>
+      <div class="store-sub">${settings.storeSubtitle}</div>
+      ${settings.storeAddress ? `<div class="store-sub">📍 ${settings.storeAddress}</div>` : ""}
+      ${sellerBlock(settings)}
     </div>
     <div class="doc-title-block">
       <div class="doc-title">HISOB-FAKTURA</div>
@@ -148,6 +187,8 @@ export function buildInvoiceHtml(sale: SaleWithItems): string {
   </div>
 
   <hr class="divider"/>
+
+  ${customerBlock(customer)}
 
   <div class="meta-grid">
     <div class="meta-box">
@@ -196,27 +237,31 @@ export function buildInvoiceHtml(sale: SaleWithItems): string {
 
   <div class="sign-row">
     <div class="sign-box">
-      <div class="sign-label">Sotuvchi imzosi:</div>
+      <div class="sign-label">Sotuvchi: ${primarySeller ? `${primarySeller.name} · ${primarySeller.phone}` : ""}</div>
       <div class="sign-line"></div>
-      <div class="sign-name">F.I.Sh / Imzo</div>
+      <div class="sign-name">Imzo</div>
     </div>
     <div class="sign-box">
-      <div class="sign-label">Xaridor imzosi:</div>
+      <div class="sign-label">Xaridor: ${customer?.name ?? "________________________"}</div>
       <div class="sign-line"></div>
-      <div class="sign-name">F.I.Sh / Imzo</div>
+      <div class="sign-name">Imzo</div>
     </div>
   </div>
 
   <div class="footer">
     <div class="footer-thanks">Xaridingiz uchun tashakkur!</div>
-    <div class="footer-sub">${STORE_NAME} · ${STORE_SUBTITLE}</div>
+    <div class="footer-sub">${settings.storeName} · ${settings.storeSubtitle}</div>
   </div>
 </body>
 </html>`;
 }
 
 // ── Sales Receipt (Savdo cheki) ───────────────────────────────────────────────
-export function buildReceiptHtml(sale: SaleWithItems): string {
+export function buildReceiptHtml(
+  sale: SaleWithItems,
+  settings: StoreSettings = DEFAULT_SETTINGS,
+  customer?: PdfCustomer | null
+): string {
   const rows = sale.items
     .map(
       (item, i) => `
@@ -232,6 +277,8 @@ export function buildReceiptHtml(sale: SaleWithItems): string {
       </tr>`
     )
     .join("");
+
+  const primarySeller = settings.sellers[0];
 
   return `<!DOCTYPE html>
 <html lang="uz">
@@ -253,8 +300,10 @@ export function buildReceiptHtml(sale: SaleWithItems): string {
 </head>
 <body>
   <div class="receipt-header">
-    <div class="receipt-logo">${STORE_NAME}</div>
-    <div class="receipt-sub">${STORE_SUBTITLE}</div>
+    <div class="receipt-logo">${settings.storeName}</div>
+    <div class="receipt-sub">${settings.storeSubtitle}</div>
+    ${settings.storeAddress ? `<div class="receipt-sub">📍 ${settings.storeAddress}</div>` : ""}
+    ${primarySeller ? `<div class="receipt-sub">Sotuvchi: ${primarySeller.name} · ${primarySeller.phone}</div>` : ""}
     <div class="receipt-title">— SAVDO CHEKI —</div>
   </div>
 
@@ -266,6 +315,14 @@ export function buildReceiptHtml(sale: SaleWithItems): string {
     <div><span>Vaqt:</span> ${fmtTime(sale.createdAt)}</div>
     <div><span>Dona:</span> ${sale.itemCount}</div>
   </div>
+
+  ${customer && (customer.name || customer.phone) ? `
+  <div class="dashed"></div>
+  <div style="font-size:11px;color:#6B7280;margin-bottom:4px">XARIDOR:</div>
+  ${customer.name ? `<div style="font-size:12px;font-weight:600;color:${DARK}">${customer.name}</div>` : ""}
+  ${customer.phone ? `<div style="font-size:12px;color:#374151">📞 ${customer.phone}</div>` : ""}
+  ${customer.address ? `<div style="font-size:12px;color:#374151">📍 ${customer.address}</div>` : ""}
+  ` : ""}
 
   <div class="dashed"></div>
 
@@ -294,12 +351,12 @@ export function buildReceiptHtml(sale: SaleWithItems): string {
 
   <div class="sign-row" style="margin-top:28px">
     <div class="sign-box">
-      <div class="sign-label" style="font-size:11px;color:#6B7280;margin-bottom:22px">Sotuvchi:</div>
+      <div class="sign-label" style="font-size:11px;color:#6B7280;margin-bottom:22px">Sotuvchi: ${primarySeller?.name ?? ""}</div>
       <div class="sign-line"></div>
       <div class="sign-name">Imzo</div>
     </div>
     <div class="sign-box">
-      <div class="sign-label" style="font-size:11px;color:#6B7280;margin-bottom:22px">Xaridor:</div>
+      <div class="sign-label" style="font-size:11px;color:#6B7280;margin-bottom:22px">Xaridor: ${customer?.name ?? ""}</div>
       <div class="sign-line"></div>
       <div class="sign-name">Imzo</div>
     </div>
@@ -307,14 +364,18 @@ export function buildReceiptHtml(sale: SaleWithItems): string {
 
   <div class="footer" style="margin-top:28px">
     <div class="footer-thanks">Xaridingiz uchun tashakkur!</div>
-    <div class="footer-sub">${STORE_NAME} — ${fmtDate(sale.createdAt)}</div>
+    <div class="footer-sub">${settings.storeName} — ${fmtDate(sale.createdAt)}</div>
   </div>
 </body>
 </html>`;
 }
 
 // ── Waybill (Yuk xati) ────────────────────────────────────────────────────────
-export function buildWaybillHtml(sale: SaleWithItems): string {
+export function buildWaybillHtml(
+  sale: SaleWithItems,
+  settings: StoreSettings = DEFAULT_SETTINGS,
+  customer?: PdfCustomer | null
+): string {
   const rows = sale.items
     .map(
       (item, i) => `
@@ -331,6 +392,8 @@ export function buildWaybillHtml(sale: SaleWithItems): string {
     )
     .join("");
 
+  const primarySeller = settings.sellers[0];
+
   return `<!DOCTYPE html>
 <html lang="uz">
 <head>
@@ -342,9 +405,10 @@ export function buildWaybillHtml(sale: SaleWithItems): string {
 <body>
   <div class="header">
     <div>
-      <div class="store-name">${STORE_NAME}</div>
-      <div class="store-sub">${STORE_SUBTITLE}</div>
-      <div class="store-sub">${STORE_ADDRESS}</div>
+      <div class="store-name">${settings.storeName}</div>
+      <div class="store-sub">${settings.storeSubtitle}</div>
+      ${settings.storeAddress ? `<div class="store-sub">📍 ${settings.storeAddress}</div>` : ""}
+      ${sellerBlock(settings)}
     </div>
     <div class="doc-title-block">
       <div class="doc-title">YUK XATI</div>
@@ -381,13 +445,18 @@ export function buildWaybillHtml(sale: SaleWithItems): string {
   <div class="meta-grid">
     <div class="meta-box">
       <div class="meta-label">Jo'natuvchi (Sotuvchi)</div>
-      <div class="meta-val">${STORE_NAME}</div>
-      <div style="font-size:11px;color:#6B7280;margin-top:4px">${STORE_SUBTITLE}</div>
+      <div class="meta-val">${settings.storeName}</div>
+      ${primarySeller ? `
+        <div class="meta-sub">${primarySeller.name}</div>
+        <div class="meta-sub">📞 ${primarySeller.phone}</div>
+      ` : ""}
+      ${settings.storeAddress ? `<div class="meta-sub">📍 ${settings.storeAddress}</div>` : ""}
     </div>
     <div class="meta-box">
       <div class="meta-label">Qabul qiluvchi (Xaridor)</div>
-      <div class="meta-val">________________________</div>
-      <div style="font-size:11px;color:#6B7280;margin-top:4px">Manzil: ___________________</div>
+      <div class="meta-val">${customer?.name ?? "________________________"}</div>
+      ${customer?.phone ? `<div class="meta-sub">📞 ${customer.phone}</div>` : `<div class="meta-sub" style="color:#D1D5DB">Tel: ___________________</div>`}
+      ${customer?.address ? `<div class="meta-sub">📍 ${customer.address}</div>` : `<div class="meta-sub" style="color:#D1D5DB">Manzil: ________________</div>`}
     </div>
   </div>
 
@@ -423,12 +492,12 @@ export function buildWaybillHtml(sale: SaleWithItems): string {
 
   <div class="sign-row">
     <div class="sign-box">
-      <div class="sign-label">Jo'natuvchi imzosi:</div>
+      <div class="sign-label">Jo'natuvchi: ${primarySeller ? `${primarySeller.name}` : ""}</div>
       <div class="sign-line"></div>
       <div class="sign-name">F.I.Sh / Imzo / Muhr</div>
     </div>
     <div class="sign-box">
-      <div class="sign-label">Qabul qiluvchi imzosi:</div>
+      <div class="sign-label">Qabul qiluvchi: ${customer?.name ?? ""}</div>
       <div class="sign-line"></div>
       <div class="sign-name">F.I.Sh / Imzo / Sana</div>
     </div>
@@ -436,7 +505,7 @@ export function buildWaybillHtml(sale: SaleWithItems): string {
 
   <div class="footer">
     <div class="footer-thanks">Xaridingiz uchun tashakkur!</div>
-    <div class="footer-sub">${STORE_NAME} · Yuk xati № WB-${String(sale.id).padStart(5, "0")} · ${fmtDate(sale.createdAt)}</div>
+    <div class="footer-sub">${settings.storeName} · Yuk xati № WB-${String(sale.id).padStart(5, "0")} · ${fmtDate(sale.createdAt)}</div>
   </div>
 </body>
 </html>`;

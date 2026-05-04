@@ -1,15 +1,19 @@
 import {
   useGetSales,
+  useGetCustomers,
   useDeleteSale,
   useBulkDeleteSales,
   getGetSalesQueryKey,
   getGetDashboardStatsQueryKey,
   getGetCustomersQueryKey,
   type SaleWithItems,
+  type Customer,
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import * as Haptics from "expo-haptics";
 import React, { useState, useCallback } from "react";
+import { useSettings, type StoreSettings } from "@/hooks/useSettings";
+import type { PdfCustomer } from "@/utils/pdfTemplates";
 import {
   ActivityIndicator,
   FlatList,
@@ -58,10 +62,15 @@ const DOC_ACTIONS: Array<{
   { type: "waybill",  icon: "local-shipping",label: "Yuk xat", color: "#7C3AED", bg: "#EDE9FE" },
 ];
 
-function getHtml(sale: SaleWithItems, docType: DocType): string {
-  if (docType === "invoice") return buildInvoiceHtml(sale);
-  if (docType === "receipt") return buildReceiptHtml(sale);
-  return buildWaybillHtml(sale);
+function getHtml(
+  sale: SaleWithItems,
+  docType: DocType,
+  settings: StoreSettings,
+  customer?: PdfCustomer | null
+): string {
+  if (docType === "invoice") return buildInvoiceHtml(sale, settings, customer);
+  if (docType === "receipt") return buildReceiptHtml(sale, settings, customer);
+  return buildWaybillHtml(sale, settings, customer);
 }
 
 function SaleCard({
@@ -71,6 +80,8 @@ function SaleCard({
   selected,
   onSelect,
   onLongPress,
+  settings,
+  customers,
 }: {
   sale: SaleWithItems;
   colors: ReturnType<typeof import("@/hooks/useColors").useColors>;
@@ -78,15 +89,28 @@ function SaleCard({
   selected: boolean;
   onSelect: (id: number) => void;
   onLongPress: (id: number) => void;
+  settings: StoreSettings;
+  customers?: Customer[];
 }) {
   const [expanded, setExpanded] = useState(false);
   const [loadingDoc, setLoadingDoc] = useState<DocType | null>(null);
+
+  const pdfCustomer: PdfCustomer | null = sale.customerId
+    ? (() => {
+        const found = customers?.find((c) => c.id === sale.customerId);
+        return {
+          name: found?.name ?? sale.customerName ?? null,
+          phone: found?.phone ?? null,
+          address: found?.address ?? null,
+        };
+      })()
+    : null;
 
   const handleDoc = async (docType: DocType) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setLoadingDoc(docType);
     try {
-      const html = getHtml(sale, docType);
+      const html = getHtml(sale, docType, settings, pdfCustomer);
       await generateAndSharePdf(html, sale.id, docType);
     } finally {
       setLoadingDoc(null);
@@ -281,6 +305,8 @@ export default function HistoryScreen() {
   const [confirmType, setConfirmType] = useState<ConfirmType>(null);
 
   const { data: sales, isLoading, refetch, isRefetching } = useGetSales();
+  const { data: customers } = useGetCustomers();
+  const { settings } = useSettings();
 
   const invalidateAll = useCallback(() => {
     queryClient.invalidateQueries({ queryKey: getGetSalesQueryKey() });
@@ -484,6 +510,8 @@ export default function HistoryScreen() {
               selected={selectedIds.has(item.id)}
               onSelect={handleToggleSelect}
               onLongPress={handleLongPress}
+              settings={settings}
+              customers={customers}
             />
           )}
           contentContainerStyle={{ padding: 14, paddingBottom: insets.bottom + 90 }}

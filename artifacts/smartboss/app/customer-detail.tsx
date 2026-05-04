@@ -34,6 +34,7 @@ import {
 import { MaterialIcons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useColors } from "@/hooks/useColors";
+import { useSettings } from "@/hooks/useSettings";
 
 function formatMoney(n: number) {
   return n.toLocaleString("uz-UZ") + " UZS";
@@ -50,7 +51,7 @@ function formatDate(iso: string) {
   });
 }
 
-function buildStatementHtml(stmt: CustomerStatement): string {
+function buildStatementHtml(stmt: CustomerStatement, storeName = "SMARTBOSScontrol", sellerName = "", sellerPhone = "", storeAddress = ""): string {
   const { customer, sales, payments } = stmt;
   const debtSales = sales.filter((s) => s.paymentType === "debt");
 
@@ -117,7 +118,9 @@ function buildStatementHtml(stmt: CustomerStatement): string {
     <tbody>${paymentRows}</tbody>
   </table>` : ""}
 
-  <div class="footer">SMARTBOSScontrol &mdash; avtomatik hujjat</div>
+  ${storeAddress ? `<div style="font-size:11px;color:#9CA3AF;margin-bottom:4px">📍 ${storeAddress}</div>` : ""}
+  ${sellerName ? `<div style="font-size:11px;color:#9CA3AF;margin-bottom:4px">Sotuvchi: ${sellerName}${sellerPhone ? ` · ${sellerPhone}` : ""}</div>` : ""}
+  <div class="footer">${storeName} &mdash; avtomatik hujjat</div>
   </body></html>`;
 }
 
@@ -126,6 +129,7 @@ export default function CustomerDetailScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const queryClient = useQueryClient();
+  const { settings } = useSettings();
   const params = useLocalSearchParams<{ id: string }>();
   const customerId = parseInt(params.id ?? "0", 10);
 
@@ -243,7 +247,14 @@ export default function CustomerDetailScreen() {
     if (!statement) return;
     try {
       setPdfLoading(true);
-      const html = buildStatementHtml(statement);
+      const primarySeller = settings.sellers[0];
+      const html = buildStatementHtml(
+        statement,
+        settings.storeName,
+        primarySeller?.name ?? "",
+        primarySeller?.phone ?? "",
+        settings.storeAddress
+      );
       if (Platform.OS === "web") {
         const win = window.open("", "_blank");
         if (win) {
