@@ -319,7 +319,13 @@ export default function POSScreen() {
   const successAnim = useRef(new Animated.Value(0)).current;
 
   const { data: products, isLoading: productsLoading } = useGetProducts();
-  const { data: customers } = useGetCustomers();
+  const { data: customers, refetch: refetchCustomers, isLoading: customersLoading } = useGetCustomers();
+
+  useEffect(() => {
+    if (customerPickerOpen) {
+      refetchCustomers();
+    }
+  }, [customerPickerOpen, refetchCustomers]);
 
   const routeParams = useLocalSearchParams<{ preCustomerId?: string; preCustomerName?: string }>();
   useEffect(() => {
@@ -729,6 +735,11 @@ export default function POSScreen() {
               )}
             </View>
 
+            {customersLoading && (
+              <View style={{ alignItems: "center", paddingVertical: 20 }}>
+                <ActivityIndicator size="small" color={colors.primary} />
+              </View>
+            )}
             <ScrollView style={{ marginTop: 10 }} showsVerticalScrollIndicator={false}>
               {(customers ?? [])
                 .filter((c) => {

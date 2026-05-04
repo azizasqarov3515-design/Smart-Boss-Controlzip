@@ -16,6 +16,7 @@ import { MaterialIcons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useColors } from "@/hooks/useColors";
 import { useSettings, type Seller, type StoreSettings } from "@/hooks/useSettings";
+import { useTheme } from "@/contexts/ThemeContext";
 
 function uuid() {
   return Math.random().toString(36).slice(2) + Date.now().toString(36);
@@ -79,6 +80,7 @@ export default function SettingsScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const { settings, saveSettings, isLoading } = useSettings();
+  const { mode: themeMode, setMode: setThemeMode } = useTheme();
 
   const [storeName, setStoreName] = useState("");
   const [storeSubtitle, setStoreSubtitle] = useState("");
@@ -265,6 +267,39 @@ export default function SettingsScreen() {
                 Yangi sotuvchi qo'shish
               </Text>
             </TouchableOpacity>
+          </SectionCard>
+
+          {/* Theme */}
+          <SectionCard title="Ko'rinish (Mavzu)" icon="palette" colors={colors}>
+            {(
+              [
+                { value: "light", label: "Kunduzgi", icon: "light-mode" },
+                { value: "dark",  label: "Tungi",    icon: "dark-mode"  },
+                { value: "system",label: "Tizim",    icon: "brightness-auto" },
+              ] as { value: "light" | "dark" | "system"; label: string; icon: keyof typeof MaterialIcons.glyphMap }[]
+            ).map((opt) => {
+              const active = themeMode === opt.value;
+              return (
+                <TouchableOpacity
+                  key={opt.value}
+                  style={[
+                    styles.themeRow,
+                    {
+                      backgroundColor: active ? colors.primary + "18" : colors.muted,
+                      borderColor: active ? colors.primary : colors.border,
+                    },
+                  ]}
+                  onPress={() => { setThemeMode(opt.value); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }}
+                  activeOpacity={0.8}
+                >
+                  <MaterialIcons name={opt.icon} size={22} color={active ? colors.primary : colors.mutedForeground} />
+                  <Text style={[styles.themeLabel, { color: active ? colors.primary : colors.foreground, fontFamily: active ? "Inter_600SemiBold" : "Inter_400Regular" }]}>
+                    {opt.label}
+                  </Text>
+                  {active && <MaterialIcons name="check-circle" size={18} color={colors.primary} style={{ marginLeft: "auto" }} />}
+                </TouchableOpacity>
+              );
+            })}
           </SectionCard>
 
           {/* Hint */}
@@ -556,6 +591,18 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   modalSaveBtnText: { fontFamily: "Inter_700Bold", fontSize: 15, color: "#fff" },
+
+  themeRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    borderRadius: 12,
+    borderWidth: 1.5,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    marginBottom: 8,
+  },
+  themeLabel: { fontSize: 15 },
 
   // Delete confirm modal
   confirmBackdrop: {
