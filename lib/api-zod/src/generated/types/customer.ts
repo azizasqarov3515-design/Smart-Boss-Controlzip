@@ -10,6 +10,7 @@ export interface Customer {
   id: number;
   name: string;
   phone: string;
+  address?: string | null;
   debtLimit: number;
   totalDebt: number;
   note?: string | null;

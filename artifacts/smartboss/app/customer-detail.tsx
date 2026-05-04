@@ -138,6 +138,7 @@ export default function CustomerDetailScreen() {
   const [payError, setPayError] = useState<string | null>(null);
   const [editName, setEditName] = useState("");
   const [editPhone, setEditPhone] = useState("");
+  const [editAddress, setEditAddress] = useState("");
   const [editLimit, setEditLimit] = useState("");
   const [editNote, setEditNote] = useState("");
   const [editError, setEditError] = useState<string | null>(null);
@@ -226,6 +227,7 @@ export default function CustomerDetailScreen() {
     if (!customer) return;
     setEditName(customer.name);
     setEditPhone(customer.phone);
+    setEditAddress(customer.address ?? "");
     setEditLimit(customer.debtLimit > 0 ? String(customer.debtLimit) : "");
     setEditNote(customer.note ?? "");
     setEditError(null);
@@ -241,6 +243,7 @@ export default function CustomerDetailScreen() {
       data: {
         name: editName.trim(),
         phone: editPhone.trim(),
+        address: editAddress.trim() || undefined,
         debtLimit: isNaN(limit) ? 0 : limit,
         note: editNote.trim() || undefined,
       },
@@ -291,6 +294,14 @@ export default function CustomerDetailScreen() {
             {customer.name}
           </Text>
           <Text style={[styles.headerPhone, { color: colors.mutedForeground }]}>{customer.phone}</Text>
+          {customer.address ? (
+            <View style={styles.headerAddressRow}>
+              <MaterialIcons name="location-on" size={12} color={colors.mutedForeground} />
+              <Text style={[styles.headerAddress, { color: colors.mutedForeground }]} numberOfLines={1}>
+                {customer.address}
+              </Text>
+            </View>
+          ) : null}
         </View>
         <View style={styles.headerActions}>
           <TouchableOpacity onPress={handleEdit} style={styles.iconBtn} activeOpacity={0.7}>
@@ -558,6 +569,14 @@ export default function CustomerDetailScreen() {
                 keyboardType="phone-pad"
                 placeholderTextColor={colors.mutedForeground}
               />
+              <Text style={[styles.label, { color: colors.mutedForeground }]}>Yashash joyi</Text>
+              <TextInput
+                style={[styles.input, { backgroundColor: colors.muted, borderColor: colors.border, color: colors.foreground }]}
+                value={editAddress}
+                onChangeText={setEditAddress}
+                placeholder="Shahar, ko'cha, uy"
+                placeholderTextColor={colors.mutedForeground}
+              />
               <Text style={[styles.label, { color: colors.mutedForeground }]}>Qarz limiti (UZS)</Text>
               <TextInput
                 style={[styles.input, { backgroundColor: colors.muted, borderColor: colors.border, color: colors.foreground }]}
@@ -746,4 +765,6 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   saveBtnText: { fontFamily: "Inter_700Bold", fontSize: 15, color: "#fff" },
+  headerAddressRow: { flexDirection: "row", alignItems: "center", gap: 3, marginTop: 2 },
+  headerAddress: { fontFamily: "Inter_400Regular", fontSize: 11, flex: 1 },
 });

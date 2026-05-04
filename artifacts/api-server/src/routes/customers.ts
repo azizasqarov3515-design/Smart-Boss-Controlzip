@@ -9,6 +9,11 @@ const router = Router();
 const customerInputSchema = z.object({
   name: z.string().trim().min(1, "Ismi kiritilishi shart"),
   phone: z.string().trim().min(1, "Telefon raqami kiritilishi shart"),
+  address: z
+    .string()
+    .trim()
+    .nullish()
+    .transform((v) => v ?? null),
   debtLimit: z
     .union([z.string(), z.number()])
     .transform((v) => String(parseFloat(String(v)) || 0))
@@ -38,6 +43,7 @@ function mapCustomer(c: typeof customersTable.$inferSelect) {
     id: c.id,
     name: c.name,
     phone: c.phone,
+    address: c.address ?? null,
     debtLimit: parseFloat(c.debtLimit),
     totalDebt: parseFloat(c.totalDebt),
     note: c.note ?? null,
@@ -68,6 +74,7 @@ router.post("/customers", async (req, res) => {
       .values({
         name: body.name,
         phone: body.phone,
+        address: body.address,
         debtLimit: body.debtLimit,
         note: body.note,
       })
@@ -112,6 +119,7 @@ router.put("/customers/:id", async (req, res) => {
       .set({
         name: body.name,
         phone: body.phone,
+        address: body.address,
         debtLimit: body.debtLimit,
         note: body.note,
       })

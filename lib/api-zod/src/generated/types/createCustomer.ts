@@ -9,6 +9,7 @@
 export interface CreateCustomer {
   name: string;
   phone: string;
+  address?: string | null;
   debtLimit?: number;
   note?: string | null;
 }

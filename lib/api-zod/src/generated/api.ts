@@ -161,6 +161,7 @@ export const GetCustomersResponseItem = zod.object({
   id: zod.number(),
   name: zod.string(),
   phone: zod.string(),
+  address: zod.string().nullish(),
   debtLimit: zod.number(),
   totalDebt: zod.number(),
   note: zod.string().nullish(),
@@ -174,6 +175,7 @@ export const GetCustomersResponse = zod.array(GetCustomersResponseItem);
 export const CreateCustomerBody = zod.object({
   name: zod.string(),
   phone: zod.string(),
+  address: zod.string().nullish(),
   debtLimit: zod.number().optional(),
   note: zod.string().nullish(),
 });
@@ -189,6 +191,7 @@ export const GetCustomerResponse = zod.object({
   id: zod.number(),
   name: zod.string(),
   phone: zod.string(),
+  address: zod.string().nullish(),
   debtLimit: zod.number(),
   totalDebt: zod.number(),
   note: zod.string().nullish(),
@@ -205,6 +208,7 @@ export const UpdateCustomerParams = zod.object({
 export const UpdateCustomerBody = zod.object({
   name: zod.string(),
   phone: zod.string(),
+  address: zod.string().nullish(),
   debtLimit: zod.number().optional(),
   note: zod.string().nullish(),
 });
@@ -213,6 +217,7 @@ export const UpdateCustomerResponse = zod.object({
   id: zod.number(),
   name: zod.string(),
   phone: zod.string(),
+  address: zod.string().nullish(),
   debtLimit: zod.number(),
   totalDebt: zod.number(),
   note: zod.string().nullish(),
@@ -268,6 +273,7 @@ export const GetCustomerStatementResponse = zod.object({
     id: zod.number(),
     name: zod.string(),
     phone: zod.string(),
+    address: zod.string().nullish(),
     debtLimit: zod.number(),
     totalDebt: zod.number(),
     note: zod.string().nullish(),

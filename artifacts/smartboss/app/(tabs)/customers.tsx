@@ -73,6 +73,14 @@ function CustomerCard({
           <MaterialIcons name="phone" size={13} color={colors.mutedForeground} />
           <Text style={[styles.cardPhone, { color: colors.mutedForeground }]}>{customer.phone}</Text>
         </View>
+        {customer.address ? (
+          <View style={styles.cardPhoneRow}>
+            <MaterialIcons name="location-on" size={13} color={colors.mutedForeground} />
+            <Text style={[styles.cardPhone, { color: colors.mutedForeground }]} numberOfLines={1}>
+              {customer.address}
+            </Text>
+          </View>
+        ) : null}
         {customer.note ? (
           <Text style={[styles.cardNote, { color: colors.mutedForeground }]} numberOfLines={1}>
             {customer.note}
@@ -124,6 +132,7 @@ export default function CustomersScreen() {
   const [addOpen, setAddOpen] = useState(false);
   const [formName, setFormName] = useState("");
   const [formPhone, setFormPhone] = useState("");
+  const [formAddress, setFormAddress] = useState("");
   const [formLimit, setFormLimit] = useState("");
   const [formNote, setFormNote] = useState("");
   const [formError, setFormError] = useState<string | null>(null);
@@ -148,6 +157,7 @@ export default function CustomersScreen() {
   const resetForm = () => {
     setFormName("");
     setFormPhone("");
+    setFormAddress("");
     setFormLimit("");
     setFormNote("");
     setFormError(null);
@@ -161,6 +171,7 @@ export default function CustomersScreen() {
     const body: CreateCustomer = {
       name: formName.trim(),
       phone: formPhone.trim(),
+      address: formAddress.trim() || undefined,
       debtLimit: isNaN(limit) ? 0 : limit,
       note: formNote.trim() || undefined,
     };
@@ -321,6 +332,15 @@ export default function CustomersScreen() {
                 value={formPhone}
                 onChangeText={setFormPhone}
                 keyboardType="phone-pad"
+              />
+
+              <Text style={[styles.label, { color: colors.mutedForeground }]}>Yashash joyi</Text>
+              <TextInput
+                style={[styles.input, { backgroundColor: colors.muted, borderColor: colors.border, color: colors.foreground }]}
+                placeholder="Shahar, ko'cha, uy"
+                placeholderTextColor={colors.mutedForeground}
+                value={formAddress}
+                onChangeText={setFormAddress}
               />
 
               <Text style={[styles.label, { color: colors.mutedForeground }]}>Qarz limiti (UZS)</Text>

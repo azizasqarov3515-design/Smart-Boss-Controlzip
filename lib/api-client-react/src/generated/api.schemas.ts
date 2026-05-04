@@ -91,6 +91,7 @@ export interface Customer {
   id: number;
   name: string;
   phone: string;
+  address?: string | null;
   debtLimit: number;
   totalDebt: number;
   note?: string | null;
@@ -100,6 +101,7 @@ export interface Customer {
 export interface CreateCustomer {
   name: string;
   phone: string;
+  address?: string | null;
   debtLimit?: number;
   note?: string | null;
 }
