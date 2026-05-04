@@ -222,6 +222,85 @@ router.post("/sales", async (req, res) => {
   }
 });
 
+// Helper: delete one sale and restore stock/debt
+async function deleteSaleById(saleId: number) {
+  const [sale] = await db.select().from(salesTable).where(eq(salesTable.id, saleId));
+  if (!sale) return null;
+
+  const items = await db.select().from(saleItemsTable).where(eq(saleItemsTable.saleId, saleId));
+
+  await db.transaction(async (tx) => {
+    // Restore stock for each item
+    for (const item of items) {
+      if (item.productId != null) {
+        await tx
+          .update(productsTable)
+          .set({ quantity: sql`${productsTable.quantity} + ${item.quantity}` })
+          .where(eq(productsTable.id, item.productId));
+      }
+    }
+    // Restore customer debt if debt sale
+    if (sale.customerId && sale.debtAmount && parseFloat(sale.debtAmount) > 0) {
+      await tx
+        .update(customersTable)
+        .set({
+          totalDebt: sql`GREATEST(0, ${customersTable.totalDebt} - ${sale.debtAmount})`,
+        })
+        .where(eq(customersTable.id, sale.customerId));
+    }
+    // Delete items and sale
+    await tx.delete(saleItemsTable).where(eq(saleItemsTable.saleId, saleId));
+    await tx.delete(salesTable).where(eq(salesTable.id, saleId));
+  });
+
+  return sale;
+}
+
+router.delete("/sales/:id", async (req, res) => {
+  try {
+    const id = parseInt(req.params["id"] ?? "0", 10);
+    if (!id) { res.status(400).json({ error: "Invalid id" }); return; }
+    const deleted = await deleteSaleById(id);
+    if (!deleted) { res.status(404).json({ error: "Sale not found" }); return; }
+    res.json({ success: true });
+  } catch (err) {
+    req.log.error({ err }, "Failed to delete sale");
+    res.status(500).json({ error: "Failed to delete sale" });
+  }
+});
+
+router.post("/sales/bulk-delete", async (req, res) => {
+  try {
+    const schema = z.object({
+      ids: z.array(z.number().int().positive()).nullable().optional(),
+      deleteAll: z.boolean().nullable().optional(),
+    });
+    const body = schema.parse(req.body);
+
+    let saleIds: number[];
+    if (body.deleteAll) {
+      const all = await db.select({ id: salesTable.id }).from(salesTable);
+      saleIds = all.map((s) => s.id);
+    } else if (body.ids && body.ids.length > 0) {
+      saleIds = body.ids;
+    } else {
+      res.json({ deleted: 0 }); return;
+    }
+
+    for (const id of saleIds) {
+      await deleteSaleById(id);
+    }
+
+    res.json({ deleted: saleIds.length });
+  } catch (err) {
+    if (err instanceof z.ZodError) {
+      res.status(400).json({ error: "Validation failed", details: err.issues }); return;
+    }
+    req.log.error({ err }, "Failed to bulk delete sales");
+    res.status(500).json({ error: "Failed to bulk delete sales" });
+  }
+});
+
 router.get("/products/barcode/:barcode", async (req, res) => {
   try {
     const barcode = req.params["barcode"];

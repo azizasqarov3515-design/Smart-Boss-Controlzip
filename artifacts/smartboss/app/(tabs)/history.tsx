@@ -1,9 +1,19 @@
-import { useGetSales, type SaleWithItems } from "@workspace/api-client-react";
+import {
+  useGetSales,
+  useDeleteSale,
+  useBulkDeleteSales,
+  getGetSalesQueryKey,
+  getGetDashboardStatsQueryKey,
+  getGetCustomersQueryKey,
+  type SaleWithItems,
+} from "@workspace/api-client-react";
+import { useQueryClient } from "@tanstack/react-query";
 import * as Haptics from "expo-haptics";
-import React, { useState } from "react";
+import React, { useState, useCallback } from "react";
 import {
   ActivityIndicator,
   FlatList,
+  Modal,
   Platform,
   RefreshControl,
   StyleSheet,
@@ -43,9 +53,9 @@ const DOC_ACTIONS: Array<{
   color: string;
   bg: string;
 }> = [
-  { type: "invoice",  icon: "receipt",           label: "Faktura", color: "#1565C0", bg: "#EFF6FF" },
-  { type: "receipt",  icon: "point-of-sale",      label: "Chek",    color: "#065F46", bg: "#D1FAE5" },
-  { type: "waybill",  icon: "local-shipping",     label: "Yuk xat", color: "#7C3AED", bg: "#EDE9FE" },
+  { type: "invoice",  icon: "receipt",       label: "Faktura", color: "#1565C0", bg: "#EFF6FF" },
+  { type: "receipt",  icon: "point-of-sale", label: "Chek",    color: "#065F46", bg: "#D1FAE5" },
+  { type: "waybill",  icon: "local-shipping",label: "Yuk xat", color: "#7C3AED", bg: "#EDE9FE" },
 ];
 
 function getHtml(sale: SaleWithItems, docType: DocType): string {
@@ -57,9 +67,17 @@ function getHtml(sale: SaleWithItems, docType: DocType): string {
 function SaleCard({
   sale,
   colors,
+  selectionMode,
+  selected,
+  onSelect,
+  onLongPress,
 }: {
   sale: SaleWithItems;
   colors: ReturnType<typeof import("@/hooks/useColors").useColors>;
+  selectionMode: boolean;
+  selected: boolean;
+  onSelect: (id: number) => void;
+  onLongPress: (id: number) => void;
 }) {
   const [expanded, setExpanded] = useState(false);
   const [loadingDoc, setLoadingDoc] = useState<DocType | null>(null);
@@ -75,17 +93,57 @@ function SaleCard({
     }
   };
 
+  const handlePress = () => {
+    if (selectionMode) {
+      Haptics.selectionAsync();
+      onSelect(sale.id);
+    } else {
+      Haptics.selectionAsync();
+      setExpanded((e) => !e);
+    }
+  };
+
+  const handleLongPress = () => {
+    if (!selectionMode) {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      onLongPress(sale.id);
+    }
+  };
+
+  const paymentColors = {
+    cash: { bg: "#D1FAE5", text: "#065F46", label: "Naqd" },
+    card: { bg: "#DBEAFE", text: "#1E40AF", label: "Karta" },
+    debt: { bg: "#FEE2E2", text: "#991B1B", label: "Qarz" },
+  };
+  const pt = paymentColors[sale.paymentType as keyof typeof paymentColors] ?? paymentColors.cash;
+
   return (
-    <View style={[styles.saleCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+    <TouchableOpacity
+      style={[
+        styles.saleCard,
+        {
+          backgroundColor: selected ? colors.primary + "18" : colors.card,
+          borderColor: selected ? colors.primary : colors.border,
+          borderWidth: selected ? 2 : 1,
+        },
+      ]}
+      onPress={handlePress}
+      onLongPress={handleLongPress}
+      activeOpacity={0.85}
+    >
       {/* Header row */}
-      <TouchableOpacity
-        style={styles.saleHeader}
-        onPress={() => {
-          Haptics.selectionAsync();
-          setExpanded((e) => !e);
-        }}
-        activeOpacity={0.8}
-      >
+      <View style={styles.saleHeader}>
+        {selectionMode && (
+          <View style={[
+            styles.checkbox,
+            {
+              backgroundColor: selected ? colors.primary : "transparent",
+              borderColor: selected ? colors.primary : colors.mutedForeground,
+            },
+          ]}>
+            {selected && <MaterialIcons name="check" size={14} color="#fff" />}
+          </View>
+        )}
         <View style={[styles.saleIdBadge, { backgroundColor: colors.primary }]}>
           <Text style={styles.saleIdText}>#{sale.id}</Text>
         </View>
@@ -96,6 +154,11 @@ function SaleCard({
           <Text style={[styles.saleTotal, { color: colors.foreground }]}>
             {formatMoney(sale.totalAmount)}
           </Text>
+          {sale.customerName && (
+            <Text style={[styles.customerLabel, { color: colors.mutedForeground }]} numberOfLines={1}>
+              <MaterialIcons name="person" size={11} color={colors.mutedForeground} /> {sale.customerName}
+            </Text>
+          )}
         </View>
         <View style={styles.saleRight}>
           <View style={[styles.itemCountBadge, { backgroundColor: colors.secondary }]}>
@@ -104,39 +167,46 @@ function SaleCard({
               {sale.itemCount} dona
             </Text>
           </View>
-          <MaterialIcons
-            name={expanded ? "keyboard-arrow-up" : "keyboard-arrow-down"}
-            size={20}
-            color={colors.mutedForeground}
-          />
+          <View style={[styles.payTypeBadge, { backgroundColor: pt.bg }]}>
+            <Text style={[styles.payTypeText, { color: pt.text }]}>{pt.label}</Text>
+          </View>
+          {!selectionMode && (
+            <MaterialIcons
+              name={expanded ? "keyboard-arrow-up" : "keyboard-arrow-down"}
+              size={20}
+              color={colors.mutedForeground}
+            />
+          )}
         </View>
-      </TouchableOpacity>
-
-      {/* PDF action buttons — always visible */}
-      <View style={[styles.docRow, { borderTopColor: colors.border }]}>
-        <Text style={[styles.docRowLabel, { color: colors.mutedForeground }]}>
-          Hujjat:
-        </Text>
-        {DOC_ACTIONS.map(({ type, icon, label, color, bg }) => (
-          <TouchableOpacity
-            key={type}
-            style={[styles.docBtn, { backgroundColor: bg, borderColor: color + "33" }]}
-            onPress={() => handleDoc(type)}
-            disabled={loadingDoc !== null}
-            activeOpacity={0.78}
-          >
-            {loadingDoc === type ? (
-              <ActivityIndicator size="small" color={color} />
-            ) : (
-              <MaterialIcons name={icon} size={14} color={color} />
-            )}
-            <Text style={[styles.docBtnText, { color }]}>{label}</Text>
-          </TouchableOpacity>
-        ))}
       </View>
 
+      {/* PDF action buttons — hidden in selection mode */}
+      {!selectionMode && (
+        <View style={[styles.docRow, { borderTopColor: colors.border }]}>
+          <Text style={[styles.docRowLabel, { color: colors.mutedForeground }]}>
+            Hujjat:
+          </Text>
+          {DOC_ACTIONS.map(({ type, icon, label, color, bg }) => (
+            <TouchableOpacity
+              key={type}
+              style={[styles.docBtn, { backgroundColor: bg, borderColor: color + "33" }]}
+              onPress={() => handleDoc(type)}
+              disabled={loadingDoc !== null}
+              activeOpacity={0.78}
+            >
+              {loadingDoc === type ? (
+                <ActivityIndicator size="small" color={color} />
+              ) : (
+                <MaterialIcons name={icon} size={14} color={color} />
+              )}
+              <Text style={[styles.docBtnText, { color }]}>{label}</Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+      )}
+
       {/* Expanded items list */}
-      {expanded && (
+      {!selectionMode && expanded && (
         <View style={[styles.itemsList, { borderTopColor: colors.border }]}>
           {sale.items.map((item, i) => (
             <View
@@ -194,16 +264,41 @@ function SaleCard({
           </View>
         </View>
       )}
-    </View>
+    </TouchableOpacity>
   );
 }
+
+type ConfirmType = "selected" | "all" | null;
 
 export default function HistoryScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const isWeb = Platform.OS === "web";
+  const queryClient = useQueryClient();
+
+  const [selectionMode, setSelectionMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
+  const [confirmType, setConfirmType] = useState<ConfirmType>(null);
 
   const { data: sales, isLoading, refetch, isRefetching } = useGetSales();
+
+  const invalidateAll = useCallback(() => {
+    queryClient.invalidateQueries({ queryKey: getGetSalesQueryKey() });
+    queryClient.invalidateQueries({ queryKey: getGetDashboardStatsQueryKey() });
+    queryClient.invalidateQueries({ queryKey: getGetCustomersQueryKey() });
+  }, [queryClient]);
+
+  const { mutate: bulkDelete, isPending: bulkDeleting } = useBulkDeleteSales({
+    mutation: {
+      onSuccess: () => {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        invalidateAll();
+        setSelectedIds(new Set());
+        setSelectionMode(false);
+        setConfirmType(null);
+      },
+    },
+  });
 
   const totalRevenue = (sales ?? []).reduce((s, sale) => s + sale.totalAmount, 0);
   const todaySales = (sales ?? []).filter((s) => {
@@ -212,59 +307,152 @@ export default function HistoryScreen() {
   });
   const todayRevenue = todaySales.reduce((s, sale) => s + sale.totalAmount, 0);
 
+  const handleToggleSelect = useCallback((id: number) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }, []);
+
+  const handleLongPress = useCallback((id: number) => {
+    setSelectionMode(true);
+    setSelectedIds(new Set([id]));
+  }, []);
+
+  const handleSelectAll = () => {
+    if (!sales) return;
+    if (selectedIds.size === sales.length) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(sales.map((s) => s.id)));
+    }
+  };
+
+  const exitSelectionMode = () => {
+    setSelectionMode(false);
+    setSelectedIds(new Set());
+  };
+
+  const handleConfirmDelete = () => {
+    if (confirmType === "all") {
+      bulkDelete({ data: { deleteAll: true } });
+    } else if (confirmType === "selected") {
+      bulkDelete({ data: { ids: Array.from(selectedIds) } });
+    }
+  };
+
+  const allSelected = (sales?.length ?? 0) > 0 && selectedIds.size === (sales?.length ?? 0);
+
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      {/* Summary bar */}
-      <View
-        style={[
-          styles.summaryBar,
-          {
-            backgroundColor: colors.card,
-            borderBottomColor: colors.border,
-            paddingTop: isWeb ? 16 : 12,
-          },
-        ]}
-      >
-        <View style={styles.summaryItem}>
-          <Text style={[styles.summaryLabel, { color: colors.mutedForeground }]}>
-            Jami savdolar
-          </Text>
-          <Text style={[styles.summaryVal, { color: colors.foreground }]}>
-            {sales?.length ?? 0} ta
-          </Text>
-        </View>
-        <View style={[styles.summaryDivider, { backgroundColor: colors.border }]} />
-        <View style={styles.summaryItem}>
-          <Text style={[styles.summaryLabel, { color: colors.mutedForeground }]}>
-            Bugungi tushum
-          </Text>
-          <Text style={[styles.summaryVal, { color: colors.success }]}>
-            {formatMoney(todayRevenue)}
-          </Text>
-        </View>
-        <View style={[styles.summaryDivider, { backgroundColor: colors.border }]} />
-        <View style={styles.summaryItem}>
-          <Text style={[styles.summaryLabel, { color: colors.mutedForeground }]}>
-            Jami tushum
-          </Text>
-          <Text style={[styles.summaryVal, { color: colors.primary }]}>
-            {formatMoney(totalRevenue)}
-          </Text>
-        </View>
-      </View>
 
-      {/* PDF legend */}
-      <View style={[styles.legendBar, { backgroundColor: colors.muted, borderBottomColor: colors.border }]}>
-        <MaterialIcons name="picture-as-pdf" size={13} color={colors.mutedForeground} />
-        <Text style={[styles.legendText, { color: colors.mutedForeground }]}>
-          Har bir sotuv uchun:
-        </Text>
-        {DOC_ACTIONS.map(({ type, icon, label, color }) => (
-          <View key={type} style={styles.legendChip}>
-            <MaterialIcons name={icon} size={12} color={color} />
-            <Text style={[styles.legendChipText, { color }]}>{label}</Text>
+      {/* Selection action bar (shown when in selection mode) */}
+      {selectionMode ? (
+        <View style={[styles.selectionBar, { backgroundColor: colors.primary, paddingTop: isWeb ? 16 : 10 }]}>
+          <TouchableOpacity style={styles.selBarBtn} onPress={exitSelectionMode} activeOpacity={0.8}>
+            <MaterialIcons name="close" size={22} color="#fff" />
+          </TouchableOpacity>
+          <Text style={styles.selBarTitle}>
+            {selectedIds.size} ta tanlandi
+          </Text>
+          <TouchableOpacity style={styles.selBarBtn} onPress={handleSelectAll} activeOpacity={0.8}>
+            <MaterialIcons name={allSelected ? "deselect" : "select-all"} size={22} color="#fff" />
+            <Text style={styles.selBarBtnText}>{allSelected ? "Barchani bekor" : "Barchasi"}</Text>
+          </TouchableOpacity>
+        </View>
+      ) : (
+        /* Summary bar (normal mode) */
+        <View
+          style={[
+            styles.summaryBar,
+            {
+              backgroundColor: colors.card,
+              borderBottomColor: colors.border,
+              paddingTop: isWeb ? 16 : 12,
+            },
+          ]}
+        >
+          <View style={styles.summaryItem}>
+            <Text style={[styles.summaryLabel, { color: colors.mutedForeground }]}>
+              Jami savdolar
+            </Text>
+            <Text style={[styles.summaryVal, { color: colors.foreground }]}>
+              {sales?.length ?? 0} ta
+            </Text>
           </View>
-        ))}
+          <View style={[styles.summaryDivider, { backgroundColor: colors.border }]} />
+          <View style={styles.summaryItem}>
+            <Text style={[styles.summaryLabel, { color: colors.mutedForeground }]}>
+              Bugungi tushum
+            </Text>
+            <Text style={[styles.summaryVal, { color: colors.success }]}>
+              {formatMoney(todayRevenue)}
+            </Text>
+          </View>
+          <View style={[styles.summaryDivider, { backgroundColor: colors.border }]} />
+          <View style={styles.summaryItem}>
+            <Text style={[styles.summaryLabel, { color: colors.mutedForeground }]}>
+              Jami tushum
+            </Text>
+            <Text style={[styles.summaryVal, { color: colors.primary }]}>
+              {formatMoney(totalRevenue)}
+            </Text>
+          </View>
+        </View>
+      )}
+
+      {/* Action toolbar */}
+      <View style={[styles.toolbar, { backgroundColor: colors.card, borderBottomColor: colors.border }]}>
+        {selectionMode ? (
+          <>
+            <TouchableOpacity
+              style={[
+                styles.toolBtn,
+                { backgroundColor: colors.muted, borderColor: colors.border, opacity: selectedIds.size === 0 ? 0.4 : 1 },
+              ]}
+              disabled={selectedIds.size === 0 || bulkDeleting}
+              onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); setConfirmType("selected"); }}
+              activeOpacity={0.8}
+            >
+              {bulkDeleting ? (
+                <ActivityIndicator size="small" color="#DC2626" />
+              ) : (
+                <MaterialIcons name="delete-sweep" size={18} color="#DC2626" />
+              )}
+              <Text style={[styles.toolBtnText, { color: "#DC2626" }]}>
+                O'chirish ({selectedIds.size})
+              </Text>
+            </TouchableOpacity>
+          </>
+        ) : (
+          <>
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.legendHint, { color: colors.mutedForeground }]}>
+                <MaterialIcons name="touch-app" size={12} color={colors.mutedForeground} /> Uzoq bosish → tanlash rejimi
+              </Text>
+            </View>
+            <TouchableOpacity
+              style={[styles.toolBtn, { backgroundColor: "#FEE2E2", borderColor: "#FECACA" }]}
+              onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy); setConfirmType("all"); }}
+              disabled={!sales || sales.length === 0}
+              activeOpacity={0.8}
+            >
+              <MaterialIcons name="delete-forever" size={18} color="#DC2626" />
+              <Text style={[styles.toolBtnText, { color: "#DC2626" }]}>Hammasini o'chirish</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.toolBtn, { backgroundColor: colors.muted, borderColor: colors.border }]}
+              onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); setSelectionMode(true); }}
+              disabled={!sales || sales.length === 0}
+              activeOpacity={0.8}
+            >
+              <MaterialIcons name="checklist" size={18} color={colors.primary} />
+              <Text style={[styles.toolBtnText, { color: colors.primary }]}>Tanlash</Text>
+            </TouchableOpacity>
+          </>
+        )}
       </View>
 
       {isLoading ? (
@@ -288,8 +476,17 @@ export default function HistoryScreen() {
         <FlatList
           data={sales}
           keyExtractor={(item) => String(item.id)}
-          renderItem={({ item }) => <SaleCard sale={item} colors={colors} />}
-          contentContainerStyle={{ padding: 14, paddingBottom: insets.bottom + 80 }}
+          renderItem={({ item }) => (
+            <SaleCard
+              sale={item}
+              colors={colors}
+              selectionMode={selectionMode}
+              selected={selectedIds.has(item.id)}
+              onSelect={handleToggleSelect}
+              onLongPress={handleLongPress}
+            />
+          )}
+          contentContainerStyle={{ padding: 14, paddingBottom: insets.bottom + 90 }}
           refreshControl={
             <RefreshControl
               refreshing={isRefetching}
@@ -301,12 +498,84 @@ export default function HistoryScreen() {
           showsVerticalScrollIndicator={false}
         />
       )}
+
+      {/* Delete confirmation modal */}
+      <Modal
+        visible={confirmType !== null}
+        transparent
+        animationType="fade"
+        statusBarTranslucent
+        onRequestClose={() => !bulkDeleting && setConfirmType(null)}
+      >
+        <View style={styles.modalBackdrop}>
+          <View style={[styles.modalSheet, { backgroundColor: colors.card }]}>
+            <View style={styles.modalIconWrap}>
+              <MaterialIcons name="delete-forever" size={36} color="#DC2626" />
+            </View>
+            <Text style={[styles.modalTitle, { color: colors.foreground }]}>
+              {confirmType === "all" ? "Barchasini o'chirish" : `${selectedIds.size} ta sotuvni o'chirish`}
+            </Text>
+            <Text style={[styles.modalMsg, { color: colors.mutedForeground }]}>
+              {confirmType === "all"
+                ? `Barcha ${sales?.length ?? 0} ta savdo tarixi o'chiriladi. Mahsulot stoki tiklanadi.`
+                : `Tanlangan ${selectedIds.size} ta savdo o'chiriladi. Mahsulot stoki tiklanadi.`}
+              {"\n"}
+              <Text style={{ color: "#DC2626", fontFamily: "Inter_600SemiBold" }}>
+                Bu amalni qaytarib bo'lmaydi!
+              </Text>
+            </Text>
+            <View style={styles.modalBtns}>
+              <TouchableOpacity
+                style={[styles.modalCancelBtn, { backgroundColor: colors.muted, borderColor: colors.border }]}
+                onPress={() => setConfirmType(null)}
+                disabled={bulkDeleting}
+                activeOpacity={0.8}
+              >
+                <Text style={[styles.modalCancelText, { color: colors.mutedForeground }]}>Bekor</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.modalDeleteBtn, { backgroundColor: bulkDeleting ? "#FECACA" : "#DC2626" }]}
+                onPress={handleConfirmDelete}
+                disabled={bulkDeleting}
+                activeOpacity={0.85}
+              >
+                {bulkDeleting ? (
+                  <ActivityIndicator size="small" color="#DC2626" />
+                ) : (
+                  <>
+                    <MaterialIcons name="delete" size={18} color="#fff" />
+                    <Text style={styles.modalDeleteText}>O'chirish</Text>
+                  </>
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
+
+  selectionBar: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 12,
+    paddingBottom: 10,
+    gap: 8,
+  },
+  selBarBtn: { flexDirection: "row", alignItems: "center", gap: 4, padding: 4 },
+  selBarBtnText: { fontFamily: "Inter_600SemiBold", fontSize: 13, color: "#fff" },
+  selBarTitle: {
+    flex: 1,
+    fontFamily: "Inter_700Bold",
+    fontSize: 15,
+    color: "#fff",
+    textAlign: "center",
+  },
+
   summaryBar: {
     flexDirection: "row",
     alignItems: "center",
@@ -324,18 +593,25 @@ const styles = StyleSheet.create({
   summaryVal: { fontFamily: "Inter_700Bold", fontSize: 13, textAlign: "center" },
   summaryDivider: { width: 1, height: 36 },
 
-  legendBar: {
+  toolbar: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 6,
-    paddingHorizontal: 14,
+    paddingHorizontal: 12,
     paddingVertical: 8,
     borderBottomWidth: 1,
-    flexWrap: "wrap",
+    gap: 8,
   },
-  legendText: { fontFamily: "Inter_400Regular", fontSize: 11 },
-  legendChip: { flexDirection: "row", alignItems: "center", gap: 3 },
-  legendChipText: { fontFamily: "Inter_500Medium", fontSize: 11 },
+  legendHint: { fontFamily: "Inter_400Regular", fontSize: 11 },
+  toolBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    paddingHorizontal: 11,
+    paddingVertical: 8,
+    borderRadius: 10,
+    borderWidth: 1,
+  },
+  toolBtnText: { fontFamily: "Inter_600SemiBold", fontSize: 12 },
 
   loader: { flex: 1, alignItems: "center", justifyContent: "center", gap: 12 },
   loadingText: { fontFamily: "Inter_400Regular", fontSize: 14 },
@@ -356,7 +632,6 @@ const styles = StyleSheet.create({
 
   saleCard: {
     borderRadius: 14,
-    borderWidth: 1,
     marginBottom: 10,
     overflow: "hidden",
     shadowColor: "#000",
@@ -364,6 +639,14 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.05,
     shadowRadius: 4,
     elevation: 1,
+  },
+  checkbox: {
+    width: 22,
+    height: 22,
+    borderRadius: 6,
+    borderWidth: 2,
+    alignItems: "center",
+    justifyContent: "center",
   },
   saleHeader: {
     flexDirection: "row",
@@ -380,8 +663,9 @@ const styles = StyleSheet.create({
   },
   saleIdText: { fontFamily: "Inter_700Bold", fontSize: 13, color: "#fff" },
   saleInfo: { flex: 1 },
-  saleDate: { fontFamily: "Inter_400Regular", fontSize: 12, marginBottom: 2 },
+  saleDate: { fontFamily: "Inter_400Regular", fontSize: 12, marginBottom: 1 },
   saleTotal: { fontFamily: "Inter_700Bold", fontSize: 16 },
+  customerLabel: { fontFamily: "Inter_400Regular", fontSize: 11, marginTop: 1 },
   saleRight: { alignItems: "flex-end", gap: 4 },
   itemCountBadge: {
     flexDirection: "row",
@@ -392,8 +676,13 @@ const styles = StyleSheet.create({
     borderRadius: 7,
   },
   itemCountText: { fontFamily: "Inter_500Medium", fontSize: 11 },
+  payTypeBadge: {
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+    borderRadius: 6,
+  },
+  payTypeText: { fontFamily: "Inter_600SemiBold", fontSize: 10 },
 
-  // PDF doc buttons
   docRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -417,7 +706,6 @@ const styles = StyleSheet.create({
   },
   docBtnText: { fontFamily: "Inter_600SemiBold", fontSize: 12 },
 
-  // Expanded items
   itemsList: { borderTopWidth: 1 },
   itemRow: {
     flexDirection: "row",
@@ -454,4 +742,56 @@ const styles = StyleSheet.create({
   },
   totalLabel: { fontFamily: "Inter_500Medium", fontSize: 14 },
   totalVal: { fontFamily: "Inter_700Bold", fontSize: 16 },
+
+  // Delete modal
+  modalBackdrop: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.55)",
+    alignItems: "center",
+    justifyContent: "center",
+    padding: 24,
+  },
+  modalSheet: {
+    borderRadius: 20,
+    padding: 24,
+    alignItems: "center",
+    width: "100%",
+    maxWidth: 360,
+    gap: 12,
+  },
+  modalIconWrap: {
+    width: 70,
+    height: 70,
+    borderRadius: 35,
+    backgroundColor: "#FEE2E2",
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 4,
+  },
+  modalTitle: { fontFamily: "Inter_700Bold", fontSize: 18, textAlign: "center" },
+  modalMsg: {
+    fontFamily: "Inter_400Regular",
+    fontSize: 14,
+    textAlign: "center",
+    lineHeight: 21,
+  },
+  modalBtns: { flexDirection: "row", gap: 10, marginTop: 8, width: "100%" },
+  modalCancelBtn: {
+    flex: 1,
+    borderRadius: 12,
+    borderWidth: 1,
+    paddingVertical: 13,
+    alignItems: "center",
+  },
+  modalCancelText: { fontFamily: "Inter_600SemiBold", fontSize: 15 },
+  modalDeleteBtn: {
+    flex: 1,
+    borderRadius: 12,
+    paddingVertical: 13,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+  },
+  modalDeleteText: { fontFamily: "Inter_700Bold", fontSize: 15, color: "#fff" },
 });

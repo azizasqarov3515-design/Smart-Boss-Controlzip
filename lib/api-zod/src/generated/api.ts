@@ -137,6 +137,29 @@ export const CreateSaleBody = zod.object({
 });
 
 /**
+ * @summary Delete a single sale by ID (restores stock and debt)
+ */
+export const DeleteSaleParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const DeleteSaleResponse = zod.object({
+  success: zod.boolean(),
+});
+
+/**
+ * @summary Delete multiple sales by IDs or delete all
+ */
+export const BulkDeleteSalesBody = zod.object({
+  ids: zod.array(zod.number()).nullish(),
+  deleteAll: zod.boolean().nullish(),
+});
+
+export const BulkDeleteSalesResponse = zod.object({
+  deleted: zod.number(),
+});
+
+/**
  * @summary Find product by barcode
  */
 export const GetProductByBarcodeParams = zod.object({

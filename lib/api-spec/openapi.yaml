@@ -136,6 +136,50 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/SaleWithItems"
+  /sales/{id}:
+    delete:
+      operationId: deleteSale
+      tags: [sales]
+      summary: Delete a single sale by ID (restores stock and debt)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Deleted successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                required: [success]
+  /sales/bulk-delete:
+    post:
+      operationId: bulkDeleteSales
+      tags: [sales]
+      summary: Delete multiple sales by IDs or delete all
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BulkDeleteSales"
+      responses:
+        "200":
+          description: Deleted successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  deleted:
+                    type: integer
+                required: [deleted]
   /products/barcode/{barcode}:
     get:
       operationId: getProductByBarcode
@@ -459,6 +503,18 @@ components:
           type: number
           nullable: true
       required: [items]
+    BulkDeleteSales:
+      type: object
+      properties:
+        ids:
+          type: array
+          items:
+            type: integer
+          nullable: true
+        deleteAll:
+          type: boolean
+          nullable: true
+      required: []
     Customer:
       type: object
       properties:

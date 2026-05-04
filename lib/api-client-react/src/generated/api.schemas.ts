@@ -87,6 +87,11 @@ export interface CreateSale {
   paidAmount?: number | null;
 }
 
+export interface BulkDeleteSales {
+  ids?: number[] | null;
+  deleteAll?: boolean | null;
+}
+
 export interface Customer {
   id: number;
   name: string;
@@ -145,3 +150,11 @@ export interface CustomerStatement {
 export interface NotFound {
   error: string;
 }
+
+export type DeleteSale200 = {
+  success: boolean;
+};
+
+export type BulkDeleteSales200 = {
+  deleted: number;
+};

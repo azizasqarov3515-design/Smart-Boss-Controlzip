@@ -6,6 +6,8 @@
  * OpenAPI spec version: 0.1.0
  */
 
+export * from "./bulkDeleteSales";
+export * from "./bulkDeleteSales200";
 export * from "./createCustomer";
 export * from "./createDebtPayment";
 export * from "./createProduct";
@@ -16,6 +18,7 @@ export * from "./customer";
 export * from "./customerStatement";
 export * from "./dashboardStats";
 export * from "./debtPayment";
+export * from "./deleteSale200";
 export * from "./healthStatus";
 export * from "./notFound";
 export * from "./product";

@@ -17,6 +17,8 @@ import type {
 } from "@tanstack/react-query";
 
 import type {
+  BulkDeleteSales,
+  BulkDeleteSales200,
   CreateCustomer,
   CreateDebtPayment,
   CreateProduct,
@@ -25,6 +27,7 @@ import type {
   CustomerStatement,
   DashboardStats,
   DebtPayment,
+  DeleteSale200,
   HealthStatus,
   NotFound,
   Product,
@@ -673,6 +676,176 @@ export const useCreateSale = <
   TContext
 > => {
   return useMutation(getCreateSaleMutationOptions(options));
+};
+
+/**
+ * @summary Delete a single sale by ID (restores stock and debt)
+ */
+export const getDeleteSaleUrl = (id: number) => {
+  return `/api/sales/${id}`;
+};
+
+export const deleteSale = async (
+  id: number,
+  options?: RequestInit,
+): Promise<DeleteSale200> => {
+  return customFetch<DeleteSale200>(getDeleteSaleUrl(id), {
+    ...options,
+    method: "DELETE",
+  });
+};
+
+export const getDeleteSaleMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof deleteSale>>,
+    TError,
+    { id: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof deleteSale>>,
+  TError,
+  { id: number },
+  TContext
+> => {
+  const mutationKey = ["deleteSale"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof deleteSale>>,
+    { id: number }
+  > = (props) => {
+    const { id } = props ?? {};
+
+    return deleteSale(id, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type DeleteSaleMutationResult = NonNullable<
+  Awaited<ReturnType<typeof deleteSale>>
+>;
+
+export type DeleteSaleMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Delete a single sale by ID (restores stock and debt)
+ */
+export const useDeleteSale = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof deleteSale>>,
+    TError,
+    { id: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof deleteSale>>,
+  TError,
+  { id: number },
+  TContext
+> => {
+  return useMutation(getDeleteSaleMutationOptions(options));
+};
+
+/**
+ * @summary Delete multiple sales by IDs or delete all
+ */
+export const getBulkDeleteSalesUrl = () => {
+  return `/api/sales/bulk-delete`;
+};
+
+export const bulkDeleteSales = async (
+  bulkDeleteSales: BulkDeleteSales,
+  options?: RequestInit,
+): Promise<BulkDeleteSales200> => {
+  return customFetch<BulkDeleteSales200>(getBulkDeleteSalesUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(bulkDeleteSales),
+  });
+};
+
+export const getBulkDeleteSalesMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof bulkDeleteSales>>,
+    TError,
+    { data: BodyType<BulkDeleteSales> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof bulkDeleteSales>>,
+  TError,
+  { data: BodyType<BulkDeleteSales> },
+  TContext
+> => {
+  const mutationKey = ["bulkDeleteSales"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof bulkDeleteSales>>,
+    { data: BodyType<BulkDeleteSales> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return bulkDeleteSales(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type BulkDeleteSalesMutationResult = NonNullable<
+  Awaited<ReturnType<typeof bulkDeleteSales>>
+>;
+export type BulkDeleteSalesMutationBody = BodyType<BulkDeleteSales>;
+export type BulkDeleteSalesMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Delete multiple sales by IDs or delete all
+ */
+export const useBulkDeleteSales = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof bulkDeleteSales>>,
+    TError,
+    { data: BodyType<BulkDeleteSales> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof bulkDeleteSales>>,
+  TError,
+  { data: BodyType<BulkDeleteSales> },
+  TContext
+> => {
+  return useMutation(getBulkDeleteSalesMutationOptions(options));
 };
 
 /**
