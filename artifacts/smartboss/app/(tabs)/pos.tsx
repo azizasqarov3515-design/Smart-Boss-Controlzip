@@ -16,6 +16,7 @@ import {
   type BarcodeScanningResult,
 } from "expo-camera";
 import * as Haptics from "expo-haptics";
+import { useLocalSearchParams } from "expo-router";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
@@ -319,6 +320,19 @@ export default function POSScreen() {
 
   const { data: products, isLoading: productsLoading } = useGetProducts();
   const { data: customers } = useGetCustomers();
+
+  const routeParams = useLocalSearchParams<{ preCustomerId?: string; preCustomerName?: string }>();
+  useEffect(() => {
+    if (routeParams.preCustomerId && customers) {
+      const preId = parseInt(routeParams.preCustomerId, 10);
+      const found = customers.find((c) => c.id === preId);
+      if (found) {
+        setSelectedCustomer(found);
+        setPaymentType("debt");
+        setTab("products");
+      }
+    }
+  }, [routeParams.preCustomerId, customers]);
   const { mutate: createSale, isPending: checkingOut } = useCreateSale({
     mutation: {
       onSuccess: () => {

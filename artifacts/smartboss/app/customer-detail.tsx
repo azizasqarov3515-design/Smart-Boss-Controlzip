@@ -20,7 +20,6 @@ import * as Print from "expo-print";
 import React, { useState } from "react";
 import {
   ActivityIndicator,
-  Alert,
   KeyboardAvoidingView,
   Modal,
   Platform,
@@ -133,6 +132,7 @@ export default function CustomerDetailScreen() {
   const [activeTab, setActiveTab] = useState<"sales" | "payments">("sales");
   const [paymentOpen, setPaymentOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [payAmount, setPayAmount] = useState("");
   const [payNote, setPayNote] = useState("");
   const [payError, setPayError] = useState<string | null>(null);
@@ -209,18 +209,7 @@ export default function CustomerDetailScreen() {
   };
 
   const handleDelete = () => {
-    Alert.alert(
-      "Mijozni o'chirish",
-      `"${customer?.name}" ni o'chirishni tasdiqlaysizmi?`,
-      [
-        { text: "Bekor", style: "cancel" },
-        {
-          text: "O'chirish",
-          style: "destructive",
-          onPress: () => deleteCustomer({ id: customerId }),
-        },
-      ]
-    );
+    setDeleteConfirmOpen(true);
   };
 
   const handleEdit = () => {
@@ -382,6 +371,20 @@ export default function CustomerDetailScreen() {
             </Text>
           </TouchableOpacity>
         ))}
+        <TouchableOpacity
+          style={[styles.tabItem, styles.newSaleTab, { borderBottomColor: colors.success }]}
+          onPress={() => {
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+            router.push({
+              pathname: "/(tabs)/pos",
+              params: { preCustomerId: customer.id, preCustomerName: customer.name },
+            });
+          }}
+          activeOpacity={0.8}
+        >
+          <MaterialIcons name="add-shopping-cart" size={16} color={colors.success} />
+          <Text style={[styles.tabText, { color: colors.success }]}>Yangi savdo</Text>
+        </TouchableOpacity>
       </View>
 
       {/* Tab content */}
@@ -627,6 +630,57 @@ export default function CustomerDetailScreen() {
           </View>
         </KeyboardAvoidingView>
       </Modal>
+
+      {/* Delete confirmation modal */}
+      <Modal
+        visible={deleteConfirmOpen}
+        transparent
+        animationType="fade"
+        statusBarTranslucent
+        onRequestClose={() => !deleting && setDeleteConfirmOpen(false)}
+      >
+        <View style={styles.deleteBackdrop}>
+          <View style={[styles.deleteSheet, { backgroundColor: colors.card }]}>
+            <View style={[styles.deleteIconWrap, { backgroundColor: "#FEE2E2" }]}>
+              <MaterialIcons name="delete-forever" size={32} color="#DC2626" />
+            </View>
+            <Text style={[styles.deleteTitle, { color: colors.foreground }]}>
+              Mijozni o'chirish
+            </Text>
+            <Text style={[styles.deleteMsg, { color: colors.mutedForeground }]}>
+              <Text style={{ fontFamily: "Inter_700Bold", color: colors.foreground }}>
+                {customer?.name}
+              </Text>
+              {" "}ni o'chirishni tasdiqlaysizmi?{"\n"}Bu amalni qaytarib bo'lmaydi.
+            </Text>
+            <View style={styles.deleteBtns}>
+              <TouchableOpacity
+                style={[styles.deleteCancelBtn, { backgroundColor: colors.muted, borderColor: colors.border }]}
+                onPress={() => setDeleteConfirmOpen(false)}
+                disabled={deleting}
+                activeOpacity={0.8}
+              >
+                <Text style={[styles.deleteCancelText, { color: colors.mutedForeground }]}>Bekor</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.deleteConfirmBtn, { backgroundColor: deleting ? colors.mutedForeground : "#DC2626" }]}
+                onPress={() => { setDeleteConfirmOpen(false); deleteCustomer({ id: customerId }); }}
+                disabled={deleting}
+                activeOpacity={0.85}
+              >
+                {deleting ? (
+                  <ActivityIndicator size="small" color="#fff" />
+                ) : (
+                  <>
+                    <MaterialIcons name="delete" size={18} color="#fff" />
+                    <Text style={styles.deleteConfirmText}>O'chirish</Text>
+                  </>
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -767,4 +821,55 @@ const styles = StyleSheet.create({
   saveBtnText: { fontFamily: "Inter_700Bold", fontSize: 15, color: "#fff" },
   headerAddressRow: { flexDirection: "row", alignItems: "center", gap: 3, marginTop: 2 },
   headerAddress: { fontFamily: "Inter_400Regular", fontSize: 11, flex: 1 },
+  newSaleTab: { borderBottomWidth: 2 },
+  // Delete modal
+  deleteBackdrop: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.55)",
+    alignItems: "center",
+    justifyContent: "center",
+    padding: 24,
+  },
+  deleteSheet: {
+    borderRadius: 20,
+    padding: 24,
+    alignItems: "center",
+    width: "100%",
+    maxWidth: 360,
+    gap: 12,
+  },
+  deleteIconWrap: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 4,
+  },
+  deleteTitle: { fontFamily: "Inter_700Bold", fontSize: 18 },
+  deleteMsg: {
+    fontFamily: "Inter_400Regular",
+    fontSize: 14,
+    textAlign: "center",
+    lineHeight: 20,
+  },
+  deleteBtns: { flexDirection: "row", gap: 10, marginTop: 8, width: "100%" },
+  deleteCancelBtn: {
+    flex: 1,
+    borderRadius: 12,
+    borderWidth: 1,
+    paddingVertical: 13,
+    alignItems: "center",
+  },
+  deleteCancelText: { fontFamily: "Inter_600SemiBold", fontSize: 15 },
+  deleteConfirmBtn: {
+    flex: 1,
+    borderRadius: 12,
+    paddingVertical: 13,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+  },
+  deleteConfirmText: { fontFamily: "Inter_700Bold", fontSize: 15, color: "#fff" },
 });
