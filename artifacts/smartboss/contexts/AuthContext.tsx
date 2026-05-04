@@ -1,5 +1,5 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { setAuthTokenGetter } from "@workspace/api-client-react";
+import { setAuthTokenGetter, setOnUnauthorized } from "@workspace/api-client-react";
 import type { QueryClient } from "@tanstack/react-query";
 import React, { createContext, useCallback, useContext, useEffect, useState } from "react";
 
@@ -35,6 +35,17 @@ export function AuthProvider({ children, queryClient }: AuthProviderProps) {
     setAuthTokenGetter(() => token);
     return () => { setAuthTokenGetter(null); };
   }, [token]);
+
+  // Auto-logout when any API call returns 401 (e.g. after server restart with old in-memory token)
+  useEffect(() => {
+    setOnUnauthorized(() => {
+      AsyncStorage.removeItem(TOKEN_KEY);
+      queryClient?.clear();
+      setToken(null);
+      setUsername(null);
+    });
+    return () => { setOnUnauthorized(null); };
+  }, [queryClient]);
 
   useEffect(() => {
     let cancelled = false;
