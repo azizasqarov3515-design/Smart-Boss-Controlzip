@@ -17,21 +17,28 @@ import type {
 } from "@tanstack/react-query";
 
 import type {
+  ApproveDeleteRequest200,
   BulkDeleteSales,
   BulkDeleteSales200,
   CreateCustomer,
   CreateDebtPayment,
+  CreateDeleteRequest,
+  CreateDeleteRequest201,
   CreateProduct,
   CreateSale,
   Customer,
   CustomerStatement,
   DashboardStats,
   DebtPayment,
+  DeleteRequest,
   DeleteSale200,
   HealthStatus,
   NotFound,
   Product,
+  RejectDeleteRequest200,
+  RemoveWorker200,
   SaleWithItems,
+  Worker,
 } from "./api.schemas";
 
 import { customFetch } from "../custom-fetch";
@@ -1617,3 +1624,657 @@ export function useGetCustomerStatement<
 
   return { ...query, queryKey: queryOptions.queryKey };
 }
+
+/**
+ * @summary Get all workers (manager only)
+ */
+export const getGetWorkersUrl = () => {
+  return `/api/workers`;
+};
+
+export const getWorkers = async (options?: RequestInit): Promise<Worker[]> => {
+  return customFetch<Worker[]>(getGetWorkersUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetWorkersQueryKey = () => {
+  return [`/api/workers`] as const;
+};
+
+export const getGetWorkersQueryOptions = <
+  TData = Awaited<ReturnType<typeof getWorkers>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getWorkers>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetWorkersQueryKey();
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getWorkers>>> = ({
+    signal,
+  }) => getWorkers({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getWorkers>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetWorkersQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getWorkers>>
+>;
+export type GetWorkersQueryError = ErrorType<unknown>;
+
+/**
+ * @summary Get all workers (manager only)
+ */
+
+export function useGetWorkers<
+  TData = Awaited<ReturnType<typeof getWorkers>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getWorkers>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetWorkersQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Approve a worker registration (manager only)
+ */
+export const getApproveWorkerUrl = (id: number) => {
+  return `/api/workers/${id}/approve`;
+};
+
+export const approveWorker = async (
+  id: number,
+  options?: RequestInit,
+): Promise<Worker> => {
+  return customFetch<Worker>(getApproveWorkerUrl(id), {
+    ...options,
+    method: "POST",
+  });
+};
+
+export const getApproveWorkerMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof approveWorker>>,
+    TError,
+    { id: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof approveWorker>>,
+  TError,
+  { id: number },
+  TContext
+> => {
+  const mutationKey = ["approveWorker"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof approveWorker>>,
+    { id: number }
+  > = (props) => {
+    const { id } = props ?? {};
+
+    return approveWorker(id, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type ApproveWorkerMutationResult = NonNullable<
+  Awaited<ReturnType<typeof approveWorker>>
+>;
+
+export type ApproveWorkerMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Approve a worker registration (manager only)
+ */
+export const useApproveWorker = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof approveWorker>>,
+    TError,
+    { id: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof approveWorker>>,
+  TError,
+  { id: number },
+  TContext
+> => {
+  return useMutation(getApproveWorkerMutationOptions(options));
+};
+
+/**
+ * @summary Reject a worker registration (manager only)
+ */
+export const getRejectWorkerUrl = (id: number) => {
+  return `/api/workers/${id}/reject`;
+};
+
+export const rejectWorker = async (
+  id: number,
+  options?: RequestInit,
+): Promise<Worker> => {
+  return customFetch<Worker>(getRejectWorkerUrl(id), {
+    ...options,
+    method: "POST",
+  });
+};
+
+export const getRejectWorkerMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof rejectWorker>>,
+    TError,
+    { id: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof rejectWorker>>,
+  TError,
+  { id: number },
+  TContext
+> => {
+  const mutationKey = ["rejectWorker"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof rejectWorker>>,
+    { id: number }
+  > = (props) => {
+    const { id } = props ?? {};
+
+    return rejectWorker(id, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type RejectWorkerMutationResult = NonNullable<
+  Awaited<ReturnType<typeof rejectWorker>>
+>;
+
+export type RejectWorkerMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Reject a worker registration (manager only)
+ */
+export const useRejectWorker = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof rejectWorker>>,
+    TError,
+    { id: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof rejectWorker>>,
+  TError,
+  { id: number },
+  TContext
+> => {
+  return useMutation(getRejectWorkerMutationOptions(options));
+};
+
+/**
+ * @summary Remove worker from app (manager only)
+ */
+export const getRemoveWorkerUrl = (id: number) => {
+  return `/api/workers/${id}`;
+};
+
+export const removeWorker = async (
+  id: number,
+  options?: RequestInit,
+): Promise<RemoveWorker200> => {
+  return customFetch<RemoveWorker200>(getRemoveWorkerUrl(id), {
+    ...options,
+    method: "DELETE",
+  });
+};
+
+export const getRemoveWorkerMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof removeWorker>>,
+    TError,
+    { id: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof removeWorker>>,
+  TError,
+  { id: number },
+  TContext
+> => {
+  const mutationKey = ["removeWorker"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof removeWorker>>,
+    { id: number }
+  > = (props) => {
+    const { id } = props ?? {};
+
+    return removeWorker(id, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type RemoveWorkerMutationResult = NonNullable<
+  Awaited<ReturnType<typeof removeWorker>>
+>;
+
+export type RemoveWorkerMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Remove worker from app (manager only)
+ */
+export const useRemoveWorker = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof removeWorker>>,
+    TError,
+    { id: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof removeWorker>>,
+  TError,
+  { id: number },
+  TContext
+> => {
+  return useMutation(getRemoveWorkerMutationOptions(options));
+};
+
+/**
+ * @summary Get pending delete requests (manager only)
+ */
+export const getGetDeleteRequestsUrl = () => {
+  return `/api/delete-requests`;
+};
+
+export const getDeleteRequests = async (
+  options?: RequestInit,
+): Promise<DeleteRequest[]> => {
+  return customFetch<DeleteRequest[]>(getGetDeleteRequestsUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetDeleteRequestsQueryKey = () => {
+  return [`/api/delete-requests`] as const;
+};
+
+export const getGetDeleteRequestsQueryOptions = <
+  TData = Awaited<ReturnType<typeof getDeleteRequests>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getDeleteRequests>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetDeleteRequestsQueryKey();
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getDeleteRequests>>
+  > = ({ signal }) => getDeleteRequests({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getDeleteRequests>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetDeleteRequestsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getDeleteRequests>>
+>;
+export type GetDeleteRequestsQueryError = ErrorType<unknown>;
+
+/**
+ * @summary Get pending delete requests (manager only)
+ */
+
+export function useGetDeleteRequests<
+  TData = Awaited<ReturnType<typeof getDeleteRequests>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getDeleteRequests>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetDeleteRequestsQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Create a delete request (worker)
+ */
+export const getCreateDeleteRequestUrl = () => {
+  return `/api/delete-requests`;
+};
+
+export const createDeleteRequest = async (
+  createDeleteRequest: CreateDeleteRequest,
+  options?: RequestInit,
+): Promise<CreateDeleteRequest201> => {
+  return customFetch<CreateDeleteRequest201>(getCreateDeleteRequestUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(createDeleteRequest),
+  });
+};
+
+export const getCreateDeleteRequestMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createDeleteRequest>>,
+    TError,
+    { data: BodyType<CreateDeleteRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof createDeleteRequest>>,
+  TError,
+  { data: BodyType<CreateDeleteRequest> },
+  TContext
+> => {
+  const mutationKey = ["createDeleteRequest"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof createDeleteRequest>>,
+    { data: BodyType<CreateDeleteRequest> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return createDeleteRequest(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CreateDeleteRequestMutationResult = NonNullable<
+  Awaited<ReturnType<typeof createDeleteRequest>>
+>;
+export type CreateDeleteRequestMutationBody = BodyType<CreateDeleteRequest>;
+export type CreateDeleteRequestMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Create a delete request (worker)
+ */
+export const useCreateDeleteRequest = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createDeleteRequest>>,
+    TError,
+    { data: BodyType<CreateDeleteRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof createDeleteRequest>>,
+  TError,
+  { data: BodyType<CreateDeleteRequest> },
+  TContext
+> => {
+  return useMutation(getCreateDeleteRequestMutationOptions(options));
+};
+
+/**
+ * @summary Approve delete request (manager)
+ */
+export const getApproveDeleteRequestUrl = (id: number) => {
+  return `/api/delete-requests/${id}/approve`;
+};
+
+export const approveDeleteRequest = async (
+  id: number,
+  options?: RequestInit,
+): Promise<ApproveDeleteRequest200> => {
+  return customFetch<ApproveDeleteRequest200>(getApproveDeleteRequestUrl(id), {
+    ...options,
+    method: "POST",
+  });
+};
+
+export const getApproveDeleteRequestMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof approveDeleteRequest>>,
+    TError,
+    { id: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof approveDeleteRequest>>,
+  TError,
+  { id: number },
+  TContext
+> => {
+  const mutationKey = ["approveDeleteRequest"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof approveDeleteRequest>>,
+    { id: number }
+  > = (props) => {
+    const { id } = props ?? {};
+
+    return approveDeleteRequest(id, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type ApproveDeleteRequestMutationResult = NonNullable<
+  Awaited<ReturnType<typeof approveDeleteRequest>>
+>;
+
+export type ApproveDeleteRequestMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Approve delete request (manager)
+ */
+export const useApproveDeleteRequest = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof approveDeleteRequest>>,
+    TError,
+    { id: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof approveDeleteRequest>>,
+  TError,
+  { id: number },
+  TContext
+> => {
+  return useMutation(getApproveDeleteRequestMutationOptions(options));
+};
+
+/**
+ * @summary Reject delete request (manager)
+ */
+export const getRejectDeleteRequestUrl = (id: number) => {
+  return `/api/delete-requests/${id}/reject`;
+};
+
+export const rejectDeleteRequest = async (
+  id: number,
+  options?: RequestInit,
+): Promise<RejectDeleteRequest200> => {
+  return customFetch<RejectDeleteRequest200>(getRejectDeleteRequestUrl(id), {
+    ...options,
+    method: "POST",
+  });
+};
+
+export const getRejectDeleteRequestMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof rejectDeleteRequest>>,
+    TError,
+    { id: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof rejectDeleteRequest>>,
+  TError,
+  { id: number },
+  TContext
+> => {
+  const mutationKey = ["rejectDeleteRequest"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof rejectDeleteRequest>>,
+    { id: number }
+  > = (props) => {
+    const { id } = props ?? {};
+
+    return rejectDeleteRequest(id, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type RejectDeleteRequestMutationResult = NonNullable<
+  Awaited<ReturnType<typeof rejectDeleteRequest>>
+>;
+
+export type RejectDeleteRequestMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Reject delete request (manager)
+ */
+export const useRejectDeleteRequest = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof rejectDeleteRequest>>,
+    TError,
+    { id: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof rejectDeleteRequest>>,
+  TError,
+  { id: number },
+  TContext
+> => {
+  return useMutation(getRejectDeleteRequestMutationOptions(options));
+};

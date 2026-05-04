@@ -2,6 +2,8 @@ import {
   useGetDashboardStats,
   useGetProducts,
   useGetSales,
+  useGetWorkers,
+  useGetDeleteRequests,
 } from "@workspace/api-client-react";
 import * as FileSystem from "expo-file-system";
 import * as Haptics from "expo-haptics";
@@ -52,24 +54,97 @@ function formatTime(iso: string) {
   return new Date(iso).toLocaleTimeString("uz-UZ", { hour: "2-digit", minute: "2-digit" });
 }
 
+function WorkerDashboard() {
+  const colors = useColors();
+  const insets = useSafeAreaInsets();
+  const router = useRouter();
+  const { workerName } = useAuth();
+  const isWeb = Platform.OS === "web";
+
+  return (
+    <ScrollView
+      style={[styles.container, { backgroundColor: colors.background }]}
+      contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 90, paddingTop: isWeb ? 20 : 16 }]}
+      showsVerticalScrollIndicator={false}
+    >
+      <View style={styles.header}>
+        <View style={styles.headerLeft}>
+          <Text style={[styles.greeting, { color: colors.mutedForeground }]}>Xush kelibsiz, {workerName ?? "Sotuvchi"}</Text>
+          <Text style={[styles.title, { color: colors.foreground }]}>SMARTBOSScontrol</Text>
+        </View>
+        <View style={styles.headerRight}>
+          <LiveClock />
+        </View>
+      </View>
+
+      <View style={[styles.workerWelcomeCard, { backgroundColor: colors.primary }]}>
+        <MaterialIcons name="badge" size={40} color="rgba(255,255,255,0.9)" />
+        <Text style={styles.workerWelcomeTitle}>Sotuvchi bo'limi</Text>
+        <Text style={styles.workerWelcomeSub}>Savdo qilish uchun Kassa bo'limiga o'ting</Text>
+        <TouchableOpacity
+          style={styles.workerPosBtn}
+          onPress={() => router.push("/(tabs)/pos")}
+          activeOpacity={0.85}
+        >
+          <MaterialIcons name="point-of-sale" size={20} color={colors.primary} />
+          <Text style={[styles.workerPosBtnText, { color: colors.primary }]}>Kassaga o'tish</Text>
+        </TouchableOpacity>
+      </View>
+
+      <View style={styles.workerQuickLinks}>
+        <TouchableOpacity
+          style={[styles.quickCard, { backgroundColor: colors.card, borderColor: colors.border }]}
+          onPress={() => router.push("/(tabs)/history")}
+          activeOpacity={0.8}
+        >
+          <MaterialIcons name="receipt-long" size={26} color={colors.primary} />
+          <Text style={[styles.quickCardLabel, { color: colors.foreground }]}>Tarix</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.quickCard, { backgroundColor: colors.card, borderColor: colors.border }]}
+          onPress={() => router.push("/(tabs)/customers")}
+          activeOpacity={0.8}
+        >
+          <MaterialIcons name="people" size={26} color={colors.primary} />
+          <Text style={[styles.quickCardLabel, { color: colors.foreground }]}>Mijozlar</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.quickCard, { backgroundColor: colors.card, borderColor: colors.border }]}
+          onPress={() => router.push("/(tabs)/products")}
+          activeOpacity={0.8}
+        >
+          <MaterialIcons name="inventory" size={26} color={colors.primary} />
+          <Text style={[styles.quickCardLabel, { color: colors.foreground }]}>Tovarlar</Text>
+        </TouchableOpacity>
+      </View>
+    </ScrollView>
+  );
+}
+
 export default function DashboardScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const isWeb = Platform.OS === "web";
-  const { username, downloadBackup } = useAuth();
+  const { username, downloadBackup, role } = useAuth();
   const [backupLoading, setBackupLoading] = useState(false);
 
   const { data: stats, isLoading: statsLoading, refetch: refetchStats, isRefetching: r1 } = useGetDashboardStats();
   const { data: products, isLoading: productsLoading, refetch: refetchProducts, isRefetching: r2 } = useGetProducts();
   const { data: sales, isLoading: salesLoading, refetch: refetchSales, isRefetching: r3 } = useGetSales();
+  const { data: workers, refetch: refetchWorkers } = useGetWorkers({ query: { enabled: role === "manager", refetchInterval: 30000 } });
+  const { data: deleteRequests, refetch: refetchDeleteRequests } = useGetDeleteRequests({ query: { enabled: role === "manager", refetchInterval: 30000 } });
+
+  if (role === "worker") {
+    return <WorkerDashboard />;
+  }
 
   const isLoading = statsLoading || productsLoading || salesLoading;
   const isRefreshing = r1 || r2 || r3;
 
   const onRefresh = () => {
     Haptics.selectionAsync();
-    refetchStats(); refetchProducts(); refetchSales();
+    refetchStats(); refetchProducts(); refetchSales(); refetchWorkers(); refetchDeleteRequests();
   };
 
   const handleBackup = async () => {
@@ -119,6 +194,10 @@ export default function DashboardScreen() {
   const todayRevenue = todaySales.reduce((s, sale) => s + sale.totalAmount, 0);
   const recentSales = (sales ?? []).slice(0, 5);
 
+  const pendingWorkers = (workers ?? []).filter((w) => w.status === "pending");
+  const pendingDeleteRequests = deleteRequests ?? [];
+  const totalPending = pendingWorkers.length + pendingDeleteRequests.length;
+
   return (
     <ScrollView
       style={[styles.container, { backgroundColor: colors.background }]}
@@ -126,10 +205,9 @@ export default function DashboardScreen() {
       showsVerticalScrollIndicator={false}
       refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} tintColor={colors.primary} colors={[colors.primary]} />}
     >
-      {/* Header row: title | clock | kassa */}
       <View style={styles.header}>
         <View style={styles.headerLeft}>
-          <Text style={[styles.greeting, { color: colors.mutedForeground }]}>Xush kelibsiz, {username ?? "Admin"}</Text>
+          <Text style={[styles.greeting, { color: colors.mutedForeground }]}>Xush kelibsiz, {username ?? "Rahbar"}</Text>
           <Text style={[styles.title, { color: colors.foreground }]}>SMARTBOSScontrol</Text>
         </View>
         <View style={styles.headerRight}>
@@ -145,6 +223,29 @@ export default function DashboardScreen() {
         </View>
       </View>
 
+      {/* Pending notifications for manager */}
+      {totalPending > 0 && (
+        <TouchableOpacity
+          style={[styles.notifCard, { backgroundColor: "#FFFBEB", borderColor: "#F59E0B" }]}
+          onPress={() => router.push("/(tabs)/settings")}
+          activeOpacity={0.85}
+        >
+          <View style={styles.notifLeft}>
+            <PulsingDot color="#D97706" />
+            <MaterialIcons name="notifications-active" size={20} color="#D97706" />
+            <View>
+              <Text style={[styles.notifTitle, { color: "#92400E" }]}>Kutayotgan so'rovlar</Text>
+              <Text style={[styles.notifSub, { color: "#B45309" }]}>
+                {pendingWorkers.length > 0 && `${pendingWorkers.length} ta ishchi arizasi`}
+                {pendingWorkers.length > 0 && pendingDeleteRequests.length > 0 && " • "}
+                {pendingDeleteRequests.length > 0 && `${pendingDeleteRequests.length} ta o'chirish so'rovi`}
+              </Text>
+            </View>
+          </View>
+          <MaterialIcons name="arrow-forward-ios" size={16} color="#D97706" />
+        </TouchableOpacity>
+      )}
+
       {isLoading ? (
         <View style={styles.loader}>
           <ActivityIndicator size="large" color={colors.primary} />
@@ -156,6 +257,15 @@ export default function DashboardScreen() {
           <View style={styles.statsGrid}>
             <StatCard label="Bugungi sotuv" value={String(todaySales.length) + " ta"} icon="point-of-sale" variant="primary" />
             <StatCard label="Bugungi tushum" value={formatMoney(todayRevenue)} icon="trending-up" variant="success" />
+          </View>
+          <View style={[styles.statsGrid, { marginTop: 10 }]}>
+            <StatCard
+              label="Bugungi sof foyda"
+              value={formatMoney(stats?.todayNetProfit ?? 0)}
+              icon="savings"
+              variant="success"
+              subtitle="Foyda (tan narxi ayirib)"
+            />
           </View>
 
           <Text style={[styles.sectionTitle, { color: colors.foreground, marginTop: 18 }]}>Ombor holati</Text>
@@ -289,28 +399,24 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   headerLeft: { flex: 1, minWidth: 0 },
-  headerRight: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    flexShrink: 0,
-  },
+  headerRight: { flexDirection: "row", alignItems: "center", gap: 8, flexShrink: 0 },
   greeting: { fontFamily: "Inter_400Regular", fontSize: 11 },
   title: { fontFamily: "Inter_700Bold", fontSize: 19 },
   posBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-    paddingHorizontal: 12,
-    paddingVertical: 9,
-    borderRadius: 12,
-    shadowColor: "#1565C0",
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.28,
-    shadowRadius: 6,
-    elevation: 4,
+    flexDirection: "row", alignItems: "center", gap: 4,
+    paddingHorizontal: 12, paddingVertical: 9, borderRadius: 12,
+    shadowColor: "#1565C0", shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.28, shadowRadius: 6, elevation: 4,
   },
   posBtnText: { fontFamily: "Inter_600SemiBold", fontSize: 13, color: "#fff" },
+  notifCard: {
+    flexDirection: "row", alignItems: "center", justifyContent: "space-between",
+    borderRadius: 14, borderWidth: 1.5, paddingHorizontal: 14, paddingVertical: 12,
+    marginBottom: 16,
+  },
+  notifLeft: { flexDirection: "row", alignItems: "center", gap: 8, flex: 1 },
+  notifTitle: { fontFamily: "Inter_700Bold", fontSize: 13 },
+  notifSub: { fontFamily: "Inter_400Regular", fontSize: 11, marginTop: 2 },
   loader: { alignItems: "center", paddingTop: 60, gap: 12 },
   loadingText: { fontFamily: "Inter_400Regular", fontSize: 14 },
   sectionTitle: { fontFamily: "Inter_700Bold", fontSize: 16, marginBottom: 10 },
@@ -354,4 +460,26 @@ const styles = StyleSheet.create({
   backupLabel: { fontFamily: "Inter_500Medium", fontSize: 12, marginBottom: 10 },
   backupBtn: { flexDirection: "row", alignItems: "center", gap: 10, borderRadius: 14, borderWidth: 1.5, paddingHorizontal: 18, paddingVertical: 14 },
   backupBtnText: { fontFamily: "Inter_600SemiBold", fontSize: 14 },
+  workerWelcomeCard: {
+    borderRadius: 20, padding: 28, alignItems: "center",
+    marginBottom: 20, gap: 10,
+    shadowColor: "#1565C0", shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.25, shadowRadius: 12, elevation: 6,
+  },
+  workerWelcomeTitle: { fontFamily: "Inter_700Bold", fontSize: 22, color: "#fff" },
+  workerWelcomeSub: { fontFamily: "Inter_400Regular", fontSize: 14, color: "rgba(255,255,255,0.85)", textAlign: "center" },
+  workerPosBtn: {
+    flexDirection: "row", alignItems: "center", gap: 8,
+    backgroundColor: "#fff", borderRadius: 14, paddingHorizontal: 24, paddingVertical: 13,
+    marginTop: 8,
+  },
+  workerPosBtnText: { fontFamily: "Inter_700Bold", fontSize: 16 },
+  workerQuickLinks: { flexDirection: "row", gap: 12 },
+  quickCard: {
+    flex: 1, alignItems: "center", justifyContent: "center", gap: 8,
+    borderRadius: 16, borderWidth: 1, paddingVertical: 20,
+    shadowColor: "#000", shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06, shadowRadius: 6, elevation: 2,
+  },
+  quickCardLabel: { fontFamily: "Inter_600SemiBold", fontSize: 12 },
 });

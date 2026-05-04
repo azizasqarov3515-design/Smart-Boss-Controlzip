@@ -175,13 +175,23 @@ router.get("/dashboard/stats", async (req, res) => {
       })
       .from(productsTable);
 
-    // Get total outstanding debt across all customers
-    const { customersTable } = await import("@workspace/db/schema");
+    const { customersTable, salesTable, saleItemsTable } = await import("@workspace/db/schema");
+
     const [debtStats] = await db
       .select({
         totalDebt: sql<number>`coalesce(sum(${customersTable.totalDebt}::numeric), 0)::numeric`,
       })
       .from(customersTable);
+
+    // Today's net profit = sum of (unit_price - cost_price) * quantity for today's sales
+    const profitResult = await db.execute(sql`
+      SELECT COALESCE(SUM((si.unit_price::numeric - p.cost_price::numeric) * si.quantity), 0) AS today_net_profit
+      FROM ${saleItemsTable} si
+      JOIN ${salesTable} s ON si.sale_id = s.id
+      JOIN ${productsTable} p ON si.product_id = p.id
+      WHERE s.created_at::date = CURRENT_DATE
+    `);
+    const profitStats = profitResult.rows[0] as Record<string, unknown> | undefined;
 
     res.json({
       totalProducts: stats?.totalProducts ?? 0,
@@ -192,6 +202,7 @@ router.get("/dashboard/stats", async (req, res) => {
       todaySales: 0,
       todayTransactions: 0,
       totalDebt: parseFloat(String(debtStats?.totalDebt ?? 0)),
+      todayNetProfit: parseFloat(String((profitStats as Record<string, unknown>)?.["today_net_profit"] ?? 0)),
     });
   } catch (err) {
     req.log.error({ err }, "Failed to get dashboard stats");

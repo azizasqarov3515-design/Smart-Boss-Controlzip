@@ -87,6 +87,7 @@ export const GetDashboardStatsResponse = zod.object({
   todaySales: zod.number(),
   todayTransactions: zod.number(),
   totalDebt: zod.number(),
+  todayNetProfit: zod.number(),
 });
 
 /**
@@ -321,4 +322,105 @@ export const GetCustomerStatementResponse = zod.object({
       createdAt: zod.string(),
     }),
   ),
+});
+
+/**
+ * @summary Get all workers (manager only)
+ */
+export const GetWorkersResponseItem = zod.object({
+  id: zod.number(),
+  name: zod.string(),
+  address: zod.string(),
+  phone: zod.string(),
+  status: zod.string(),
+  createdAt: zod.string(),
+});
+export const GetWorkersResponse = zod.array(GetWorkersResponseItem);
+
+/**
+ * @summary Approve a worker registration (manager only)
+ */
+export const ApproveWorkerParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const ApproveWorkerResponse = zod.object({
+  id: zod.number(),
+  name: zod.string(),
+  address: zod.string(),
+  phone: zod.string(),
+  status: zod.string(),
+  createdAt: zod.string(),
+});
+
+/**
+ * @summary Reject a worker registration (manager only)
+ */
+export const RejectWorkerParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const RejectWorkerResponse = zod.object({
+  id: zod.number(),
+  name: zod.string(),
+  address: zod.string(),
+  phone: zod.string(),
+  status: zod.string(),
+  createdAt: zod.string(),
+});
+
+/**
+ * @summary Remove worker from app (manager only)
+ */
+export const RemoveWorkerParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const RemoveWorkerResponse = zod.object({
+  ok: zod.boolean(),
+});
+
+/**
+ * @summary Get pending delete requests (manager only)
+ */
+export const GetDeleteRequestsResponseItem = zod.object({
+  id: zod.number(),
+  saleIds: zod.array(zod.number()),
+  workerId: zod.number().nullish(),
+  workerName: zod.string(),
+  status: zod.string(),
+  createdAt: zod.string(),
+});
+export const GetDeleteRequestsResponse = zod.array(
+  GetDeleteRequestsResponseItem,
+);
+
+/**
+ * @summary Create a delete request (worker)
+ */
+
+export const CreateDeleteRequestBody = zod.object({
+  saleIds: zod.array(zod.number()).min(1),
+});
+
+/**
+ * @summary Approve delete request (manager)
+ */
+export const ApproveDeleteRequestParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const ApproveDeleteRequestResponse = zod.object({
+  ok: zod.boolean(),
+});
+
+/**
+ * @summary Reject delete request (manager)
+ */
+export const RejectDeleteRequestParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const RejectDeleteRequestResponse = zod.object({
+  ok: zod.boolean(),
 });

@@ -6,10 +6,13 @@
  * OpenAPI spec version: 0.1.0
  */
 
+export * from "./approveDeleteRequest200";
 export * from "./bulkDeleteSales";
 export * from "./bulkDeleteSales200";
 export * from "./createCustomer";
 export * from "./createDebtPayment";
+export * from "./createDeleteRequest";
+export * from "./createDeleteRequest201";
 export * from "./createProduct";
 export * from "./createSale";
 export * from "./createSaleItem";
@@ -18,11 +21,19 @@ export * from "./customer";
 export * from "./customerStatement";
 export * from "./dashboardStats";
 export * from "./debtPayment";
+export * from "./deleteRequest";
 export * from "./deleteSale200";
 export * from "./healthStatus";
 export * from "./notFound";
 export * from "./product";
+export * from "./rejectDeleteRequest200";
+export * from "./removeWorker200";
 export * from "./saleItem";
 export * from "./saleWithItems";
 export * from "./statementPayment";
 export * from "./statementSale";
+export * from "./worker";
+export * from "./workerLogin";
+export * from "./workerLoginResponse";
+export * from "./workerRegister";
+export * from "./workerRegisterResponse";

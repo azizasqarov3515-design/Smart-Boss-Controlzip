@@ -39,20 +39,40 @@ const queryClient = new QueryClient({
   },
 });
 
+const PUBLIC_SEGMENTS = ["role-select", "login", "worker-login", "worker-register", "worker-pending"];
+
 function RootLayoutNav() {
-  const { isAuthenticated, isLoading } = useAuth();
+  const { isAuthenticated, isLoading, role, workerStatus } = useAuth();
   const router = useRouter();
   const segments = useSegments();
 
   useEffect(() => {
     if (isLoading) return;
-    const inLogin = segments[0] === "login";
-    if (!isAuthenticated && !inLogin) {
-      router.replace("/login");
-    } else if (isAuthenticated && inLogin) {
-      router.replace("/(tabs)");
+    const currentSegment = segments[0] as string | undefined;
+    const isPublic = PUBLIC_SEGMENTS.includes(currentSegment ?? "");
+
+    if (!isAuthenticated) {
+      if (!isPublic) router.replace("/role-select");
+      return;
     }
-  }, [isAuthenticated, isLoading, segments, router]);
+
+    // Authenticated: check role-based routing
+    if (role === "worker") {
+      if (workerStatus === "pending") {
+        if (currentSegment !== "worker-pending") router.replace("/worker-pending");
+        return;
+      }
+      if (workerStatus === "rejected") {
+        if (currentSegment !== "worker-login") router.replace("/worker-login");
+        return;
+      }
+      // approved worker — send to tabs if on a public/auth screen
+      if (isPublic) router.replace("/(tabs)");
+    } else {
+      // manager — send to tabs if on a public/auth screen
+      if (isPublic) router.replace("/(tabs)");
+    }
+  }, [isAuthenticated, isLoading, role, workerStatus, segments, router]);
 
   if (isLoading) {
     return (
@@ -64,7 +84,11 @@ function RootLayoutNav() {
 
   return (
     <Stack screenOptions={{ headerBackTitle: "Orqaga" }}>
+      <Stack.Screen name="role-select" options={{ headerShown: false }} />
       <Stack.Screen name="login" options={{ headerShown: false }} />
+      <Stack.Screen name="worker-login" options={{ headerShown: false }} />
+      <Stack.Screen name="worker-register" options={{ headerShown: false }} />
+      <Stack.Screen name="worker-pending" options={{ headerShown: false }} />
       <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
       <Stack.Screen
         name="product-form"

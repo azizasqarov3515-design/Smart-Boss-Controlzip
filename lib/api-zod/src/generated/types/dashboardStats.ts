@@ -15,4 +15,5 @@ export interface DashboardStats {
   todaySales: number;
   todayTransactions: number;
   totalDebt: number;
+  todayNetProfit: number;
 }

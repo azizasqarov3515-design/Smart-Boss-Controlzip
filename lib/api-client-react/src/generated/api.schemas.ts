@@ -38,6 +38,56 @@ export interface DashboardStats {
   todaySales: number;
   todayTransactions: number;
   totalDebt: number;
+  todayNetProfit: number;
+}
+
+export interface Worker {
+  id: number;
+  name: string;
+  address: string;
+  phone: string;
+  status: string;
+  createdAt: string;
+}
+
+export interface WorkerRegister {
+  name: string;
+  address: string;
+  phone: string;
+  password: string;
+}
+
+export interface WorkerRegisterResponse {
+  id: number;
+  name: string;
+  status: string;
+}
+
+export interface WorkerLogin {
+  phone: string;
+  password: string;
+}
+
+export interface WorkerLoginResponse {
+  token: string;
+  workerId: number;
+  name: string;
+  status: string;
+  role: string;
+}
+
+export interface DeleteRequest {
+  id: number;
+  saleIds: number[];
+  workerId?: number | null;
+  workerName: string;
+  status: string;
+  createdAt: string;
+}
+
+export interface CreateDeleteRequest {
+  /** @minItems 1 */
+  saleIds: number[];
 }
 
 export interface SaleItem {
@@ -157,4 +207,21 @@ export type DeleteSale200 = {
 
 export type BulkDeleteSales200 = {
   deleted: number;
+};
+
+export type RemoveWorker200 = {
+  ok: boolean;
+};
+
+export type CreateDeleteRequest201 = {
+  id: number;
+  status: string;
+};
+
+export type ApproveDeleteRequest200 = {
+  ok: boolean;
+};
+
+export type RejectDeleteRequest200 = {
+  ok: boolean;
 };

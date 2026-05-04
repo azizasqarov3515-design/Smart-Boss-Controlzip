@@ -12,6 +12,8 @@ tags:
   - name: dashboard
   - name: sales
   - name: customers
+  - name: workers
+  - name: deleteRequests
 paths:
   /healthz:
     get:
@@ -356,6 +358,159 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/CustomerStatement"
+  /workers:
+    get:
+      operationId: getWorkers
+      tags: [workers]
+      summary: Get all workers (manager only)
+      responses:
+        "200":
+          description: List of workers
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Worker"
+  /workers/{id}/approve:
+    post:
+      operationId: approveWorker
+      tags: [workers]
+      summary: Approve a worker registration (manager only)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Worker approved
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Worker"
+  /workers/{id}/reject:
+    post:
+      operationId: rejectWorker
+      tags: [workers]
+      summary: Reject a worker registration (manager only)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Worker rejected
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Worker"
+  /workers/{id}:
+    delete:
+      operationId: removeWorker
+      tags: [workers]
+      summary: Remove worker from app (manager only)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Worker removed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                required: [ok]
+  /delete-requests:
+    get:
+      operationId: getDeleteRequests
+      tags: [deleteRequests]
+      summary: Get pending delete requests (manager only)
+      responses:
+        "200":
+          description: List of delete requests
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/DeleteRequest"
+    post:
+      operationId: createDeleteRequest
+      tags: [deleteRequests]
+      summary: Create a delete request (worker)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateDeleteRequest"
+      responses:
+        "201":
+          description: Delete request created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: integer
+                  status:
+                    type: string
+                required: [id, status]
+  /delete-requests/{id}/approve:
+    post:
+      operationId: approveDeleteRequest
+      tags: [deleteRequests]
+      summary: Approve delete request (manager)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Approved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                required: [ok]
+  /delete-requests/{id}/reject:
+    post:
+      operationId: rejectDeleteRequest
+      tags: [deleteRequests]
+      summary: Reject delete request (manager)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Rejected
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                required: [ok]
 components:
   schemas:
     HealthStatus:
@@ -421,7 +576,97 @@ components:
           type: integer
         totalDebt:
           type: number
-      required: [totalProducts, totalItems, totalCostValue, totalSaleValue, lowStockCount, todaySales, todayTransactions, totalDebt]
+        todayNetProfit:
+          type: number
+      required: [totalProducts, totalItems, totalCostValue, totalSaleValue, lowStockCount, todaySales, todayTransactions, totalDebt, todayNetProfit]
+    Worker:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        address:
+          type: string
+        phone:
+          type: string
+        status:
+          type: string
+        createdAt:
+          type: string
+      required: [id, name, address, phone, status, createdAt]
+    WorkerRegister:
+      type: object
+      properties:
+        name:
+          type: string
+        address:
+          type: string
+        phone:
+          type: string
+        password:
+          type: string
+      required: [name, address, phone, password]
+    WorkerRegisterResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        status:
+          type: string
+      required: [id, name, status]
+    WorkerLogin:
+      type: object
+      properties:
+        phone:
+          type: string
+        password:
+          type: string
+      required: [phone, password]
+    WorkerLoginResponse:
+      type: object
+      properties:
+        token:
+          type: string
+        workerId:
+          type: integer
+        name:
+          type: string
+        status:
+          type: string
+        role:
+          type: string
+      required: [token, workerId, name, status, role]
+    DeleteRequest:
+      type: object
+      properties:
+        id:
+          type: integer
+        saleIds:
+          type: array
+          items:
+            type: integer
+        workerId:
+          type: integer
+          nullable: true
+        workerName:
+          type: string
+        status:
+          type: string
+        createdAt:
+          type: string
+      required: [id, saleIds, workerName, status, createdAt]
+    CreateDeleteRequest:
+      type: object
+      properties:
+        saleIds:
+          type: array
+          items:
+            type: integer
+          minItems: 1
+      required: [saleIds]
     SaleItem:
       type: object
       properties:

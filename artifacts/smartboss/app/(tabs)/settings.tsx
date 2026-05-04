@@ -17,6 +17,23 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useColors } from "@/hooks/useColors";
 import { useSettings, type Seller, type StoreSettings } from "@/hooks/useSettings";
 import { useTheme } from "@/contexts/ThemeContext";
+import { useAuth } from "@/contexts/AuthContext";
+import {
+  useGetWorkers,
+  useApproveWorker,
+  useRejectWorker,
+  useRemoveWorker,
+  useGetDeleteRequests,
+  useApproveDeleteRequest,
+  useRejectDeleteRequest,
+  getGetWorkersQueryKey,
+  getGetDeleteRequestsQueryKey,
+  getGetSalesQueryKey,
+  getGetDashboardStatsQueryKey,
+  type Worker,
+  type DeleteRequest,
+} from "@workspace/api-client-react";
+import { useQueryClient } from "@tanstack/react-query";
 
 function uuid() {
   return Math.random().toString(36).slice(2) + Date.now().toString(36);
@@ -27,11 +44,13 @@ function SectionCard({
   icon,
   children,
   colors,
+  badge,
 }: {
   title: string;
   icon: keyof typeof MaterialIcons.glyphMap;
   children: React.ReactNode;
   colors: ReturnType<typeof useColors>;
+  badge?: number;
 }) {
   return (
     <View style={[styles.sectionCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
@@ -40,6 +59,11 @@ function SectionCard({
           <MaterialIcons name={icon} size={18} color={colors.primary} />
         </View>
         <Text style={[styles.sectionTitle, { color: colors.foreground }]}>{title}</Text>
+        {badge != null && badge > 0 && (
+          <View style={[styles.badge, { backgroundColor: "#DC2626" }]}>
+            <Text style={styles.badgeText}>{badge}</Text>
+          </View>
+        )}
       </View>
       <View style={styles.sectionBody}>{children}</View>
     </View>
@@ -76,11 +100,262 @@ function Field({
   );
 }
 
+function WorkerStatusBadge({ status, colors }: { status: string; colors: ReturnType<typeof useColors> }) {
+  const map = {
+    pending: { bg: "#FEF3C7", text: "#92400E", label: "Kutmoqda" },
+    approved: { bg: "#D1FAE5", text: "#065F46", label: "Tasdiqlangan" },
+    rejected: { bg: "#FEE2E2", text: "#991B1B", label: "Rad etilgan" },
+  };
+  const s = map[status as keyof typeof map] ?? map.pending;
+  return (
+    <View style={[styles.statusBadge, { backgroundColor: s.bg }]}>
+      <Text style={[styles.statusBadgeText, { color: s.text }]}>{s.label}</Text>
+    </View>
+  );
+}
+
+function WorkersSection({ colors }: { colors: ReturnType<typeof useColors> }) {
+  const queryClient = useQueryClient();
+  const { data: workers, isLoading, refetch } = useGetWorkers({ query: { refetchInterval: 15000 } });
+  const [removeConfirm, setRemoveConfirm] = useState<Worker | null>(null);
+
+  const invalidate = () => {
+    queryClient.invalidateQueries({ queryKey: getGetWorkersQueryKey() });
+  };
+
+  const { mutate: approve, isPending: approving } = useApproveWorker({
+    mutation: { onSuccess: invalidate },
+  });
+  const { mutate: reject, isPending: rejecting } = useRejectWorker({
+    mutation: { onSuccess: invalidate },
+  });
+  const { mutate: remove, isPending: removing } = useRemoveWorker({
+    mutation: {
+      onSuccess: () => {
+        setRemoveConfirm(null);
+        invalidate();
+      },
+    },
+  });
+
+  const pending = (workers ?? []).filter((w) => w.status === "pending");
+  const others = (workers ?? []).filter((w) => w.status !== "pending");
+
+  if (isLoading) return (
+    <View style={styles.centerRow}>
+      <ActivityIndicator size="small" color={colors.primary} />
+    </View>
+  );
+
+  return (
+    <View style={{ gap: 12 }}>
+      {pending.length > 0 && (
+        <View>
+          <Text style={[styles.subSectionLabel, { color: colors.mutedForeground }]}>Kutayotgan arizalar</Text>
+          {pending.map((w) => (
+            <View key={w.id} style={[styles.workerRow, { backgroundColor: "#FFFBEB", borderColor: "#FCD34D" }]}>
+              <View style={[styles.workerAvatar, { backgroundColor: "#FDE68A" }]}>
+                <Text style={[styles.workerAvatarText, { color: "#92400E" }]}>{w.name.charAt(0).toUpperCase()}</Text>
+              </View>
+              <View style={styles.workerInfo}>
+                <Text style={[styles.workerName, { color: colors.foreground }]}>{w.name}</Text>
+                <Text style={[styles.workerPhone, { color: colors.mutedForeground }]}>{w.phone}</Text>
+                <Text style={[styles.workerAddress, { color: colors.mutedForeground }]} numberOfLines={1}>{w.address}</Text>
+              </View>
+              <View style={styles.workerActions}>
+                <TouchableOpacity
+                  style={[styles.actionBtn, { backgroundColor: "#D1FAE5" }]}
+                  onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); approve({ id: w.id }); }}
+                  activeOpacity={0.8}
+                  disabled={approving || rejecting}
+                >
+                  <MaterialIcons name="check" size={18} color="#065F46" />
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.actionBtn, { backgroundColor: "#FEE2E2" }]}
+                  onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); reject({ id: w.id }); }}
+                  activeOpacity={0.8}
+                  disabled={approving || rejecting}
+                >
+                  <MaterialIcons name="close" size={18} color="#DC2626" />
+                </TouchableOpacity>
+              </View>
+            </View>
+          ))}
+        </View>
+      )}
+
+      {others.length > 0 && (
+        <View>
+          <Text style={[styles.subSectionLabel, { color: colors.mutedForeground }]}>Barcha ishchilar</Text>
+          {others.map((w) => (
+            <View key={w.id} style={[styles.workerRow, { backgroundColor: colors.muted, borderColor: colors.border }]}>
+              <View style={[styles.workerAvatar, { backgroundColor: colors.primary + "22" }]}>
+                <Text style={[styles.workerAvatarText, { color: colors.primary }]}>{w.name.charAt(0).toUpperCase()}</Text>
+              </View>
+              <View style={styles.workerInfo}>
+                <View style={styles.workerNameRow}>
+                  <Text style={[styles.workerName, { color: colors.foreground }]}>{w.name}</Text>
+                  <WorkerStatusBadge status={w.status} colors={colors} />
+                </View>
+                <Text style={[styles.workerPhone, { color: colors.mutedForeground }]}>{w.phone}</Text>
+              </View>
+              <TouchableOpacity
+                style={[styles.actionBtn, { backgroundColor: "#FEE2E2" }]}
+                onPress={() => setRemoveConfirm(w)}
+                activeOpacity={0.8}
+              >
+                <MaterialIcons name="person-remove" size={17} color="#DC2626" />
+              </TouchableOpacity>
+            </View>
+          ))}
+        </View>
+      )}
+
+      {(workers ?? []).length === 0 && (
+        <View style={styles.emptyRow}>
+          <MaterialIcons name="person-off" size={32} color={colors.border} />
+          <Text style={[styles.emptyText, { color: colors.mutedForeground }]}>Hali ishchi yo'q</Text>
+        </View>
+      )}
+
+      <TouchableOpacity
+        style={[styles.refreshBtn, { borderColor: colors.border }]}
+        onPress={() => refetch()}
+        activeOpacity={0.8}
+      >
+        <MaterialIcons name="refresh" size={16} color={colors.mutedForeground} />
+        <Text style={[styles.refreshBtnText, { color: colors.mutedForeground }]}>Yangilash</Text>
+      </TouchableOpacity>
+
+      <Modal
+        visible={!!removeConfirm}
+        transparent
+        animationType="fade"
+        statusBarTranslucent
+        onRequestClose={() => setRemoveConfirm(null)}
+      >
+        <View style={styles.confirmBackdrop}>
+          <View style={[styles.confirmSheet, { backgroundColor: colors.card }]}>
+            <View style={[styles.confirmIconWrap, { backgroundColor: "#FEE2E2" }]}>
+              <MaterialIcons name="person-remove" size={28} color="#DC2626" />
+            </View>
+            <Text style={[styles.confirmTitle, { color: colors.foreground }]}>Ishchini chiqarish</Text>
+            <Text style={[styles.confirmMsg, { color: colors.mutedForeground }]}>
+              <Text style={{ fontFamily: "Inter_700Bold", color: colors.foreground }}>{removeConfirm?.name}</Text>
+              {" "}ni tizimdan chiqarasizmi?
+            </Text>
+            <View style={styles.confirmBtns}>
+              <TouchableOpacity
+                style={[styles.confirmCancelBtn, { backgroundColor: colors.muted, borderColor: colors.border }]}
+                onPress={() => setRemoveConfirm(null)}
+                activeOpacity={0.8}
+              >
+                <Text style={[styles.confirmCancelText, { color: colors.mutedForeground }]}>Bekor</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.confirmDeleteBtn, { backgroundColor: "#DC2626" }]}
+                onPress={() => removeConfirm && remove({ id: removeConfirm.id })}
+                activeOpacity={0.85}
+                disabled={removing}
+              >
+                {removing ? <ActivityIndicator size="small" color="#fff" /> : <MaterialIcons name="person-remove" size={16} color="#fff" />}
+                <Text style={styles.confirmDeleteText}>Chiqarish</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+    </View>
+  );
+}
+
+function DeleteRequestsSection({ colors }: { colors: ReturnType<typeof useColors> }) {
+  const queryClient = useQueryClient();
+  const { data: requests, isLoading, refetch } = useGetDeleteRequests({ query: { refetchInterval: 15000 } });
+
+  const invalidate = () => {
+    queryClient.invalidateQueries({ queryKey: getGetDeleteRequestsQueryKey() });
+    queryClient.invalidateQueries({ queryKey: getGetSalesQueryKey() });
+    queryClient.invalidateQueries({ queryKey: getGetDashboardStatsQueryKey() });
+  };
+
+  const { mutate: approve, isPending: approving } = useApproveDeleteRequest({
+    mutation: { onSuccess: invalidate },
+  });
+  const { mutate: reject, isPending: rejecting } = useRejectDeleteRequest({
+    mutation: { onSuccess: invalidate },
+  });
+
+  if (isLoading) return (
+    <View style={styles.centerRow}>
+      <ActivityIndicator size="small" color={colors.primary} />
+    </View>
+  );
+
+  if ((requests ?? []).length === 0) return (
+    <View style={styles.emptyRow}>
+      <MaterialIcons name="inbox" size={32} color={colors.border} />
+      <Text style={[styles.emptyText, { color: colors.mutedForeground }]}>O'chirish so'rovlari yo'q</Text>
+    </View>
+  );
+
+  return (
+    <View style={{ gap: 10 }}>
+      {(requests ?? []).map((r: DeleteRequest) => (
+        <View key={r.id} style={[styles.requestRow, { backgroundColor: "#FFF7ED", borderColor: "#FDBA74" }]}>
+          <View style={styles.requestTop}>
+            <MaterialIcons name="delete-sweep" size={18} color="#EA580C" />
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.requestWorker, { color: colors.foreground }]}>{r.workerName}</Text>
+              <Text style={[styles.requestSub, { color: colors.mutedForeground }]}>
+                {(r.saleIds as number[]).length} ta savdo o'chirish so'rovi
+              </Text>
+            </View>
+            <Text style={[styles.requestDate, { color: colors.mutedForeground }]}>
+              {new Date(r.createdAt).toLocaleDateString("uz-UZ")}
+            </Text>
+          </View>
+          <View style={styles.requestBtns}>
+            <TouchableOpacity
+              style={[styles.reqBtn, { backgroundColor: "#D1FAE5", flex: 1 }]}
+              onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); approve({ id: r.id }); }}
+              disabled={approving || rejecting}
+              activeOpacity={0.8}
+            >
+              <MaterialIcons name="check" size={16} color="#065F46" />
+              <Text style={[styles.reqBtnText, { color: "#065F46" }]}>Tasdiqlash</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.reqBtn, { backgroundColor: "#FEE2E2", flex: 1 }]}
+              onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); reject({ id: r.id }); }}
+              disabled={approving || rejecting}
+              activeOpacity={0.8}
+            >
+              <MaterialIcons name="close" size={16} color="#DC2626" />
+              <Text style={[styles.reqBtnText, { color: "#DC2626" }]}>Rad etish</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      ))}
+      <TouchableOpacity
+        style={[styles.refreshBtn, { borderColor: colors.border }]}
+        onPress={() => refetch()}
+        activeOpacity={0.8}
+      >
+        <MaterialIcons name="refresh" size={16} color={colors.mutedForeground} />
+        <Text style={[styles.refreshBtnText, { color: colors.mutedForeground }]}>Yangilash</Text>
+      </TouchableOpacity>
+    </View>
+  );
+}
+
 export default function SettingsScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const { settings, saveSettings, isLoading } = useSettings();
   const { mode: themeMode, setMode: setThemeMode } = useTheme();
+  const { role } = useAuth();
 
   const [storeName, setStoreName] = useState("");
   const [storeSubtitle, setStoreSubtitle] = useState("");
@@ -96,6 +371,9 @@ export default function SettingsScreen() {
   const [sellerError, setSellerError] = useState<string | null>(null);
   const [deleteSellerConfirm, setDeleteSellerConfirm] = useState<Seller | null>(null);
 
+  const { data: pendingWorkers } = useGetWorkers({ query: { enabled: role === "manager", refetchInterval: 15000, select: (d) => d.filter((w) => w.status === "pending") } });
+  const { data: pendingDeleteReqs } = useGetDeleteRequests({ query: { enabled: role === "manager", refetchInterval: 15000 } });
+
   useEffect(() => {
     if (!isLoading) {
       setStoreName(settings.storeName);
@@ -108,12 +386,7 @@ export default function SettingsScreen() {
   const handleSave = async () => {
     if (!storeName.trim()) return;
     setSaving(true);
-    const next: StoreSettings = {
-      storeName: storeName.trim(),
-      storeSubtitle: storeSubtitle.trim(),
-      storeAddress: storeAddress.trim(),
-      sellers,
-    };
+    const next: StoreSettings = { storeName: storeName.trim(), storeSubtitle: storeSubtitle.trim(), storeAddress: storeAddress.trim(), sellers };
     await saveSettings(next);
     setSaving(false);
     setSaved(true);
@@ -121,39 +394,19 @@ export default function SettingsScreen() {
     setTimeout(() => setSaved(false), 2000);
   };
 
-  const openAddSeller = () => {
-    setEditingSeller(null);
-    setSellerName("");
-    setSellerPhone("");
-    setSellerError(null);
-    setSellerModal(true);
-  };
-
-  const openEditSeller = (s: Seller) => {
-    setEditingSeller(s);
-    setSellerName(s.name);
-    setSellerPhone(s.phone);
-    setSellerError(null);
-    setSellerModal(true);
-  };
+  const openAddSeller = () => { setEditingSeller(null); setSellerName(""); setSellerPhone(""); setSellerError(null); setSellerModal(true); };
+  const openEditSeller = (s: Seller) => { setEditingSeller(s); setSellerName(s.name); setSellerPhone(s.phone); setSellerError(null); setSellerModal(true); };
 
   const handleSaveSeller = () => {
     if (!sellerName.trim()) { setSellerError("Ism kiritilishi shart"); return; }
     if (!sellerPhone.trim()) { setSellerError("Telefon kiritilishi shart"); return; }
     if (editingSeller) {
-      setSellers((prev) => prev.map((s) => s.id === editingSeller.id
-        ? { ...s, name: sellerName.trim(), phone: sellerPhone.trim() }
-        : s
-      ));
+      setSellers((prev) => prev.map((s) => s.id === editingSeller.id ? { ...s, name: sellerName.trim(), phone: sellerPhone.trim() } : s));
     } else {
       setSellers((prev) => [...prev, { id: uuid(), name: sellerName.trim(), phone: sellerPhone.trim() }]);
     }
     setSellerModal(false);
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-  };
-
-  const handleDeleteSeller = (s: Seller) => {
-    setDeleteSellerConfirm(s);
   };
 
   const confirmDeleteSeller = () => {
@@ -164,145 +417,118 @@ export default function SettingsScreen() {
   };
 
   if (isLoading) {
+    return <View style={[styles.loader, { backgroundColor: colors.background }]}><ActivityIndicator size="large" color={colors.primary} /></View>;
+  }
+
+  const themeSection = (
+    <SectionCard title="Ko'rinish (Mavzu)" icon="palette" colors={colors}>
+      {(
+        [
+          { value: "light", label: "Kunduzgi", icon: "light-mode" },
+          { value: "dark", label: "Tungi", icon: "dark-mode" },
+          { value: "system", label: "Tizim", icon: "brightness-auto" },
+        ] as { value: "light" | "dark" | "system"; label: string; icon: keyof typeof MaterialIcons.glyphMap }[]
+      ).map((opt) => {
+        const active = themeMode === opt.value;
+        return (
+          <TouchableOpacity
+            key={opt.value}
+            style={[styles.themeRow, { backgroundColor: active ? colors.primary + "18" : colors.muted, borderColor: active ? colors.primary : colors.border }]}
+            onPress={() => { setThemeMode(opt.value); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }}
+            activeOpacity={0.8}
+          >
+            <MaterialIcons name={opt.icon} size={22} color={active ? colors.primary : colors.mutedForeground} />
+            <Text style={[styles.themeLabel, { color: active ? colors.primary : colors.foreground, fontFamily: active ? "Inter_700Bold" : "Inter_400Regular" }]}>
+              {opt.label}
+            </Text>
+            {active && <MaterialIcons name="check-circle" size={18} color={colors.primary} style={{ marginLeft: "auto" }} />}
+          </TouchableOpacity>
+        );
+      })}
+    </SectionCard>
+  );
+
+  // Worker view — only theme
+  if (role === "worker") {
     return (
-      <View style={[styles.loader, { backgroundColor: colors.background }]}>
-        <ActivityIndicator size="large" color={colors.primary} />
+      <View style={[styles.container, { backgroundColor: colors.background }]}>
+        <ScrollView
+          contentContainerStyle={{ padding: 16, paddingBottom: insets.bottom + 100, gap: 16 }}
+          showsVerticalScrollIndicator={false}
+        >
+          {themeSection}
+          <View style={[styles.hintBox, { backgroundColor: colors.muted, borderColor: colors.border }]}>
+            <MaterialIcons name="info-outline" size={16} color={colors.mutedForeground} />
+            <Text style={[styles.hintText, { color: colors.mutedForeground }]}>
+              Sozlama bo'limida faqat mavzu o'zgartirishga ruxsat mavjud.
+            </Text>
+          </View>
+        </ScrollView>
       </View>
     );
   }
 
+  // Manager view — full settings
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <KeyboardAvoidingView
-        style={{ flex: 1 }}
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
-      >
+      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === "ios" ? "padding" : undefined}>
         <ScrollView
           contentContainerStyle={{ padding: 16, paddingBottom: insets.bottom + 100, gap: 16 }}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
         >
+          {/* Workers management */}
+          <SectionCard title="Ishchilar arizalari" icon="badge" colors={colors} badge={pendingWorkers?.length}>
+            <WorkersSection colors={colors} />
+          </SectionCard>
+
+          {/* Delete requests */}
+          <SectionCard title="O'chirish so'rovlari" icon="delete-sweep" colors={colors} badge={pendingDeleteReqs?.length}>
+            <DeleteRequestsSection colors={colors} />
+          </SectionCard>
+
           {/* Store info */}
           <SectionCard title="Do'kon ma'lumotlari" icon="store" colors={colors}>
-            <Field
-              label="Do'kon nomi *"
-              value={storeName}
-              onChangeText={setStoreName}
-              placeholder="SMARTBOSS"
-              colors={colors}
-            />
-            <Field
-              label="Tavsif (kichik yozuv)"
-              value={storeSubtitle}
-              onChangeText={setStoreSubtitle}
-              placeholder="Android mobil aksessuarlar do'koni"
-              colors={colors}
-            />
-            <Field
-              label="Do'kon manzili"
-              value={storeAddress}
-              onChangeText={setStoreAddress}
-              placeholder="Shahar, ko'cha, bino..."
-              colors={colors}
-            />
+            <Field label="Do'kon nomi *" value={storeName} onChangeText={setStoreName} placeholder="SMARTBOSS" colors={colors} />
+            <Field label="Tavsif (kichik yozuv)" value={storeSubtitle} onChangeText={setStoreSubtitle} placeholder="Android mobil aksessuarlar do'koni" colors={colors} />
+            <Field label="Do'kon manzili" value={storeAddress} onChangeText={setStoreAddress} placeholder="Shahar, ko'cha, bino..." colors={colors} />
           </SectionCard>
 
           {/* Sellers */}
-          <SectionCard title="Sotuvchilar" icon="badge" colors={colors}>
+          <SectionCard title="Sotuvchilar" icon="people" colors={colors}>
             {sellers.length === 0 && (
               <View style={styles.emptyRow}>
                 <MaterialIcons name="person-off" size={32} color={colors.border} />
-                <Text style={[styles.emptyText, { color: colors.mutedForeground }]}>
-                  Sotuvchi yo'q
-                </Text>
+                <Text style={[styles.emptyText, { color: colors.mutedForeground }]}>Sotuvchi yo'q</Text>
               </View>
             )}
             {sellers.map((s, idx) => (
-              <View
-                key={s.id}
-                style={[
-                  styles.sellerRow,
-                  {
-                    backgroundColor: colors.muted,
-                    borderColor: colors.border,
-                    borderTopWidth: idx === 0 ? 0 : 1,
-                  },
-                ]}
-              >
+              <View key={s.id} style={[styles.sellerRow, { backgroundColor: colors.muted, borderColor: colors.border, borderTopWidth: idx === 0 ? 0 : 1 }]}>
                 <View style={[styles.sellerAvatar, { backgroundColor: colors.primary + "22" }]}>
-                  <Text style={[styles.sellerAvatarText, { color: colors.primary }]}>
-                    {s.name.charAt(0).toUpperCase()}
-                  </Text>
+                  <Text style={[styles.sellerAvatarText, { color: colors.primary }]}>{s.name.charAt(0).toUpperCase()}</Text>
                 </View>
                 <View style={styles.sellerInfo}>
                   <Text style={[styles.sellerName, { color: colors.foreground }]}>{s.name}</Text>
                   <Text style={[styles.sellerPhone, { color: colors.mutedForeground }]}>{s.phone}</Text>
                 </View>
                 <View style={styles.sellerActions}>
-                  <TouchableOpacity
-                    style={[styles.sellerActionBtn, { backgroundColor: colors.primary + "18" }]}
-                    onPress={() => openEditSeller(s)}
-                    activeOpacity={0.8}
-                  >
+                  <TouchableOpacity style={[styles.sellerActionBtn, { backgroundColor: colors.primary + "18" }]} onPress={() => openEditSeller(s)} activeOpacity={0.8}>
                     <MaterialIcons name="edit" size={16} color={colors.primary} />
                   </TouchableOpacity>
-                  <TouchableOpacity
-                    style={[styles.sellerActionBtn, { backgroundColor: "#FEE2E2" }]}
-                    onPress={() => handleDeleteSeller(s)}
-                    activeOpacity={0.8}
-                  >
+                  <TouchableOpacity style={[styles.sellerActionBtn, { backgroundColor: "#FEE2E2" }]} onPress={() => setDeleteSellerConfirm(s)} activeOpacity={0.8}>
                     <MaterialIcons name="delete" size={16} color="#DC2626" />
                   </TouchableOpacity>
                 </View>
               </View>
             ))}
-
-            <TouchableOpacity
-              style={[styles.addSellerBtn, { borderColor: colors.primary }]}
-              onPress={openAddSeller}
-              activeOpacity={0.85}
-            >
+            <TouchableOpacity style={[styles.addSellerBtn, { borderColor: colors.primary }]} onPress={openAddSeller} activeOpacity={0.85}>
               <MaterialIcons name="person-add" size={18} color={colors.primary} />
-              <Text style={[styles.addSellerText, { color: colors.primary }]}>
-                Yangi sotuvchi qo'shish
-              </Text>
+              <Text style={[styles.addSellerText, { color: colors.primary }]}>Yangi sotuvchi qo'shish</Text>
             </TouchableOpacity>
           </SectionCard>
 
-          {/* Theme */}
-          <SectionCard title="Ko'rinish (Mavzu)" icon="palette" colors={colors}>
-            {(
-              [
-                { value: "light", label: "Kunduzgi", icon: "light-mode" },
-                { value: "dark",  label: "Tungi",    icon: "dark-mode"  },
-                { value: "system",label: "Tizim",    icon: "brightness-auto" },
-              ] as { value: "light" | "dark" | "system"; label: string; icon: keyof typeof MaterialIcons.glyphMap }[]
-            ).map((opt) => {
-              const active = themeMode === opt.value;
-              return (
-                <TouchableOpacity
-                  key={opt.value}
-                  style={[
-                    styles.themeRow,
-                    {
-                      backgroundColor: active ? colors.primary + "18" : colors.muted,
-                      borderColor: active ? colors.primary : colors.border,
-                    },
-                  ]}
-                  onPress={() => { setThemeMode(opt.value); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }}
-                  activeOpacity={0.8}
-                >
-                  <MaterialIcons name={opt.icon} size={22} color={active ? colors.primary : colors.mutedForeground} />
-                  <Text style={[styles.themeLabel, { color: active ? colors.primary : colors.foreground, fontFamily: active ? "Inter_600SemiBold" : "Inter_400Regular" }]}>
-                    {opt.label}
-                  </Text>
-                  {active && <MaterialIcons name="check-circle" size={18} color={colors.primary} style={{ marginLeft: "auto" }} />}
-                </TouchableOpacity>
-              );
-            })}
-          </SectionCard>
+          {themeSection}
 
-          {/* Hint */}
           <View style={[styles.hintBox, { backgroundColor: colors.muted, borderColor: colors.border }]}>
             <MaterialIcons name="info-outline" size={16} color={colors.mutedForeground} />
             <Text style={[styles.hintText, { color: colors.mutedForeground }]}>
@@ -320,75 +546,37 @@ export default function SettingsScreen() {
           disabled={saving || !storeName.trim()}
           activeOpacity={0.88}
         >
-          {saving ? (
-            <ActivityIndicator size="small" color="#fff" />
-          ) : saved ? (
-            <>
-              <MaterialIcons name="check-circle" size={20} color="#fff" />
-              <Text style={styles.saveBtnText}>Saqlandi!</Text>
-            </>
+          {saving ? <ActivityIndicator size="small" color="#fff" /> : saved ? (
+            <><MaterialIcons name="check-circle" size={20} color="#fff" /><Text style={styles.saveBtnText}>Saqlandi!</Text></>
           ) : (
-            <>
-              <MaterialIcons name="save" size={20} color="#fff" />
-              <Text style={styles.saveBtnText}>Sozlamalarni saqlash</Text>
-            </>
+            <><MaterialIcons name="save" size={20} color="#fff" /><Text style={styles.saveBtnText}>Sozlamalarni saqlash</Text></>
           )}
         </TouchableOpacity>
       </View>
 
       {/* Seller add/edit modal */}
-      <Modal
-        visible={sellerModal}
-        transparent
-        animationType="slide"
-        statusBarTranslucent
-        onRequestClose={() => setSellerModal(false)}
-      >
-        <KeyboardAvoidingView
-          style={{ flex: 1 }}
-          behavior={Platform.OS === "ios" ? "padding" : "height"}
-        >
+      <Modal visible={sellerModal} transparent animationType="slide" statusBarTranslucent onRequestClose={() => setSellerModal(false)}>
+        <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === "ios" ? "padding" : "height"}>
           <View style={styles.modalBackdrop}>
             <View style={[styles.modalSheet, { backgroundColor: colors.card }]}>
               <View style={[styles.modalHeader, { borderBottomColor: colors.border }]}>
-                <Text style={[styles.modalTitle, { color: colors.foreground }]}>
-                  {editingSeller ? "Sotuvchini tahrirlash" : "Yangi sotuvchi"}
-                </Text>
+                <Text style={[styles.modalTitle, { color: colors.foreground }]}>{editingSeller ? "Sotuvchini tahrirlash" : "Yangi sotuvchi"}</Text>
                 <TouchableOpacity onPress={() => setSellerModal(false)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
                   <MaterialIcons name="close" size={22} color={colors.mutedForeground} />
                 </TouchableOpacity>
               </View>
               <View style={styles.modalBody}>
-                <Field
-                  label="Sotuvchi ismi *"
-                  value={sellerName}
-                  onChangeText={setSellerName}
-                  placeholder="Azizbek"
-                  colors={colors}
-                />
-                <Field
-                  label="Telefon raqami *"
-                  value={sellerPhone}
-                  onChangeText={setSellerPhone}
-                  placeholder="+998 93 483 12 89"
-                  keyboardType="phone-pad"
-                  colors={colors}
-                />
+                <Field label="Sotuvchi ismi *" value={sellerName} onChangeText={setSellerName} placeholder="Azizbek" colors={colors} />
+                <Field label="Telefon raqami *" value={sellerPhone} onChangeText={setSellerPhone} placeholder="+998 93 483 12 89" keyboardType="phone-pad" colors={colors} />
                 {sellerError && (
                   <View style={styles.errorBox}>
                     <MaterialIcons name="error-outline" size={14} color="#DC2626" />
                     <Text style={styles.errorText}>{sellerError}</Text>
                   </View>
                 )}
-                <TouchableOpacity
-                  style={[styles.modalSaveBtn, { backgroundColor: colors.primary }]}
-                  onPress={handleSaveSeller}
-                  activeOpacity={0.88}
-                >
+                <TouchableOpacity style={[styles.modalSaveBtn, { backgroundColor: colors.primary }]} onPress={handleSaveSeller} activeOpacity={0.88}>
                   <MaterialIcons name="check" size={18} color="#fff" />
-                  <Text style={styles.modalSaveBtnText}>
-                    {editingSeller ? "Saqlash" : "Qo'shish"}
-                  </Text>
+                  <Text style={styles.modalSaveBtnText}>{editingSeller ? "Saqlash" : "Qo'shish"}</Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -397,40 +585,22 @@ export default function SettingsScreen() {
       </Modal>
 
       {/* Delete seller confirm modal */}
-      <Modal
-        visible={!!deleteSellerConfirm}
-        transparent
-        animationType="fade"
-        statusBarTranslucent
-        onRequestClose={() => setDeleteSellerConfirm(null)}
-      >
+      <Modal visible={!!deleteSellerConfirm} transparent animationType="fade" statusBarTranslucent onRequestClose={() => setDeleteSellerConfirm(null)}>
         <View style={styles.confirmBackdrop}>
           <View style={[styles.confirmSheet, { backgroundColor: colors.card }]}>
             <View style={[styles.confirmIconWrap, { backgroundColor: "#FEE2E2" }]}>
               <MaterialIcons name="person-remove" size={28} color="#DC2626" />
             </View>
-            <Text style={[styles.confirmTitle, { color: colors.foreground }]}>
-              Sotuvchini o'chirish
-            </Text>
+            <Text style={[styles.confirmTitle, { color: colors.foreground }]}>Sotuvchini o'chirish</Text>
             <Text style={[styles.confirmMsg, { color: colors.mutedForeground }]}>
-              <Text style={{ fontFamily: "Inter_700Bold", color: colors.foreground }}>
-                {deleteSellerConfirm?.name}
-              </Text>
+              <Text style={{ fontFamily: "Inter_700Bold", color: colors.foreground }}>{deleteSellerConfirm?.name}</Text>
               {" "}ni ro'yxatdan o'chirasizmi?
             </Text>
             <View style={styles.confirmBtns}>
-              <TouchableOpacity
-                style={[styles.confirmCancelBtn, { backgroundColor: colors.muted, borderColor: colors.border }]}
-                onPress={() => setDeleteSellerConfirm(null)}
-                activeOpacity={0.8}
-              >
+              <TouchableOpacity style={[styles.confirmCancelBtn, { backgroundColor: colors.muted, borderColor: colors.border }]} onPress={() => setDeleteSellerConfirm(null)} activeOpacity={0.8}>
                 <Text style={[styles.confirmCancelText, { color: colors.mutedForeground }]}>Bekor</Text>
               </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.confirmDeleteBtn, { backgroundColor: "#DC2626" }]}
-                onPress={confirmDeleteSeller}
-                activeOpacity={0.85}
-              >
+              <TouchableOpacity style={[styles.confirmDeleteBtn, { backgroundColor: "#DC2626" }]} onPress={confirmDeleteSeller} activeOpacity={0.85}>
                 <MaterialIcons name="delete" size={16} color="#fff" />
                 <Text style={styles.confirmDeleteText}>O'chirish</Text>
               </TouchableOpacity>
@@ -445,208 +615,76 @@ export default function SettingsScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   loader: { flex: 1, alignItems: "center", justifyContent: "center" },
-
-  sectionCard: {
-    borderRadius: 16,
-    borderWidth: 1,
-    overflow: "hidden",
-  },
-  sectionHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-  },
-  sectionIconWrap: {
-    width: 32,
-    height: 32,
-    borderRadius: 8,
-    alignItems: "center",
-    justifyContent: "center",
-  },
+  badge: { minWidth: 20, height: 20, borderRadius: 10, alignItems: "center", justifyContent: "center", paddingHorizontal: 5, marginLeft: "auto" },
+  badgeText: { fontFamily: "Inter_700Bold", fontSize: 11, color: "#fff" },
+  sectionCard: { borderRadius: 16, borderWidth: 1, overflow: "hidden" },
+  sectionHeader: { flexDirection: "row", alignItems: "center", gap: 10, paddingHorizontal: 16, paddingVertical: 12, borderBottomWidth: 1 },
+  sectionIconWrap: { width: 32, height: 32, borderRadius: 8, alignItems: "center", justifyContent: "center" },
   sectionTitle: { fontFamily: "Inter_700Bold", fontSize: 15 },
   sectionBody: { padding: 16, gap: 12 },
-
+  subSectionLabel: { fontFamily: "Inter_600SemiBold", fontSize: 11, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 6 },
   field: { gap: 5 },
   fieldLabel: { fontFamily: "Inter_500Medium", fontSize: 12 },
-  fieldInput: {
-    borderRadius: 10,
-    borderWidth: 1,
-    paddingHorizontal: 12,
-    paddingVertical: 11,
-    fontFamily: "Inter_400Regular",
-    fontSize: 14,
-  },
-
-  emptyRow: { alignItems: "center", paddingVertical: 16, gap: 8 },
-  emptyText: { fontFamily: "Inter_400Regular", fontSize: 13 },
-
-  sellerRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-    paddingVertical: 12,
-    paddingHorizontal: 4,
-    borderRadius: 10,
-    marginBottom: 6,
-  },
-  sellerAvatar: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    alignItems: "center",
-    justifyContent: "center",
-  },
+  fieldInput: { borderRadius: 10, borderWidth: 1, paddingHorizontal: 12, paddingVertical: 11, fontFamily: "Inter_400Regular", fontSize: 14 },
+  themeRow: { flexDirection: "row", alignItems: "center", gap: 10, borderRadius: 10, borderWidth: 1.5, paddingHorizontal: 14, paddingVertical: 11 },
+  themeLabel: { fontSize: 14 },
+  sellerRow: { flexDirection: "row", alignItems: "center", gap: 10, borderRadius: 10, borderWidth: 1, padding: 10 },
+  sellerAvatar: { width: 36, height: 36, borderRadius: 10, alignItems: "center", justifyContent: "center" },
   sellerAvatarText: { fontFamily: "Inter_700Bold", fontSize: 16 },
   sellerInfo: { flex: 1 },
   sellerName: { fontFamily: "Inter_600SemiBold", fontSize: 14 },
-  sellerPhone: { fontFamily: "Inter_400Regular", fontSize: 12, marginTop: 2 },
+  sellerPhone: { fontFamily: "Inter_400Regular", fontSize: 12, marginTop: 1 },
   sellerActions: { flexDirection: "row", gap: 6 },
-  sellerActionBtn: {
-    width: 32,
-    height: 32,
-    borderRadius: 8,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-
-  addSellerBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 8,
-    borderRadius: 12,
-    borderWidth: 1.5,
-    borderStyle: "dashed",
-    paddingVertical: 12,
-    marginTop: 4,
-  },
+  sellerActionBtn: { width: 32, height: 32, borderRadius: 8, alignItems: "center", justifyContent: "center" },
+  addSellerBtn: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, borderRadius: 10, borderWidth: 1.5, borderStyle: "dashed", paddingVertical: 11 },
   addSellerText: { fontFamily: "Inter_600SemiBold", fontSize: 14 },
-
-  hintBox: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    gap: 8,
-    borderRadius: 12,
-    borderWidth: 1,
-    padding: 12,
-  },
+  emptyRow: { alignItems: "center", paddingVertical: 16, gap: 6 },
+  emptyText: { fontFamily: "Inter_400Regular", fontSize: 13 },
+  hintBox: { flexDirection: "row", alignItems: "flex-start", gap: 10, borderRadius: 12, borderWidth: 1, padding: 12 },
   hintText: { fontFamily: "Inter_400Regular", fontSize: 12, flex: 1, lineHeight: 18 },
-
-  saveBar: {
-    borderTopWidth: 1,
-    paddingHorizontal: 16,
-    paddingTop: 12,
-  },
-  saveBtn: {
-    borderRadius: 14,
-    paddingVertical: 15,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 8,
-  },
-  saveBtnText: { fontFamily: "Inter_700Bold", fontSize: 16, color: "#fff" },
-
-  // Seller modal
-  modalBackdrop: {
-    flex: 1,
-    backgroundColor: "rgba(0,0,0,0.5)",
-    justifyContent: "flex-end",
-  },
-  modalSheet: {
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    overflow: "hidden",
-  },
-  modalHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-    borderBottomWidth: 1,
-  },
+  saveBar: { borderTopWidth: 1, padding: 14 },
+  saveBtn: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, borderRadius: 14, height: 50 },
+  saveBtnText: { fontFamily: "Inter_700Bold", fontSize: 15, color: "#fff" },
+  modalBackdrop: { flex: 1, backgroundColor: "rgba(0,0,0,0.5)", justifyContent: "flex-end" },
+  modalSheet: { borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 20 },
+  modalHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingBottom: 14, borderBottomWidth: 1, marginBottom: 14 },
   modalTitle: { fontFamily: "Inter_700Bold", fontSize: 17 },
-  modalBody: { padding: 20, gap: 14 },
-  errorBox: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    backgroundColor: "#FEF2F2",
-    borderRadius: 8,
-    paddingHorizontal: 10,
-    paddingVertical: 8,
-  },
-  errorText: { fontFamily: "Inter_500Medium", fontSize: 13, color: "#DC2626" },
-  modalSaveBtn: {
-    borderRadius: 12,
-    paddingVertical: 14,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 8,
-    marginTop: 4,
-  },
+  modalBody: { gap: 12 },
+  modalSaveBtn: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, borderRadius: 12, height: 48, marginTop: 4 },
   modalSaveBtnText: { fontFamily: "Inter_700Bold", fontSize: 15, color: "#fff" },
-
-  themeRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-    borderRadius: 12,
-    borderWidth: 1.5,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    marginBottom: 8,
-  },
-  themeLabel: { fontSize: 15 },
-
-  // Delete confirm modal
-  confirmBackdrop: {
-    flex: 1,
-    backgroundColor: "rgba(0,0,0,0.55)",
-    alignItems: "center",
-    justifyContent: "center",
-    padding: 24,
-  },
-  confirmSheet: {
-    borderRadius: 20,
-    padding: 24,
-    alignItems: "center",
-    width: "100%",
-    maxWidth: 340,
-    gap: 10,
-  },
-  confirmIconWrap: {
-    width: 58,
-    height: 58,
-    borderRadius: 29,
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: 4,
-  },
-  confirmTitle: { fontFamily: "Inter_700Bold", fontSize: 17 },
-  confirmMsg: { fontFamily: "Inter_400Regular", fontSize: 14, textAlign: "center", lineHeight: 20 },
-  confirmBtns: { flexDirection: "row", gap: 10, marginTop: 8, width: "100%" },
-  confirmCancelBtn: {
-    flex: 1,
-    borderRadius: 12,
-    borderWidth: 1,
-    paddingVertical: 12,
-    alignItems: "center",
-  },
-  confirmCancelText: { fontFamily: "Inter_600SemiBold", fontSize: 15 },
-  confirmDeleteBtn: {
-    flex: 1,
-    borderRadius: 12,
-    paddingVertical: 12,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 6,
-  },
-  confirmDeleteText: { fontFamily: "Inter_700Bold", fontSize: 15, color: "#fff" },
+  errorBox: { flexDirection: "row", alignItems: "center", gap: 6 },
+  errorText: { fontFamily: "Inter_400Regular", fontSize: 12, color: "#DC2626" },
+  confirmBackdrop: { flex: 1, backgroundColor: "rgba(0,0,0,0.5)", justifyContent: "center", paddingHorizontal: 28 },
+  confirmSheet: { borderRadius: 24, padding: 24 },
+  confirmIconWrap: { width: 56, height: 56, borderRadius: 16, alignItems: "center", justifyContent: "center", alignSelf: "center", marginBottom: 14 },
+  confirmTitle: { fontFamily: "Inter_700Bold", fontSize: 18, textAlign: "center", marginBottom: 8 },
+  confirmMsg: { fontFamily: "Inter_400Regular", fontSize: 14, textAlign: "center", lineHeight: 20, marginBottom: 20 },
+  confirmBtns: { flexDirection: "row", gap: 10 },
+  confirmCancelBtn: { flex: 1, height: 46, borderRadius: 12, borderWidth: 1, alignItems: "center", justifyContent: "center" },
+  confirmCancelText: { fontFamily: "Inter_600SemiBold", fontSize: 14 },
+  confirmDeleteBtn: { flex: 1, height: 46, borderRadius: 12, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6 },
+  confirmDeleteText: { fontFamily: "Inter_700Bold", fontSize: 14, color: "#fff" },
+  workerRow: { flexDirection: "row", alignItems: "center", gap: 10, borderRadius: 12, borderWidth: 1, padding: 10, marginBottom: 6 },
+  workerAvatar: { width: 38, height: 38, borderRadius: 11, alignItems: "center", justifyContent: "center" },
+  workerAvatarText: { fontFamily: "Inter_700Bold", fontSize: 16 },
+  workerInfo: { flex: 1 },
+  workerNameRow: { flexDirection: "row", alignItems: "center", gap: 6, flexWrap: "wrap" },
+  workerName: { fontFamily: "Inter_600SemiBold", fontSize: 14 },
+  workerPhone: { fontFamily: "Inter_400Regular", fontSize: 12, marginTop: 1 },
+  workerAddress: { fontFamily: "Inter_400Regular", fontSize: 11, marginTop: 1 },
+  workerActions: { flexDirection: "row", gap: 6 },
+  actionBtn: { width: 34, height: 34, borderRadius: 9, alignItems: "center", justifyContent: "center" },
+  statusBadge: { paddingHorizontal: 7, paddingVertical: 2, borderRadius: 7 },
+  statusBadgeText: { fontFamily: "Inter_600SemiBold", fontSize: 10 },
+  requestRow: { borderRadius: 12, borderWidth: 1, padding: 12, gap: 10 },
+  requestTop: { flexDirection: "row", alignItems: "flex-start", gap: 10 },
+  requestWorker: { fontFamily: "Inter_600SemiBold", fontSize: 14 },
+  requestSub: { fontFamily: "Inter_400Regular", fontSize: 12, marginTop: 2 },
+  requestDate: { fontFamily: "Inter_400Regular", fontSize: 11 },
+  requestBtns: { flexDirection: "row", gap: 8 },
+  reqBtn: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 5, borderRadius: 9, paddingVertical: 8 },
+  reqBtnText: { fontFamily: "Inter_600SemiBold", fontSize: 13 },
+  refreshBtn: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, borderRadius: 10, borderWidth: 1, paddingVertical: 9 },
+  refreshBtnText: { fontFamily: "Inter_400Regular", fontSize: 12 },
+  centerRow: { alignItems: "center", paddingVertical: 12 },
 });

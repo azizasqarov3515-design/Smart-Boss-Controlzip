@@ -12,7 +12,7 @@ export default function TabLayout() {
   const { isDark } = useTheme();
   const isIOS = Platform.OS === "ios";
   const isWeb = Platform.OS === "web";
-  const { logout } = useAuth();
+  const { logout, role, workerName } = useAuth();
   const router = useRouter();
 
   const handleLogout = () => {
@@ -26,7 +26,7 @@ export default function TabLayout() {
           style: "destructive",
           onPress: async () => {
             await logout();
-            router.replace("/login");
+            router.replace("/role-select");
           },
         },
       ]
@@ -38,6 +38,8 @@ export default function TabLayout() {
       <MaterialIcons name="logout" size={22} color={colors.headerText} />
     </TouchableOpacity>
   );
+
+  const settingsTitle = role === "worker" ? `${workerName ?? "Sotuvchi"} — Sozlama` : "Admin sozlamalari";
 
   return (
     <Tabs
@@ -130,7 +132,7 @@ export default function TabLayout() {
         name="settings"
         options={{
           title: "Sozlama",
-          headerTitle: "Admin sozlamalari",
+          headerTitle: settingsTitle,
           tabBarIcon: ({ color, size }) => (
             <MaterialIcons name="settings" size={size} color={color} />
           ),
