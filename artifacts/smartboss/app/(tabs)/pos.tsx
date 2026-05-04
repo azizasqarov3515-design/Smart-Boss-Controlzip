@@ -304,6 +304,8 @@ export default function POSScreen() {
   const [search, setSearch] = useState("");
   const [tab, setTab] = useState<"cart" | "products">("cart");
   const [checkoutSuccess, setCheckoutSuccess] = useState(false);
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [saleError, setSaleError] = useState<string | null>(null);
   const successAnim = useRef(new Animated.Value(0)).current;
 
   const { data: products, isLoading: productsLoading } = useGetProducts();
@@ -314,6 +316,8 @@ export default function POSScreen() {
         queryClient.invalidateQueries({ queryKey: getGetProductsQueryKey() });
         queryClient.invalidateQueries({ queryKey: getGetDashboardStatsQueryKey() });
         queryClient.invalidateQueries({ queryKey: getGetSalesQueryKey() });
+        setConfirmOpen(false);
+        setSaleError(null);
         setCart(new Map());
         setTab("cart");
         setCheckoutSuccess(true);
@@ -325,7 +329,7 @@ export default function POSScreen() {
       },
       onError: (err: Error) => {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-        Alert.alert("Xato", err.message || "Sotuv amalga oshmadi");
+        setSaleError(err.message || "Sotuv amalga oshmadi");
       },
     },
   });
@@ -420,26 +424,20 @@ export default function POSScreen() {
 
   const handleCheckout = () => {
     if (cartItems.length === 0) return;
-    Alert.alert(
-      "Sotishni tasdiqlash",
-      `Jami: ${formatMoney(total)}\n${totalItems} dona mahsulot`,
-      [
-        { text: "Bekor qilish", style: "cancel" },
-        {
-          text: "✓ Sotish",
-          onPress: () => {
-            createSale({
-              data: {
-                items: cartItems.map((i) => ({
-                  productId: i.product.id,
-                  quantity: i.quantity,
-                })),
-              },
-            });
-          },
-        },
-      ]
-    );
+    setSaleError(null);
+    setConfirmOpen(true);
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+  };
+
+  const handleConfirmSale = () => {
+    createSale({
+      data: {
+        items: cartItems.map((i) => ({
+          productId: i.product.id,
+          quantity: i.quantity,
+        })),
+      },
+    });
   };
 
   const filteredProducts = (products ?? []).filter((p) => {
@@ -460,6 +458,96 @@ export default function POSScreen() {
         onClose={() => setScannerOpen(false)}
         onScanned={handleScanned}
       />
+
+      {/* ── In-app checkout confirmation modal ── */}
+      <Modal
+        visible={confirmOpen}
+        transparent
+        animationType="slide"
+        statusBarTranslucent
+        onRequestClose={() => !checkingOut && setConfirmOpen(false)}
+      >
+        <TouchableOpacity
+          style={styles.confirmBackdrop}
+          activeOpacity={1}
+          onPress={() => !checkingOut && setConfirmOpen(false)}
+        />
+        <View style={[styles.confirmSheet, { backgroundColor: colors.card }]}>
+          <View style={[styles.confirmHandle, { backgroundColor: colors.border }]} />
+
+          <View style={styles.confirmHeader}>
+            <MaterialIcons name="shopping-cart-checkout" size={28} color={colors.primary} />
+            <Text style={[styles.confirmTitle, { color: colors.foreground }]}>
+              Sotishni tasdiqlash
+            </Text>
+          </View>
+
+          {/* Cart summary */}
+          <View style={[styles.confirmSummaryBox, { backgroundColor: colors.muted, borderColor: colors.border }]}>
+            {cartItems.map((item) => (
+              <View key={item.product.id} style={styles.confirmItemRow}>
+                <Text style={[styles.confirmItemName, { color: colors.foreground }]} numberOfLines={1}>
+                  {item.product.name}
+                </Text>
+                <Text style={[styles.confirmItemQty, { color: colors.mutedForeground }]}>
+                  {item.quantity} × {item.product.salePrice.toLocaleString()}
+                </Text>
+                <Text style={[styles.confirmItemTotal, { color: colors.primary }]}>
+                  {(item.product.salePrice * item.quantity).toLocaleString()}
+                </Text>
+              </View>
+            ))}
+          </View>
+
+          {/* Total */}
+          <View style={[styles.confirmTotalRow, { borderTopColor: colors.border }]}>
+            <Text style={[styles.confirmTotalLabel, { color: colors.mutedForeground }]}>
+              Jami ({totalItems} dona):
+            </Text>
+            <Text style={[styles.confirmTotalVal, { color: colors.foreground }]}>
+              {formatMoney(total)}
+            </Text>
+          </View>
+
+          {/* Error banner */}
+          {saleError && (
+            <View style={[styles.errorBanner, { backgroundColor: "#FEE2E2", borderColor: "#F87171" }]}>
+              <MaterialIcons name="error-outline" size={16} color="#DC2626" />
+              <Text style={styles.errorBannerText}>{saleError}</Text>
+            </View>
+          )}
+
+          {/* Buttons */}
+          <View style={styles.confirmBtns}>
+            <TouchableOpacity
+              style={[styles.confirmCancelBtn, { backgroundColor: colors.muted, borderColor: colors.border }]}
+              onPress={() => { setConfirmOpen(false); setSaleError(null); }}
+              disabled={checkingOut}
+              activeOpacity={0.8}
+            >
+              <Text style={[styles.confirmCancelText, { color: colors.mutedForeground }]}>
+                Bekor qilish
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.confirmSellBtn, { backgroundColor: checkingOut ? colors.mutedForeground : colors.success }]}
+              onPress={handleConfirmSale}
+              disabled={checkingOut}
+              activeOpacity={0.85}
+            >
+              {checkingOut ? (
+                <ActivityIndicator size="small" color="#fff" />
+              ) : (
+                <>
+                  <MaterialIcons name="check-circle" size={20} color="#fff" />
+                  <Text style={styles.confirmSellText}>Sotish</Text>
+                </>
+              )}
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
 
       {/* Success overlay */}
       {checkoutSuccess && (
@@ -1297,4 +1385,138 @@ const styles = StyleSheet.create({
   },
   successTitle: { fontFamily: "Inter_700Bold", fontSize: 20 },
   successSub: { fontFamily: "Inter_400Regular", fontSize: 14 },
+
+  // Confirmation bottom sheet
+  confirmBackdrop: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "rgba(0,0,0,0.5)",
+  },
+  confirmSheet: {
+    position: "absolute",
+    bottom: 0,
+    left: 0,
+    right: 0,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    padding: 20,
+    paddingBottom: 32,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: -4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 16,
+    elevation: 12,
+  },
+  confirmHandle: {
+    width: 40,
+    height: 4,
+    borderRadius: 2,
+    alignSelf: "center",
+    marginBottom: 18,
+  },
+  confirmHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    marginBottom: 16,
+  },
+  confirmTitle: {
+    fontFamily: "Inter_700Bold",
+    fontSize: 18,
+  },
+  confirmSummaryBox: {
+    borderRadius: 12,
+    borderWidth: 1,
+    paddingHorizontal: 14,
+    paddingVertical: 4,
+    marginBottom: 12,
+    maxHeight: 200,
+  },
+  confirmItemRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 9,
+    gap: 8,
+  },
+  confirmItemName: {
+    flex: 1,
+    fontFamily: "Inter_500Medium",
+    fontSize: 13,
+  },
+  confirmItemQty: {
+    fontFamily: "Inter_400Regular",
+    fontSize: 11,
+  },
+  confirmItemTotal: {
+    fontFamily: "Inter_700Bold",
+    fontSize: 13,
+    minWidth: 80,
+    textAlign: "right",
+  },
+  confirmTotalRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    borderTopWidth: 1,
+    paddingTop: 12,
+    marginBottom: 16,
+  },
+  confirmTotalLabel: {
+    fontFamily: "Inter_500Medium",
+    fontSize: 14,
+  },
+  confirmTotalVal: {
+    fontFamily: "Inter_700Bold",
+    fontSize: 20,
+  },
+  errorBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    borderRadius: 10,
+    borderWidth: 1,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    marginBottom: 14,
+  },
+  errorBannerText: {
+    flex: 1,
+    fontFamily: "Inter_500Medium",
+    fontSize: 13,
+    color: "#DC2626",
+  },
+  confirmBtns: {
+    flexDirection: "row",
+    gap: 10,
+  },
+  confirmCancelBtn: {
+    flex: 1,
+    borderRadius: 14,
+    borderWidth: 1,
+    paddingVertical: 15,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  confirmCancelText: {
+    fontFamily: "Inter_600SemiBold",
+    fontSize: 15,
+  },
+  confirmSellBtn: {
+    flex: 2,
+    borderRadius: 14,
+    paddingVertical: 15,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    shadowColor: "#2E7D32",
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.25,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  confirmSellText: {
+    fontFamily: "Inter_700Bold",
+    fontSize: 16,
+    color: "#fff",
+  },
 });
