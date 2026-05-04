@@ -6,12 +6,20 @@
  * OpenAPI spec version: 0.1.0
  */
 
+export * from "./createCustomer";
+export * from "./createDebtPayment";
 export * from "./createProduct";
 export * from "./createSale";
 export * from "./createSaleItem";
+export * from "./createSalePaymentType";
+export * from "./customer";
+export * from "./customerStatement";
 export * from "./dashboardStats";
+export * from "./debtPayment";
 export * from "./healthStatus";
 export * from "./notFound";
 export * from "./product";
 export * from "./saleItem";
 export * from "./saleWithItems";
+export * from "./statementPayment";
+export * from "./statementSale";

@@ -37,6 +37,7 @@ export interface DashboardStats {
   lowStockCount: number;
   todaySales: number;
   todayTransactions: number;
+  totalDebt: number;
 }
 
 export interface SaleItem {
@@ -54,6 +55,11 @@ export interface SaleWithItems {
   totalAmount: number;
   itemCount: number;
   note?: string | null;
+  paymentType: string;
+  customerId?: number | null;
+  customerName?: string | null;
+  paidAmount?: number | null;
+  debtAmount?: number | null;
   createdAt: string;
   items: SaleItem[];
 }
@@ -63,10 +69,75 @@ export interface CreateSaleItem {
   quantity: number;
 }
 
+export type CreateSalePaymentType =
+  (typeof CreateSalePaymentType)[keyof typeof CreateSalePaymentType];
+
+export const CreateSalePaymentType = {
+  cash: "cash",
+  card: "card",
+  debt: "debt",
+} as const;
+
 export interface CreateSale {
   /** @minItems 1 */
   items: CreateSaleItem[];
   note?: string | null;
+  paymentType?: CreateSalePaymentType;
+  customerId?: number | null;
+  paidAmount?: number | null;
+}
+
+export interface Customer {
+  id: number;
+  name: string;
+  phone: string;
+  debtLimit: number;
+  totalDebt: number;
+  note?: string | null;
+  createdAt: string;
+}
+
+export interface CreateCustomer {
+  name: string;
+  phone: string;
+  debtLimit?: number;
+  note?: string | null;
+}
+
+export interface DebtPayment {
+  id: number;
+  customerId: number;
+  amount: number;
+  note?: string | null;
+  createdAt: string;
+}
+
+export interface CreateDebtPayment {
+  amount: number;
+  note?: string | null;
+}
+
+export interface StatementSale {
+  id: number;
+  totalAmount: number;
+  itemCount: number;
+  paymentType: string;
+  paidAmount?: number | null;
+  debtAmount?: number | null;
+  createdAt: string;
+}
+
+export interface StatementPayment {
+  id: number;
+  amount: number;
+  note?: string | null;
+  createdAt: string;
+}
+
+export interface CustomerStatement {
+  customer: Customer;
+  sales: StatementSale[];
+  payments: StatementPayment[];
 }
 
 export interface NotFound {

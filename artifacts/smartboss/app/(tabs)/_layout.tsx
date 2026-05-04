@@ -117,6 +117,16 @@ export default function TabLayout() {
           ),
         }}
       />
+      <Tabs.Screen
+        name="customers"
+        options={{
+          title: "Mijozlar",
+          headerTitle: "Mijozlar",
+          tabBarIcon: ({ color, size }) => (
+            <MaterialIcons name="people" size={size} color={color} />
+          ),
+        }}
+      />
     </Tabs>
   );
 }

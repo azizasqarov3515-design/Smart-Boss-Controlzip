@@ -4,6 +4,7 @@ import productsRouter from "./products";
 import salesRouter from "./sales";
 import authRouter from "./auth";
 import backupRouter from "./backup";
+import customersRouter from "./customers";
 import { requireAuth } from "../lib/auth";
 
 const router: IRouter = Router();
@@ -16,5 +17,6 @@ router.use(requireAuth);
 router.use(salesRouter);
 router.use(productsRouter);
 router.use(backupRouter);
+router.use(customersRouter);
 
 export default router;

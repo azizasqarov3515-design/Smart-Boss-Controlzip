@@ -86,6 +86,7 @@ export const GetDashboardStatsResponse = zod.object({
   lowStockCount: zod.number(),
   todaySales: zod.number(),
   todayTransactions: zod.number(),
+  totalDebt: zod.number(),
 });
 
 /**
@@ -96,6 +97,11 @@ export const GetSalesResponseItem = zod.object({
   totalAmount: zod.number(),
   itemCount: zod.number(),
   note: zod.string().nullish(),
+  paymentType: zod.string(),
+  customerId: zod.number().nullish(),
+  customerName: zod.string().nullish(),
+  paidAmount: zod.number().nullish(),
+  debtAmount: zod.number().nullish(),
   createdAt: zod.string(),
   items: zod.array(
     zod.object({
@@ -125,6 +131,9 @@ export const CreateSaleBody = zod.object({
     )
     .min(1),
   note: zod.string().nullish(),
+  paymentType: zod.enum(["cash", "card", "debt"]).optional(),
+  customerId: zod.number().nullish(),
+  paidAmount: zod.number().nullish(),
 });
 
 /**
@@ -143,4 +152,144 @@ export const GetProductByBarcodeResponse = zod.object({
   quantity: zod.number(),
   barcode: zod.string().nullish(),
   createdAt: zod.string(),
+});
+
+/**
+ * @summary Get all customers
+ */
+export const GetCustomersResponseItem = zod.object({
+  id: zod.number(),
+  name: zod.string(),
+  phone: zod.string(),
+  debtLimit: zod.number(),
+  totalDebt: zod.number(),
+  note: zod.string().nullish(),
+  createdAt: zod.string(),
+});
+export const GetCustomersResponse = zod.array(GetCustomersResponseItem);
+
+/**
+ * @summary Create a customer
+ */
+export const CreateCustomerBody = zod.object({
+  name: zod.string(),
+  phone: zod.string(),
+  debtLimit: zod.number().optional(),
+  note: zod.string().nullish(),
+});
+
+/**
+ * @summary Get a customer by ID
+ */
+export const GetCustomerParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const GetCustomerResponse = zod.object({
+  id: zod.number(),
+  name: zod.string(),
+  phone: zod.string(),
+  debtLimit: zod.number(),
+  totalDebt: zod.number(),
+  note: zod.string().nullish(),
+  createdAt: zod.string(),
+});
+
+/**
+ * @summary Update a customer
+ */
+export const UpdateCustomerParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const UpdateCustomerBody = zod.object({
+  name: zod.string(),
+  phone: zod.string(),
+  debtLimit: zod.number().optional(),
+  note: zod.string().nullish(),
+});
+
+export const UpdateCustomerResponse = zod.object({
+  id: zod.number(),
+  name: zod.string(),
+  phone: zod.string(),
+  debtLimit: zod.number(),
+  totalDebt: zod.number(),
+  note: zod.string().nullish(),
+  createdAt: zod.string(),
+});
+
+/**
+ * @summary Delete a customer
+ */
+export const DeleteCustomerParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+/**
+ * @summary Get debt payment history for a customer
+ */
+export const GetCustomerPaymentsParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const GetCustomerPaymentsResponseItem = zod.object({
+  id: zod.number(),
+  customerId: zod.number(),
+  amount: zod.number(),
+  note: zod.string().nullish(),
+  createdAt: zod.string(),
+});
+export const GetCustomerPaymentsResponse = zod.array(
+  GetCustomerPaymentsResponseItem,
+);
+
+/**
+ * @summary Record a debt payment for a customer
+ */
+export const CreateCustomerPaymentParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const CreateCustomerPaymentBody = zod.object({
+  amount: zod.number(),
+  note: zod.string().nullish(),
+});
+
+/**
+ * @summary Get full debt statement for a customer
+ */
+export const GetCustomerStatementParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const GetCustomerStatementResponse = zod.object({
+  customer: zod.object({
+    id: zod.number(),
+    name: zod.string(),
+    phone: zod.string(),
+    debtLimit: zod.number(),
+    totalDebt: zod.number(),
+    note: zod.string().nullish(),
+    createdAt: zod.string(),
+  }),
+  sales: zod.array(
+    zod.object({
+      id: zod.number(),
+      totalAmount: zod.number(),
+      itemCount: zod.number(),
+      paymentType: zod.string(),
+      paidAmount: zod.number().nullish(),
+      debtAmount: zod.number().nullish(),
+      createdAt: zod.string(),
+    }),
+  ),
+  payments: zod.array(
+    zod.object({
+      id: zod.number(),
+      amount: zod.number(),
+      note: zod.string().nullish(),
+      createdAt: zod.string(),
+    }),
+  ),
 });

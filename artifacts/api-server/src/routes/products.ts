@@ -175,6 +175,14 @@ router.get("/dashboard/stats", async (req, res) => {
       })
       .from(productsTable);
 
+    // Get total outstanding debt across all customers
+    const { customersTable } = await import("@workspace/db/schema");
+    const [debtStats] = await db
+      .select({
+        totalDebt: sql<number>`coalesce(sum(${customersTable.totalDebt}::numeric), 0)::numeric`,
+      })
+      .from(customersTable);
+
     res.json({
       totalProducts: stats?.totalProducts ?? 0,
       totalItems: stats?.totalItems ?? 0,
@@ -183,6 +191,7 @@ router.get("/dashboard/stats", async (req, res) => {
       lowStockCount: stats?.lowStockCount ?? 0,
       todaySales: 0,
       todayTransactions: 0,
+      totalDebt: parseFloat(String(debtStats?.totalDebt ?? 0)),
     });
   } catch (err) {
     req.log.error({ err }, "Failed to get dashboard stats");

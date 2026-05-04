@@ -6,9 +6,13 @@
  * OpenAPI spec version: 0.1.0
  */
 import type { CreateSaleItem } from "./createSaleItem";
+import type { CreateSalePaymentType } from "./createSalePaymentType";
 
 export interface CreateSale {
   /** @minItems 1 */
   items: CreateSaleItem[];
   note?: string | null;
+  paymentType?: CreateSalePaymentType;
+  customerId?: number | null;
+  paidAmount?: number | null;
 }

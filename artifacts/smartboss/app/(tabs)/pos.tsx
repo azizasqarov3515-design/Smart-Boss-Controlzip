@@ -1,10 +1,13 @@
 import {
   useGetProducts,
   useCreateSale,
+  useGetCustomers,
   getGetProductsQueryKey,
   getGetDashboardStatsQueryKey,
   getGetSalesQueryKey,
+  getGetCustomersQueryKey,
   type Product,
+  type Customer,
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import {
@@ -22,6 +25,7 @@ import {
   KeyboardAvoidingView,
   Modal,
   Platform,
+  ScrollView,
   StyleSheet,
   Text,
   TextInput,
@@ -216,7 +220,7 @@ function ScannerModal({
         {/* Permission denied */}
         {showPermissionDenied && (
           <View style={styles.permWrap}>
-            <MaterialIcons name="camera-off" size={56} color="#EF5350" />
+            <MaterialIcons name="no-photography" size={56} color="#EF5350" />
             <Text style={styles.permTitle}>Kamera ruxsati yo'q</Text>
             <Text style={styles.permText}>
               Telefon sozlamalarida kamera ruxsatini bering, keyin qayta urinib ko'ring.
@@ -306,9 +310,15 @@ export default function POSScreen() {
   const [checkoutSuccess, setCheckoutSuccess] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [saleError, setSaleError] = useState<string | null>(null);
+  const [paymentType, setPaymentType] = useState<"cash" | "card" | "debt">("cash");
+  const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
+  const [partialPayment, setPartialPayment] = useState("");
+  const [customerPickerOpen, setCustomerPickerOpen] = useState(false);
+  const [customerSearch, setCustomerSearch] = useState("");
   const successAnim = useRef(new Animated.Value(0)).current;
 
   const { data: products, isLoading: productsLoading } = useGetProducts();
+  const { data: customers } = useGetCustomers();
   const { mutate: createSale, isPending: checkingOut } = useCreateSale({
     mutation: {
       onSuccess: () => {
@@ -316,6 +326,7 @@ export default function POSScreen() {
         queryClient.invalidateQueries({ queryKey: getGetProductsQueryKey() });
         queryClient.invalidateQueries({ queryKey: getGetDashboardStatsQueryKey() });
         queryClient.invalidateQueries({ queryKey: getGetSalesQueryKey() });
+        queryClient.invalidateQueries({ queryKey: getGetCustomersQueryKey() });
         setConfirmOpen(false);
         setSaleError(null);
         setCart(new Map());
@@ -425,17 +436,30 @@ export default function POSScreen() {
   const handleCheckout = () => {
     if (cartItems.length === 0) return;
     setSaleError(null);
+    setPaymentType("cash");
+    setSelectedCustomer(null);
+    setPartialPayment("");
     setConfirmOpen(true);
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
   };
 
   const handleConfirmSale = () => {
+    if (paymentType === "debt" && !selectedCustomer) {
+      setSaleError("Qarz uchun mijoz tanlanishi shart");
+      return;
+    }
+    const paid = paymentType === "debt"
+      ? (partialPayment ? parseFloat(partialPayment.replace(/\s/g, "")) || 0 : 0)
+      : undefined;
     createSale({
       data: {
         items: cartItems.map((i) => ({
           productId: i.product.id,
           quantity: i.quantity,
         })),
+        paymentType,
+        customerId: selectedCustomer?.id ?? undefined,
+        paidAmount: paid,
       },
     });
   };
@@ -481,6 +505,86 @@ export default function POSScreen() {
               Sotishni tasdiqlash
             </Text>
           </View>
+
+          {/* Payment type selector */}
+          <View style={[styles.payTypeRow, { backgroundColor: colors.muted, borderColor: colors.border }]}>
+            {(["cash", "card", "debt"] as const).map((pt) => {
+              const labels = { cash: "💵 Naqd", card: "💳 Karta", debt: "📋 Qarz" };
+              const isActive = paymentType === pt;
+              return (
+                <TouchableOpacity
+                  key={pt}
+                  style={[styles.payTypeBtn, isActive && { backgroundColor: pt === "debt" ? "#DC2626" : colors.primary }]}
+                  onPress={() => { setPaymentType(pt); setSaleError(null); if (pt !== "debt") setSelectedCustomer(null); }}
+                  activeOpacity={0.8}
+                  disabled={checkingOut}
+                >
+                  <Text style={[styles.payTypeBtnText, { color: isActive ? "#fff" : colors.mutedForeground }]}>
+                    {labels[pt]}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+
+          {/* Customer selection (debt only) */}
+          {paymentType === "debt" && (
+            <View style={[styles.debtSection, { backgroundColor: "#FEF2F2", borderColor: "#FECACA" }]}>
+              <TouchableOpacity
+                style={[styles.customerPickBtn, {
+                  backgroundColor: colors.card,
+                  borderColor: selectedCustomer ? "#DC2626" : colors.border
+                }]}
+                onPress={() => { setCustomerSearch(""); setCustomerPickerOpen(true); }}
+                activeOpacity={0.8}
+                disabled={checkingOut}
+              >
+                <MaterialIcons
+                  name={selectedCustomer ? "person" : "person-search"}
+                  size={18}
+                  color={selectedCustomer ? "#DC2626" : colors.mutedForeground}
+                />
+                <Text style={[styles.customerPickText, { color: selectedCustomer ? "#DC2626" : colors.mutedForeground }]}>
+                  {selectedCustomer ? selectedCustomer.name : "Mijoz tanlang..."}
+                </Text>
+                {selectedCustomer && (
+                  <TouchableOpacity onPress={() => setSelectedCustomer(null)}>
+                    <MaterialIcons name="close" size={16} color={colors.mutedForeground} />
+                  </TouchableOpacity>
+                )}
+              </TouchableOpacity>
+
+              {selectedCustomer && (
+                <Text style={styles.customerDebtInfo}>
+                  Mavjud qarz: {selectedCustomer.totalDebt.toLocaleString()} UZS
+                  {selectedCustomer.debtLimit > 0 ? ` / Limit: ${selectedCustomer.debtLimit.toLocaleString()} UZS` : ""}
+                </Text>
+              )}
+
+              <View style={styles.partialPayRow}>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.partialPayLabel}>Hozir to'lanadigan summa (ixtiyoriy)</Text>
+                  <TextInput
+                    style={[styles.partialPayInput, { backgroundColor: colors.card, borderColor: colors.border, color: colors.foreground }]}
+                    placeholder="0 — to'liq qarzga yoziladi"
+                    placeholderTextColor={colors.mutedForeground}
+                    value={partialPayment}
+                    onChangeText={setPartialPayment}
+                    keyboardType="numeric"
+                    editable={!checkingOut}
+                  />
+                </View>
+              </View>
+              {partialPayment !== "" && !isNaN(parseFloat(partialPayment)) && (
+                <View style={styles.debtPreviewRow}>
+                  <Text style={styles.debtPreviewLabel}>Qarzga yoziladigan summa:</Text>
+                  <Text style={styles.debtPreviewVal}>
+                    {Math.max(0, total - (parseFloat(partialPayment.replace(/\s/g, "")) || 0)).toLocaleString()} UZS
+                  </Text>
+                </View>
+              )}
+            </View>
+          )}
 
           {/* Cart summary */}
           <View style={[styles.confirmSummaryBox, { backgroundColor: colors.muted, borderColor: colors.border }]}>
@@ -568,6 +672,108 @@ export default function POSScreen() {
           </View>
         </Animated.View>
       )}
+
+      {/* Customer picker modal */}
+      <Modal
+        visible={customerPickerOpen}
+        transparent
+        animationType="slide"
+        statusBarTranslucent
+        onRequestClose={() => setCustomerPickerOpen(false)}
+      >
+        <TouchableOpacity
+          style={styles.confirmBackdrop}
+          activeOpacity={1}
+          onPress={() => setCustomerPickerOpen(false)}
+        />
+        <KeyboardAvoidingView
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
+          style={{ position: "absolute", bottom: 0, left: 0, right: 0 }}
+        >
+          <View style={[styles.confirmSheet, { backgroundColor: colors.card, maxHeight: "80%" }]}>
+            <View style={[styles.confirmHandle, { backgroundColor: colors.border }]} />
+            <View style={[styles.confirmHeader, { marginBottom: 12 }]}>
+              <MaterialIcons name="people" size={24} color={colors.primary} />
+              <Text style={[styles.confirmTitle, { color: colors.foreground }]}>Mijoz tanlang</Text>
+            </View>
+
+            {/* Search */}
+            <View style={[styles.pickerSearch, { backgroundColor: colors.muted, borderColor: colors.border }]}>
+              <MaterialIcons name="search" size={16} color={colors.mutedForeground} />
+              <TextInput
+                style={[styles.pickerSearchInput, { color: colors.foreground }]}
+                placeholder="Ism yoki telefon..."
+                placeholderTextColor={colors.mutedForeground}
+                value={customerSearch}
+                onChangeText={setCustomerSearch}
+                autoFocus
+              />
+              {customerSearch.length > 0 && (
+                <TouchableOpacity onPress={() => setCustomerSearch("")}>
+                  <MaterialIcons name="clear" size={15} color={colors.mutedForeground} />
+                </TouchableOpacity>
+              )}
+            </View>
+
+            <ScrollView style={{ marginTop: 10 }} showsVerticalScrollIndicator={false}>
+              {(customers ?? [])
+                .filter((c) => {
+                  const q = customerSearch.toLowerCase();
+                  return !q || c.name.toLowerCase().includes(q) || c.phone.includes(q);
+                })
+                .map((c) => {
+                  const isOver = c.debtLimit > 0 && c.totalDebt >= c.debtLimit;
+                  return (
+                    <TouchableOpacity
+                      key={c.id}
+                      style={[
+                        styles.pickerItem,
+                        {
+                          backgroundColor: colors.background,
+                          borderColor: isOver ? "#FECACA" : colors.border,
+                        },
+                      ]}
+                      onPress={() => {
+                        setSelectedCustomer(c);
+                        setCustomerPickerOpen(false);
+                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                      }}
+                      activeOpacity={0.8}
+                    >
+                      <View style={[styles.pickerAvatar, { backgroundColor: colors.primary + "20" }]}>
+                        <Text style={[styles.pickerAvatarText, { color: colors.primary }]}>
+                          {c.name.charAt(0).toUpperCase()}
+                        </Text>
+                      </View>
+                      <View style={{ flex: 1 }}>
+                        <Text style={[styles.pickerName, { color: colors.foreground }]}>{c.name}</Text>
+                        <Text style={[styles.pickerPhone, { color: colors.mutedForeground }]}>{c.phone}</Text>
+                      </View>
+                      {c.totalDebt > 0 && (
+                        <View>
+                          <Text style={[styles.pickerDebt, { color: isOver ? "#DC2626" : "#D97706" }]}>
+                            {c.totalDebt.toLocaleString()} UZS
+                          </Text>
+                          {isOver && (
+                            <Text style={styles.pickerOver}>LIMIT!</Text>
+                          )}
+                        </View>
+                      )}
+                    </TouchableOpacity>
+                  );
+                })}
+              {(customers ?? []).length === 0 && (
+                <View style={{ alignItems: "center", paddingVertical: 30 }}>
+                  <MaterialIcons name="people" size={40} color={colors.mutedForeground} />
+                  <Text style={{ color: colors.mutedForeground, fontFamily: "Inter_400Regular", marginTop: 8 }}>
+                    Hali mijoz yo'q
+                  </Text>
+                </View>
+              )}
+            </ScrollView>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
 
       {/* Top bar */}
       <View
@@ -1518,5 +1724,145 @@ const styles = StyleSheet.create({
     fontFamily: "Inter_700Bold",
     fontSize: 16,
     color: "#fff",
+  },
+
+  // Payment type selector
+  payTypeRow: {
+    flexDirection: "row",
+    borderRadius: 14,
+    borderWidth: 1,
+    padding: 4,
+    marginBottom: 14,
+    gap: 4,
+  },
+  payTypeBtn: {
+    flex: 1,
+    paddingVertical: 10,
+    borderRadius: 10,
+    alignItems: "center",
+  },
+  payTypeBtnText: {
+    fontFamily: "Inter_600SemiBold",
+    fontSize: 13,
+  },
+
+  // Debt section
+  debtSection: {
+    borderRadius: 14,
+    borderWidth: 1,
+    padding: 12,
+    marginBottom: 14,
+    gap: 10,
+  },
+  customerPickBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    borderRadius: 12,
+    borderWidth: 1,
+    paddingHorizontal: 12,
+    paddingVertical: 11,
+  },
+  customerPickText: {
+    flex: 1,
+    fontFamily: "Inter_500Medium",
+    fontSize: 14,
+  },
+  customerDebtInfo: {
+    fontFamily: "Inter_400Regular",
+    fontSize: 12,
+    color: "#991B1B",
+    paddingHorizontal: 4,
+  },
+  partialPayRow: {
+    flexDirection: "row",
+    gap: 8,
+  },
+  partialPayLabel: {
+    fontFamily: "Inter_400Regular",
+    fontSize: 11,
+    color: "#991B1B",
+    marginBottom: 6,
+  },
+  partialPayInput: {
+    borderRadius: 10,
+    borderWidth: 1,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    fontFamily: "Inter_400Regular",
+    fontSize: 14,
+  },
+  debtPreviewRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingHorizontal: 4,
+  },
+  debtPreviewLabel: {
+    fontFamily: "Inter_400Regular",
+    fontSize: 12,
+    color: "#991B1B",
+  },
+  debtPreviewVal: {
+    fontFamily: "Inter_700Bold",
+    fontSize: 13,
+    color: "#DC2626",
+  },
+
+  // Customer picker modal
+  pickerSearch: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    borderRadius: 12,
+    borderWidth: 1,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+  },
+  pickerSearchInput: {
+    flex: 1,
+    fontFamily: "Inter_400Regular",
+    fontSize: 14,
+    padding: 0,
+  },
+  pickerItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    borderRadius: 12,
+    borderWidth: 1,
+    padding: 12,
+    marginBottom: 8,
+  },
+  pickerAvatar: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  pickerAvatarText: {
+    fontFamily: "Inter_700Bold",
+    fontSize: 16,
+  },
+  pickerName: {
+    fontFamily: "Inter_600SemiBold",
+    fontSize: 14,
+  },
+  pickerPhone: {
+    fontFamily: "Inter_400Regular",
+    fontSize: 12,
+    marginTop: 1,
+  },
+  pickerDebt: {
+    fontFamily: "Inter_600SemiBold",
+    fontSize: 13,
+    textAlign: "right",
+  },
+  pickerOver: {
+    fontFamily: "Inter_700Bold",
+    fontSize: 10,
+    color: "#DC2626",
+    textAlign: "right",
   },
 });

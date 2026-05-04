@@ -1,6 +1,5 @@
 import { db } from "@workspace/db";
-import { productsTable } from "@workspace/db/schema";
-import { saleItemsTable, salesTable } from "@workspace/db/schema";
+import { customersTable, productsTable, saleItemsTable, salesTable } from "@workspace/db/schema";
 import { eq, sql } from "drizzle-orm";
 import { Router } from "express";
 import { z } from "zod";
@@ -17,7 +16,38 @@ const createSaleSchema = z.object({
     )
     .min(1),
   note: z.string().optional().nullable(),
+  paymentType: z.enum(["cash", "card", "debt"]).optional().default("cash"),
+  customerId: z.number().int().positive().optional().nullable(),
+  paidAmount: z.number().min(0).optional().nullable(),
 });
+
+function mapSaleRow(
+  sale: typeof salesTable.$inferSelect,
+  items: (typeof saleItemsTable.$inferSelect)[],
+  customerName?: string | null
+) {
+  return {
+    id: sale.id,
+    totalAmount: parseFloat(sale.totalAmount),
+    itemCount: sale.itemCount,
+    note: sale.note ?? null,
+    paymentType: sale.paymentType,
+    customerId: sale.customerId ?? null,
+    customerName: customerName ?? null,
+    paidAmount: sale.paidAmount ? parseFloat(sale.paidAmount) : null,
+    debtAmount: sale.debtAmount ? parseFloat(sale.debtAmount) : null,
+    createdAt: sale.createdAt.toISOString(),
+    items: items.map((i) => ({
+      id: i.id,
+      productId: i.productId ?? null,
+      productName: i.productName,
+      brand: i.brand,
+      unitPrice: parseFloat(i.unitPrice),
+      quantity: i.quantity,
+      totalPrice: parseFloat(i.totalPrice),
+    })),
+  };
+}
 
 router.get("/sales", async (req, res) => {
   try {
@@ -26,28 +56,28 @@ router.get("/sales", async (req, res) => {
       .from(salesTable)
       .orderBy(sql`${salesTable.createdAt} desc`);
 
+    // Batch load customer names
+    const customerIds = [...new Set(sales.map((s) => s.customerId).filter(Boolean) as number[])];
+    const customerMap = new Map<number, string>();
+    if (customerIds.length > 0) {
+      const customers = await db
+        .select({ id: customersTable.id, name: customersTable.name })
+        .from(customersTable)
+        .where(sql`${customersTable.id} = ANY(${sql.raw(`ARRAY[${customerIds.join(",")}]`)})`);
+      for (const c of customers) customerMap.set(c.id, c.name);
+    }
+
     const result = await Promise.all(
       sales.map(async (sale) => {
         const items = await db
           .select()
           .from(saleItemsTable)
           .where(eq(saleItemsTable.saleId, sale.id));
-        return {
-          id: sale.id,
-          totalAmount: parseFloat(sale.totalAmount),
-          itemCount: sale.itemCount,
-          note: sale.note ?? null,
-          createdAt: sale.createdAt.toISOString(),
-          items: items.map((i) => ({
-            id: i.id,
-            productId: i.productId ?? null,
-            productName: i.productName,
-            brand: i.brand,
-            unitPrice: parseFloat(i.unitPrice),
-            quantity: i.quantity,
-            totalPrice: parseFloat(i.totalPrice),
-          })),
-        };
+        return mapSaleRow(
+          sale,
+          items,
+          sale.customerId ? customerMap.get(sale.customerId) : null
+        );
       })
     );
     res.json(result);
@@ -60,6 +90,12 @@ router.get("/sales", async (req, res) => {
 router.post("/sales", async (req, res) => {
   try {
     const body = createSaleSchema.parse(req.body);
+
+    // Validate debt requires customer
+    if (body.paymentType === "debt" && !body.customerId) {
+      res.status(400).json({ error: "Qarz uchun mijoz tanlanishi shart" });
+      return;
+    }
 
     // Fetch all products in one query
     const productIds = body.items.map((i) => i.productId);
@@ -104,7 +140,37 @@ router.post("/sales", async (req, res) => {
 
     const totalItemCount = body.items.reduce((sum, i) => sum + i.quantity, 0);
 
-    // Create sale + sale items + decrement stock in a transaction
+    // Determine paid/debt amounts
+    const paidAmount =
+      body.paymentType === "debt"
+        ? (body.paidAmount ?? 0)
+        : totalAmount;
+    const debtAmount =
+      body.paymentType === "debt" ? totalAmount - paidAmount : 0;
+
+    // Validate customer debt limit if applicable
+    let customerName: string | null = null;
+    if (body.customerId) {
+      const [customer] = await db
+        .select()
+        .from(customersTable)
+        .where(eq(customersTable.id, body.customerId));
+      if (!customer) {
+        res.status(404).json({ error: "Mijoz topilmadi" });
+        return;
+      }
+      customerName = customer.name;
+      const currentDebt = parseFloat(customer.totalDebt);
+      const limit = parseFloat(customer.debtLimit);
+      if (limit > 0 && currentDebt + debtAmount > limit) {
+        res.status(400).json({
+          error: `Qarz limiti oshib ketdi. Mijozning joriy qarzi: ${currentDebt.toLocaleString()} UZS, limit: ${limit.toLocaleString()} UZS`,
+        });
+        return;
+      }
+    }
+
+    // Create sale + items + decrement stock + update customer debt in a single transaction
     const saleResult = await db.transaction(async (tx) => {
       const [sale] = await tx
         .insert(salesTable)
@@ -112,6 +178,10 @@ router.post("/sales", async (req, res) => {
           totalAmount: String(totalAmount),
           itemCount: totalItemCount,
           note: body.note ?? null,
+          paymentType: body.paymentType,
+          customerId: body.customerId ?? null,
+          paidAmount: String(paidAmount),
+          debtAmount: String(debtAmount),
         })
         .returning();
 
@@ -128,25 +198,20 @@ router.post("/sales", async (req, res) => {
           .where(eq(productsTable.id, item.productId));
       }
 
+      // Update customer debt if debt sale
+      if (body.customerId && debtAmount > 0) {
+        await tx
+          .update(customersTable)
+          .set({
+            totalDebt: sql`${customersTable.totalDebt} + ${String(debtAmount)}`,
+          })
+          .where(eq(customersTable.id, body.customerId));
+      }
+
       return { sale, items: insertedItems };
     });
 
-    res.status(201).json({
-      id: saleResult.sale.id,
-      totalAmount: parseFloat(saleResult.sale.totalAmount),
-      itemCount: saleResult.sale.itemCount,
-      note: saleResult.sale.note ?? null,
-      createdAt: saleResult.sale.createdAt.toISOString(),
-      items: saleResult.items.map((i) => ({
-        id: i.id,
-        productId: i.productId ?? null,
-        productName: i.productName,
-        brand: i.brand,
-        unitPrice: parseFloat(i.unitPrice),
-        quantity: i.quantity,
-        totalPrice: parseFloat(i.totalPrice),
-      })),
-    });
+    res.status(201).json(mapSaleRow(saleResult.sale, saleResult.items, customerName));
   } catch (err) {
     if (err instanceof z.ZodError) {
       res.status(400).json({ error: "Validation failed", details: err.issues });

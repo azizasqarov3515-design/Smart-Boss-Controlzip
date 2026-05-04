@@ -11,6 +11,7 @@ tags:
   - name: products
   - name: dashboard
   - name: sales
+  - name: customers
 paths:
   /healthz:
     get:
@@ -159,6 +160,158 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/NotFound"
+  /customers:
+    get:
+      operationId: getCustomers
+      tags: [customers]
+      summary: Get all customers
+      responses:
+        "200":
+          description: List of customers
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Customer"
+    post:
+      operationId: createCustomer
+      tags: [customers]
+      summary: Create a customer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateCustomer"
+      responses:
+        "201":
+          description: Created customer
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Customer"
+  /customers/{id}:
+    get:
+      operationId: getCustomer
+      tags: [customers]
+      summary: Get a customer by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Customer
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Customer"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NotFound"
+    put:
+      operationId: updateCustomer
+      tags: [customers]
+      summary: Update a customer
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateCustomer"
+      responses:
+        "200":
+          description: Updated customer
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Customer"
+    delete:
+      operationId: deleteCustomer
+      tags: [customers]
+      summary: Delete a customer
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+  /customers/{id}/payments:
+    get:
+      operationId: getCustomerPayments
+      tags: [customers]
+      summary: Get debt payment history for a customer
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: List of payments
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/DebtPayment"
+    post:
+      operationId: createCustomerPayment
+      tags: [customers]
+      summary: Record a debt payment for a customer
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateDebtPayment"
+      responses:
+        "201":
+          description: Created payment
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DebtPayment"
+  /customers/{id}/statement:
+    get:
+      operationId: getCustomerStatement
+      tags: [customers]
+      summary: Get full debt statement for a customer
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Customer debt statement
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CustomerStatement"
 components:
   schemas:
     HealthStatus:
@@ -222,7 +375,9 @@ components:
           type: number
         todayTransactions:
           type: integer
-      required: [totalProducts, totalItems, totalCostValue, totalSaleValue, lowStockCount, todaySales, todayTransactions]
+        totalDebt:
+          type: number
+      required: [totalProducts, totalItems, totalCostValue, totalSaleValue, lowStockCount, todaySales, todayTransactions, totalDebt]
     SaleItem:
       type: object
       properties:
@@ -254,13 +409,27 @@ components:
         note:
           type: string
           nullable: true
+        paymentType:
+          type: string
+        customerId:
+          type: integer
+          nullable: true
+        customerName:
+          type: string
+          nullable: true
+        paidAmount:
+          type: number
+          nullable: true
+        debtAmount:
+          type: number
+          nullable: true
         createdAt:
           type: string
         items:
           type: array
           items:
             $ref: "#/components/schemas/SaleItem"
-      required: [id, totalAmount, itemCount, createdAt, items]
+      required: [id, totalAmount, itemCount, createdAt, items, paymentType]
     CreateSaleItem:
       type: object
       properties:
@@ -280,7 +449,119 @@ components:
         note:
           type: string
           nullable: true
+        paymentType:
+          type: string
+          enum: [cash, card, debt]
+        customerId:
+          type: integer
+          nullable: true
+        paidAmount:
+          type: number
+          nullable: true
       required: [items]
+    Customer:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        phone:
+          type: string
+        debtLimit:
+          type: number
+        totalDebt:
+          type: number
+        note:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+      required: [id, name, phone, debtLimit, totalDebt, createdAt]
+    CreateCustomer:
+      type: object
+      properties:
+        name:
+          type: string
+        phone:
+          type: string
+        debtLimit:
+          type: number
+        note:
+          type: string
+          nullable: true
+      required: [name, phone]
+    DebtPayment:
+      type: object
+      properties:
+        id:
+          type: integer
+        customerId:
+          type: integer
+        amount:
+          type: number
+        note:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+      required: [id, customerId, amount, createdAt]
+    CreateDebtPayment:
+      type: object
+      properties:
+        amount:
+          type: number
+        note:
+          type: string
+          nullable: true
+      required: [amount]
+    StatementSale:
+      type: object
+      properties:
+        id:
+          type: integer
+        totalAmount:
+          type: number
+        itemCount:
+          type: integer
+        paymentType:
+          type: string
+        paidAmount:
+          type: number
+          nullable: true
+        debtAmount:
+          type: number
+          nullable: true
+        createdAt:
+          type: string
+      required: [id, totalAmount, itemCount, paymentType, createdAt]
+    StatementPayment:
+      type: object
+      properties:
+        id:
+          type: integer
+        amount:
+          type: number
+        note:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+      required: [id, amount, createdAt]
+    CustomerStatement:
+      type: object
+      properties:
+        customer:
+          $ref: "#/components/schemas/Customer"
+        sales:
+          type: array
+          items:
+            $ref: "#/components/schemas/StatementSale"
+        payments:
+          type: array
+          items:
+            $ref: "#/components/schemas/StatementPayment"
+      required: [customer, sales, payments]
     NotFound:
       type: object
       properties:
