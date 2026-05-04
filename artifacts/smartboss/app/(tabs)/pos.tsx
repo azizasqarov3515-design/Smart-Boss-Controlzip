@@ -334,7 +334,6 @@ export default function POSScreen() {
       const found = customers.find((c) => c.id === preId);
       if (found) {
         setSelectedCustomer(found);
-        setPaymentType("debt");
         setTab("products");
       }
     }
@@ -456,8 +455,6 @@ export default function POSScreen() {
   const handleCheckout = () => {
     if (cartItems.length === 0) return;
     setSaleError(null);
-    setPaymentType("cash");
-    setSelectedCustomer(null);
     setPartialPayment("");
     setConfirmOpen(true);
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
@@ -535,7 +532,7 @@ export default function POSScreen() {
                 <TouchableOpacity
                   key={pt}
                   style={[styles.payTypeBtn, isActive && { backgroundColor: pt === "debt" ? "#DC2626" : colors.primary }]}
-                  onPress={() => { setPaymentType(pt); setSaleError(null); if (pt !== "debt") setSelectedCustomer(null); }}
+                  onPress={() => { setPaymentType(pt); setSaleError(null); }}
                   activeOpacity={0.8}
                   disabled={checkingOut}
                 >
@@ -547,40 +544,68 @@ export default function POSScreen() {
             })}
           </View>
 
-          {/* Customer selection (debt only) */}
+          {/* Customer badge — shown for ALL payment types when a customer is set */}
+          {selectedCustomer && (
+            <View style={[styles.customerBadge, { backgroundColor: colors.secondary, borderColor: colors.primary + "44" }]}>
+              <View style={[styles.customerBadgeAvatar, { backgroundColor: colors.primary }]}>
+                <Text style={styles.customerBadgeAvatarText}>
+                  {selectedCustomer.name.charAt(0).toUpperCase()}
+                </Text>
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.customerBadgeName, { color: colors.foreground }]}>
+                  {selectedCustomer.name}
+                </Text>
+                {selectedCustomer.totalDebt > 0 && (
+                  <Text style={[styles.customerBadgeDebt, { color: "#D97706" }]}>
+                    Joriy qarz: {selectedCustomer.totalDebt.toLocaleString()} UZS
+                    {selectedCustomer.debtLimit > 0 ? ` / Limit: ${selectedCustomer.debtLimit.toLocaleString()} UZS` : ""}
+                  </Text>
+                )}
+              </View>
+              <TouchableOpacity
+                onPress={() => setSelectedCustomer(null)}
+                disabled={checkingOut}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              >
+                <MaterialIcons name="close" size={18} color={colors.mutedForeground} />
+              </TouchableOpacity>
+            </View>
+          )}
+
+          {/* Customer picker (shown only for debt when no customer selected) */}
+          {paymentType === "debt" && !selectedCustomer && (
+            <TouchableOpacity
+              style={[styles.customerPickBtn, { backgroundColor: colors.card, borderColor: colors.border }]}
+              onPress={() => { setCustomerSearch(""); setCustomerPickerOpen(true); }}
+              activeOpacity={0.8}
+              disabled={checkingOut}
+            >
+              <MaterialIcons name="person-search" size={18} color={colors.mutedForeground} />
+              <Text style={[styles.customerPickText, { color: colors.mutedForeground }]}>
+                Mijoz tanlang...
+              </Text>
+            </TouchableOpacity>
+          )}
+
+          {/* Change customer button for cash/card (optional, shown when no customer) */}
+          {paymentType !== "debt" && !selectedCustomer && (
+            <TouchableOpacity
+              style={[styles.customerPickBtnOptional, { borderColor: colors.border }]}
+              onPress={() => { setCustomerSearch(""); setCustomerPickerOpen(true); }}
+              activeOpacity={0.8}
+              disabled={checkingOut}
+            >
+              <MaterialIcons name="person-add" size={15} color={colors.mutedForeground} />
+              <Text style={[styles.customerPickOptionalText, { color: colors.mutedForeground }]}>
+                Mijoz biriktirish (ixtiyoriy)
+              </Text>
+            </TouchableOpacity>
+          )}
+
+          {/* Debt partial payment section */}
           {paymentType === "debt" && (
             <View style={[styles.debtSection, { backgroundColor: "#FEF2F2", borderColor: "#FECACA" }]}>
-              <TouchableOpacity
-                style={[styles.customerPickBtn, {
-                  backgroundColor: colors.card,
-                  borderColor: selectedCustomer ? "#DC2626" : colors.border
-                }]}
-                onPress={() => { setCustomerSearch(""); setCustomerPickerOpen(true); }}
-                activeOpacity={0.8}
-                disabled={checkingOut}
-              >
-                <MaterialIcons
-                  name={selectedCustomer ? "person" : "person-search"}
-                  size={18}
-                  color={selectedCustomer ? "#DC2626" : colors.mutedForeground}
-                />
-                <Text style={[styles.customerPickText, { color: selectedCustomer ? "#DC2626" : colors.mutedForeground }]}>
-                  {selectedCustomer ? selectedCustomer.name : "Mijoz tanlang..."}
-                </Text>
-                {selectedCustomer && (
-                  <TouchableOpacity onPress={() => setSelectedCustomer(null)}>
-                    <MaterialIcons name="close" size={16} color={colors.mutedForeground} />
-                  </TouchableOpacity>
-                )}
-              </TouchableOpacity>
-
-              {selectedCustomer && (
-                <Text style={styles.customerDebtInfo}>
-                  Mavjud qarz: {selectedCustomer.totalDebt.toLocaleString()} UZS
-                  {selectedCustomer.debtLimit > 0 ? ` / Limit: ${selectedCustomer.debtLimit.toLocaleString()} UZS` : ""}
-                </Text>
-              )}
-
               <View style={styles.partialPayRow}>
                 <View style={{ flex: 1 }}>
                   <Text style={styles.partialPayLabel}>Hozir to'lanadigan summa (ixtiyoriy)</Text>
@@ -1798,6 +1823,52 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: "#991B1B",
     paddingHorizontal: 4,
+  },
+  customerBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    borderRadius: 12,
+    borderWidth: 1,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    marginBottom: 10,
+  },
+  customerBadgeAvatar: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  customerBadgeAvatarText: {
+    fontFamily: "Inter_700Bold",
+    fontSize: 15,
+    color: "#fff",
+  },
+  customerBadgeName: {
+    fontFamily: "Inter_600SemiBold",
+    fontSize: 14,
+  },
+  customerBadgeDebt: {
+    fontFamily: "Inter_400Regular",
+    fontSize: 11,
+    marginTop: 2,
+  },
+  customerPickBtnOptional: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderStyle: "dashed",
+    paddingVertical: 9,
+    marginBottom: 10,
+  },
+  customerPickOptionalText: {
+    fontFamily: "Inter_400Regular",
+    fontSize: 13,
   },
   partialPayRow: {
     flexDirection: "row",
