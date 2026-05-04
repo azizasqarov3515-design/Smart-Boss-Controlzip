@@ -60,12 +60,23 @@ function WorkerDashboard() {
   const router = useRouter();
   const { workerName } = useAuth();
   const isWeb = Platform.OS === "web";
+  const [refreshing, setRefreshing] = useState(false);
+
+  const onRefresh = async () => {
+    setRefreshing(true);
+    Haptics.selectionAsync();
+    await new Promise((resolve) => setTimeout(resolve, 800));
+    setRefreshing(false);
+  };
 
   return (
     <ScrollView
       style={[styles.container, { backgroundColor: colors.background }]}
       contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 90, paddingTop: isWeb ? 20 : 16 }]}
       showsVerticalScrollIndicator={false}
+      refreshControl={
+        <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} colors={[colors.primary]} />
+      }
     >
       <View style={styles.header}>
         <View style={styles.headerLeft}>
@@ -129,11 +140,16 @@ export default function DashboardScreen() {
   const { username, downloadBackup, role } = useAuth();
   const [backupLoading, setBackupLoading] = useState(false);
 
+  const isManager = role === "manager";
+
   const { data: stats, isLoading: statsLoading, refetch: refetchStats, isRefetching: r1 } = useGetDashboardStats();
   const { data: products, isLoading: productsLoading, refetch: refetchProducts, isRefetching: r2 } = useGetProducts();
   const { data: sales, isLoading: salesLoading, refetch: refetchSales, isRefetching: r3 } = useGetSales();
-  const { data: workers, refetch: refetchWorkers } = useGetWorkers({ query: { enabled: role === "manager", refetchInterval: 30000 } });
-  const { data: deleteRequests, refetch: refetchDeleteRequests } = useGetDeleteRequests({ query: { enabled: role === "manager", refetchInterval: 30000 } });
+  // workers/deleteRequests only needed by manager — disabled for workers via enabled flag
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: workers, refetch: refetchWorkers } = useGetWorkers({ query: { enabled: isManager, refetchInterval: 30000 } as any });
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: deleteRequests, refetch: refetchDeleteRequests } = useGetDeleteRequests({ query: { enabled: isManager, refetchInterval: 30000 } as any });
 
   if (role === "worker") {
     return <WorkerDashboard />;

@@ -66,8 +66,13 @@ function RootLayoutNav() {
         if (currentSegment !== "worker-login") router.replace("/worker-login");
         return;
       }
-      // approved worker — send to tabs if on a public/auth screen
-      if (isPublic) router.replace("/(tabs)");
+      if (workerStatus === "approved") {
+        // approved worker — send to tabs if on a public/auth screen
+        if (isPublic) router.replace("/(tabs)");
+        return;
+      }
+      // workerStatus is null (still loading) — stay put
+      return;
     } else {
       // manager — send to tabs if on a public/auth screen
       if (isPublic) router.replace("/(tabs)");

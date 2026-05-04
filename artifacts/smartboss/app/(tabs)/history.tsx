@@ -108,7 +108,7 @@ function SaleCard({
   const handleDoc = async (type: DocType) => {
     setLoadingDoc(type);
     try {
-      await generateAndSharePdf(type, getHtml(sale, type, settings, pdfCustomer));
+      await generateAndSharePdf(getHtml(sale, type, settings, pdfCustomer), sale.id, type);
     } finally {
       setLoadingDoc(null);
     }

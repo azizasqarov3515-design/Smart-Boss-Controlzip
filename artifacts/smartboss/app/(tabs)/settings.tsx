@@ -5,6 +5,7 @@ import {
   KeyboardAvoidingView,
   Modal,
   Platform,
+  RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
@@ -116,7 +117,8 @@ function WorkerStatusBadge({ status, colors }: { status: string; colors: ReturnT
 
 function WorkersSection({ colors }: { colors: ReturnType<typeof useColors> }) {
   const queryClient = useQueryClient();
-  const { data: workers, isLoading, refetch } = useGetWorkers({ query: { refetchInterval: 15000 } });
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: workers, isLoading, refetch, isRefetching } = useGetWorkers({ query: { refetchInterval: 15000 } as any });
   const [removeConfirm, setRemoveConfirm] = useState<Worker | null>(null);
 
   const invalidate = () => {
@@ -220,12 +222,18 @@ function WorkersSection({ colors }: { colors: ReturnType<typeof useColors> }) {
       )}
 
       <TouchableOpacity
-        style={[styles.refreshBtn, { borderColor: colors.border }]}
-        onPress={() => refetch()}
+        style={[styles.refreshBtn, { borderColor: colors.border, opacity: isRefetching ? 0.6 : 1 }]}
+        onPress={() => { Haptics.selectionAsync(); refetch(); }}
         activeOpacity={0.8}
+        disabled={isRefetching}
       >
-        <MaterialIcons name="refresh" size={16} color={colors.mutedForeground} />
-        <Text style={[styles.refreshBtnText, { color: colors.mutedForeground }]}>Yangilash</Text>
+        {isRefetching
+          ? <ActivityIndicator size="small" color={colors.mutedForeground} />
+          : <MaterialIcons name="refresh" size={16} color={colors.mutedForeground} />
+        }
+        <Text style={[styles.refreshBtnText, { color: colors.mutedForeground }]}>
+          {isRefetching ? "Yangilanmoqda..." : "Yangilash"}
+        </Text>
       </TouchableOpacity>
 
       <Modal
@@ -272,7 +280,8 @@ function WorkersSection({ colors }: { colors: ReturnType<typeof useColors> }) {
 
 function DeleteRequestsSection({ colors }: { colors: ReturnType<typeof useColors> }) {
   const queryClient = useQueryClient();
-  const { data: requests, isLoading, refetch } = useGetDeleteRequests({ query: { refetchInterval: 15000 } });
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: requests, isLoading, refetch } = useGetDeleteRequests({ query: { refetchInterval: 15000 } as any });
 
   const invalidate = () => {
     queryClient.invalidateQueries({ queryKey: getGetDeleteRequestsQueryKey() });
@@ -356,6 +365,7 @@ export default function SettingsScreen() {
   const { settings, saveSettings, isLoading } = useSettings();
   const { mode: themeMode, setMode: setThemeMode } = useTheme();
   const { role } = useAuth();
+  const queryClient = useQueryClient();
 
   const [storeName, setStoreName] = useState("");
   const [storeSubtitle, setStoreSubtitle] = useState("");
@@ -363,6 +373,7 @@ export default function SettingsScreen() {
   const [sellers, setSellers] = useState<Seller[]>([]);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [managerRefreshing, setManagerRefreshing] = useState(false);
 
   const [sellerModal, setSellerModal] = useState(false);
   const [editingSeller, setEditingSeller] = useState<Seller | null>(null);
@@ -371,8 +382,20 @@ export default function SettingsScreen() {
   const [sellerError, setSellerError] = useState<string | null>(null);
   const [deleteSellerConfirm, setDeleteSellerConfirm] = useState<Seller | null>(null);
 
-  const { data: pendingWorkers } = useGetWorkers({ query: { enabled: role === "manager", refetchInterval: 15000, select: (d) => d.filter((w) => w.status === "pending") } });
-  const { data: pendingDeleteReqs } = useGetDeleteRequests({ query: { enabled: role === "manager", refetchInterval: 15000 } });
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: pendingWorkers } = useGetWorkers({ query: { enabled: role === "manager", refetchInterval: 15000, select: (d: Worker[]) => d.filter((w) => w.status === "pending") } as any });
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: pendingDeleteReqs } = useGetDeleteRequests({ query: { enabled: role === "manager", refetchInterval: 15000 } as any });
+
+  const handleManagerRefresh = async () => {
+    setManagerRefreshing(true);
+    Haptics.selectionAsync();
+    await Promise.all([
+      queryClient.refetchQueries({ queryKey: getGetWorkersQueryKey() }),
+      queryClient.refetchQueries({ queryKey: getGetDeleteRequestsQueryKey() }),
+    ]);
+    setManagerRefreshing(false);
+  };
 
   useEffect(() => {
     if (!isLoading) {
@@ -476,6 +499,14 @@ export default function SettingsScreen() {
           contentContainerStyle={{ padding: 16, paddingBottom: insets.bottom + 100, gap: 16 }}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
+          refreshControl={
+            <RefreshControl
+              refreshing={managerRefreshing}
+              onRefresh={handleManagerRefresh}
+              tintColor={colors.primary}
+              colors={[colors.primary]}
+            />
+          }
         >
           {/* Workers management */}
           <SectionCard title="Ishchilar arizalari" icon="badge" colors={colors} badge={pendingWorkers?.length}>

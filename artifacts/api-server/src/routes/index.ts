@@ -28,7 +28,7 @@ const checkWorkerStatus = async (req: Request, res: Response, next: NextFunction
         .from(workersTable)
         .where(eq(workersTable.id, user.workerId));
       if (!worker || worker.status !== "approved") {
-        res.status(401).json({ error: "Ruxsat bekor qilindi" });
+        res.status(403).json({ error: "Ruxsat bekor qilindi. Rahbar tasdig'ini kuting." });
         return;
       }
     } catch {

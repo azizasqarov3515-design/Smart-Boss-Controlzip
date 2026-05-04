@@ -65,7 +65,8 @@ export default function ProductFormScreen() {
   const [errors, setErrors] = useState<Partial<FormValues>>({});
   const [submitted, setSubmitted] = useState(false);
 
-  const { data: products } = useGetProducts({ query: { enabled: isEdit } });
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: products } = useGetProducts({ query: { enabled: isEdit } as any });
 
   useLayoutEffect(() => {
     navigation.setOptions({ title: isEdit ? "Tahrirlash" : "Yangi mahsulot" });
