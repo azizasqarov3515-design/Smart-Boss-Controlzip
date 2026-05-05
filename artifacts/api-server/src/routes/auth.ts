@@ -8,7 +8,7 @@ import {
   customersTable,
   deleteRequestsTable,
 } from "@workspace/db/schema";
-import { and, eq } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import { Router } from "express";
 import { z } from "zod";
 import { generateToken, revokeToken, extractBearerToken, requireAuth } from "../lib/auth";
@@ -340,10 +340,13 @@ router.post("/auth/forgot-credentials", async (req, res) => {
   const schema = z.object({ phone: z.string().min(7) });
   try {
     const body = schema.parse(req.body);
+    const normalizedInput = body.phone.replace(/\D/g, "");
     const [manager] = await db
       .select({ id: managersTable.id, login: managersTable.login, storeName: managersTable.storeName, phone: managersTable.phone })
       .from(managersTable)
-      .where(eq(managersTable.phone, body.phone));
+      .where(
+        sql`regexp_replace(${managersTable.phone}, '[^0-9]', '', 'g') = ${normalizedInput}`
+      );
 
     if (!manager) {
       res.status(404).json({ error: "Bu telefon raqam tizimda ro'yxatdan o'tmagan", code: "NOT_FOUND" });
