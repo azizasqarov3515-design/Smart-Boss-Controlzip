@@ -15,6 +15,39 @@ import { generateToken, revokeToken, extractBearerToken, requireAuth } from "../
 
 const router = Router();
 
+function maskPhone(phone: string): string {
+  const d = phone.replace(/\D/g, "");
+  if (d.length < 11) return phone;
+  const local = d.startsWith("998") ? d.slice(3) : d.slice(d.length - 9);
+  return `+998 ${local.slice(0, 2)}* *** **${local.slice(7)}`;
+}
+
+async function sendEskizSms(phone: string, message: string): Promise<void> {
+  const email = process.env["ESKIZ_EMAIL"];
+  const password = process.env["ESKIZ_PASSWORD"];
+  if (!email || !password) throw Object.assign(new Error("SMS_NOT_CONFIGURED"), { code: "SMS_NOT_CONFIGURED" });
+
+  const authRes = await fetch("https://notify.eskiz.uz/api/auth/login", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email, password }),
+  });
+  if (!authRes.ok) throw Object.assign(new Error("SMS_AUTH_FAILED"), { code: "SMS_AUTH_FAILED" });
+  const authData = (await authRes.json()) as { data?: { token?: string } };
+  const token = authData.data?.token;
+  if (!token) throw Object.assign(new Error("SMS_AUTH_FAILED"), { code: "SMS_AUTH_FAILED" });
+
+  const digits = phone.replace(/\D/g, "");
+  const mobilePhone = digits.startsWith("998") ? digits : "998" + digits;
+
+  const smsRes = await fetch("https://notify.eskiz.uz/api/message/sms/send", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+    body: JSON.stringify({ mobile_phone: mobilePhone, message, from: "4546" }),
+  });
+  if (!smsRes.ok) throw Object.assign(new Error("SMS_SEND_FAILED"), { code: "SMS_SEND_FAILED" });
+}
+
 function hashPassword(password: string): string {
   const salt = crypto.randomBytes(16).toString("hex");
   const hash = crypto.scryptSync(password, salt, 64).toString("hex");
@@ -357,8 +390,23 @@ router.post("/auth/forgot-credentials", async (req, res) => {
     const passwordHash = hashPassword(tempPassword);
     await db.update(managersTable).set({ passwordHash }).where(eq(managersTable.id, manager.id));
 
-    req.log.info({ managerId: manager.id }, "Temp password generated");
-    res.json({ login: manager.login, tempPassword, storeName: manager.storeName });
+    const smsText = `SMARTBOSScontrol\nLogin: ${manager.login}\nVaqtinchalik parol: ${tempPassword}\nKirganingizdan keyin parolni yangilang.`;
+    try {
+      await sendEskizSms(manager.phone, smsText);
+      req.log.info({ managerId: manager.id }, "SMS sent via Eskiz");
+    } catch (smsErr: unknown) {
+      const code = (smsErr as { code?: string }).code;
+      if (code === "SMS_NOT_CONFIGURED") {
+        req.log.warn({ managerId: manager.id }, "SMS not configured — ESKIZ_EMAIL/ESKIZ_PASSWORD not set");
+        res.status(503).json({ error: "SMS xizmati ulanmagan. Administrator bilan bog'laning.", code: "SMS_NOT_CONFIGURED" });
+        return;
+      }
+      req.log.error({ err: smsErr }, "SMS send failed");
+      res.status(502).json({ error: "SMS yuborishda xato yuz berdi. Keyinroq urinib ko'ring.", code: "SMS_SEND_FAILED" });
+      return;
+    }
+
+    res.json({ masked_phone: maskPhone(manager.phone), storeName: manager.storeName });
   } catch (err) {
     if (err instanceof z.ZodError) {
       res.status(400).json({ error: "Telefon raqamni kiriting" });

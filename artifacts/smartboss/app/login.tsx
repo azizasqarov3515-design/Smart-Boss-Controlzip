@@ -44,15 +44,13 @@ export default function LoginScreen() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Forgot password state
+  // Forgot password modal state
   const [forgotModal, setForgotModal] = useState(false);
   const [forgotPhone, setForgotPhone] = useState("+998 ");
   const [forgotLoading, setForgotLoading] = useState(false);
   const [forgotError, setForgotError] = useState<string | null>(null);
-  const [forgotStep, setForgotStep] = useState<"phone" | "result">("phone");
-  const [recoveredLogin, setRecoveredLogin] = useState("");
-  const [recoveredPassword, setRecoveredPassword] = useState("");
-  const [recoveredStore, setRecoveredStore] = useState("");
+  const [forgotStep, setForgotStep] = useState<"phone" | "sent">("phone");
+  const [maskedPhone, setMaskedPhone] = useState("");
 
   const handleLogin = async () => {
     if (!loginCode.trim() || !password.trim()) {
@@ -62,7 +60,7 @@ export default function LoginScreen() {
     setLoading(true);
     setError(null);
     try {
-      await login(loginCode.trim().toUpperCase(), password);
+      await login(loginCode.trim().toUpperCase(), password.trim());
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : "Login amalga oshmadi";
       setError(msg);
@@ -90,15 +88,17 @@ export default function LoginScreen() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ phone: forgotPhone }),
       });
-      const data = (await res.json()) as { login?: string; tempPassword?: string; storeName?: string; error?: string; code?: string };
+      const data = (await res.json()) as { masked_phone?: string; storeName?: string; error?: string; code?: string };
       if (!res.ok) {
-        setForgotError(data.error ?? "Xato yuz berdi");
+        if (data.code === "SMS_NOT_CONFIGURED") {
+          setForgotError("SMS xizmati hozircha ulanmagan. Administrator bilan bog'laning.");
+        } else {
+          setForgotError(data.error ?? "Xato yuz berdi");
+        }
         return;
       }
-      setRecoveredLogin(data.login ?? "");
-      setRecoveredPassword(data.tempPassword ?? "");
-      setRecoveredStore(data.storeName ?? "");
-      setForgotStep("result");
+      setMaskedPhone(data.masked_phone ?? forgotPhone);
+      setForgotStep("sent");
     } catch {
       setForgotError("Server bilan bog'lanishda xato");
     } finally {
@@ -111,15 +111,7 @@ export default function LoginScreen() {
     setForgotPhone("+998 ");
     setForgotError(null);
     setForgotStep("phone");
-    setRecoveredLogin("");
-    setRecoveredPassword("");
-    setRecoveredStore("");
-  };
-
-  const useRecoveredCredentials = () => {
-    setLoginCode(recoveredLogin);
-    setPassword(recoveredPassword);
-    closeForgotModal();
+    setMaskedPhone("");
   };
 
   return (
@@ -249,7 +241,7 @@ export default function LoginScreen() {
                 <View style={styles.modalTitleRow}>
                   <MaterialIcons name="lock-reset" size={22} color={colors.primary} />
                   <Text style={[styles.modalTitle, { color: colors.foreground }]}>
-                    {forgotStep === "phone" ? "Login / Parol tiklash" : "Ma'lumotlar yuborildi"}
+                    {forgotStep === "phone" ? "Parolni tiklash" : "SMS yuborildi"}
                   </Text>
                 </View>
                 <TouchableOpacity onPress={closeForgotModal} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
@@ -261,7 +253,7 @@ export default function LoginScreen() {
                 {forgotStep === "phone" ? (
                   <>
                     <Text style={[styles.modalDesc, { color: colors.mutedForeground }]}>
-                      Ro'yxatdan o'tishda ishlatgan telefon raqamingizni kiriting. Tizim login va yangi vaqtinchalik parolni ko'rsatadi.
+                      Ro'yxatdan o'tishda ishlatgan telefon raqamingizni kiriting. Tizim login va yangi vaqtinchalik parolni SMS orqali yuboradi.
                     </Text>
 
                     <View style={styles.fieldWrap}>
@@ -301,7 +293,7 @@ export default function LoginScreen() {
                         <>
                           <MaterialIcons name="sms" size={20} color={phoneValid ? "#fff" : colors.mutedForeground} />
                           <Text style={[styles.smsBtnText, { color: phoneValid ? "#fff" : colors.mutedForeground }]}>
-                            SMS xabarnoma olish
+                            SMS xabarnoma yuborish
                           </Text>
                         </>
                       )}
@@ -309,41 +301,32 @@ export default function LoginScreen() {
                   </>
                 ) : (
                   <>
-                    <View style={[styles.smsResultBox, { backgroundColor: "#E8F5E9", borderColor: "#4CAF50" }]}>
-                      <View style={styles.smsResultHeader}>
-                        <MaterialIcons name="mark-email-read" size={24} color="#2E7D32" />
-                        <Text style={[styles.smsResultTitle, { color: "#2E7D32" }]}>
-                          {recoveredStore} — tizim ma'lumotlari
-                        </Text>
+                    <View style={[styles.sentBox, { backgroundColor: "#E8F5E9", borderColor: "#4CAF50" }]}>
+                      <View style={styles.sentIconRow}>
+                        <MaterialIcons name="mark-chat-read" size={32} color="#2E7D32" />
+                        <Text style={[styles.sentTitle, { color: "#2E7D32" }]}>SMS muvaffaqiyatli yuborildi!</Text>
                       </View>
-                      <View style={styles.smsResultDivider} />
-
-                      <View style={styles.credRow}>
-                        <Text style={styles.credLabel}>Login:</Text>
-                        <View style={[styles.credValueBox, { backgroundColor: "#fff" }]}>
-                          <Text style={[styles.credValue, { color: "#1B5E20" }]}>{recoveredLogin}</Text>
-                        </View>
-                      </View>
-
-                      <View style={styles.credRow}>
-                        <Text style={styles.credLabel}>Yangi parol:</Text>
-                        <View style={[styles.credValueBox, { backgroundColor: "#fff" }]}>
-                          <Text style={[styles.credValue, { color: "#1B5E20" }]}>{recoveredPassword}</Text>
-                        </View>
-                      </View>
-
-                      <Text style={[styles.smsNote, { color: "#558B2F" }]}>
-                        ⚠️ Kirganingizdan keyin yangi parol o'rnating
+                      <View style={[styles.sentDivider, { backgroundColor: "#A5D6A7" }]} />
+                      <Text style={[styles.sentDesc, { color: "#388E3C" }]}>
+                        <Text style={{ fontFamily: "Inter_700Bold" }}>{maskedPhone}</Text>
+                        {"\n"}raqamiga login va vaqtinchalik parol SMS orqali yuborildi.
+                      </Text>
+                      <Text style={[styles.sentNote, { color: "#558B2F" }]}>
+                        ⚠️ Kirganingizdan keyin yangi doimiy parol o'rnating
                       </Text>
                     </View>
 
+                    <Text style={[styles.sentHint, { color: colors.mutedForeground }]}>
+                      SMS kelmagan bo'lsa, bir necha daqiqadan keyin qayta urinib ko'ring yoki telefon raqamingizni tekshiring.
+                    </Text>
+
                     <TouchableOpacity
-                      style={[styles.useCredsBtn, { backgroundColor: colors.primary }]}
-                      onPress={useRecoveredCredentials}
+                      style={[styles.closeBtn, { backgroundColor: colors.primary }]}
+                      onPress={closeForgotModal}
                       activeOpacity={0.85}
                     >
-                      <MaterialIcons name="login" size={18} color="#fff" />
-                      <Text style={styles.useCredsBtnText}>Bu ma'lumotlar bilan kirish</Text>
+                      <MaterialIcons name="check" size={18} color="#fff" />
+                      <Text style={styles.closeBtnText}>Tushunarli</Text>
                     </TouchableOpacity>
                   </>
                 )}
@@ -386,7 +369,7 @@ const styles = StyleSheet.create({
   eyeBtn: { padding: 4 },
   errorBlock: { marginBottom: 12, marginTop: -4, gap: 8 },
   errorRow: { flexDirection: "row", alignItems: "center", gap: 5 },
-  errorText: { fontFamily: "Inter_400Regular", fontSize: 13, color: "#E53935", flex: 1 },
+  errorText: { fontFamily: "Inter_400Regular", fontSize: 13, color: "#E53935" },
   forgotBtn: { flexDirection: "row", alignItems: "center", gap: 4 },
   forgotText: { fontFamily: "Inter_500Medium", fontSize: 13 },
   loginBtn: {
@@ -417,20 +400,17 @@ const styles = StyleSheet.create({
     gap: 8, borderRadius: 14, height: 52,
   },
   smsBtnText: { fontFamily: "Inter_600SemiBold", fontSize: 15 },
-  smsResultBox: {
-    borderRadius: 16, borderWidth: 1.5, padding: 16, gap: 10,
-  },
-  smsResultHeader: { flexDirection: "row", alignItems: "center", gap: 8 },
-  smsResultTitle: { fontFamily: "Inter_700Bold", fontSize: 14, flex: 1 },
-  smsResultDivider: { height: 1, backgroundColor: "#A5D6A7", marginVertical: 2 },
-  credRow: { flexDirection: "row", alignItems: "center", gap: 10 },
-  credLabel: { fontFamily: "Inter_500Medium", fontSize: 13, color: "#388E3C", width: 90 },
-  credValueBox: { flex: 1, borderRadius: 8, paddingHorizontal: 12, paddingVertical: 8 },
-  credValue: { fontFamily: "Inter_700Bold", fontSize: 18, letterSpacing: 2 },
-  smsNote: { fontFamily: "Inter_400Regular", fontSize: 11, marginTop: 4 },
-  useCredsBtn: {
+  // SMS sent screen
+  sentBox: { borderRadius: 16, borderWidth: 1.5, padding: 16, gap: 10 },
+  sentIconRow: { flexDirection: "row", alignItems: "center", gap: 10 },
+  sentTitle: { fontFamily: "Inter_700Bold", fontSize: 15, flex: 1 },
+  sentDivider: { height: 1, marginVertical: 2 },
+  sentDesc: { fontFamily: "Inter_400Regular", fontSize: 14, lineHeight: 22 },
+  sentNote: { fontFamily: "Inter_500Medium", fontSize: 11 },
+  sentHint: { fontFamily: "Inter_400Regular", fontSize: 12, lineHeight: 18, textAlign: "center" },
+  closeBtn: {
     flexDirection: "row", alignItems: "center", justifyContent: "center",
     gap: 8, borderRadius: 14, height: 50,
   },
-  useCredsBtnText: { fontFamily: "Inter_600SemiBold", fontSize: 15, color: "#fff" },
+  closeBtnText: { fontFamily: "Inter_600SemiBold", fontSize: 15, color: "#fff" },
 });
