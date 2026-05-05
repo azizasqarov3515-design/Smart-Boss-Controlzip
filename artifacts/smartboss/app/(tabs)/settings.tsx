@@ -157,39 +157,53 @@ function WorkersSection({ colors }: { colors: ReturnType<typeof useColors> }) {
         <View>
           <Text style={[styles.subSectionLabel, { color: colors.mutedForeground }]}>Kutayotgan arizalar</Text>
           {pending.map((w) => (
-            <View key={w.id} style={[styles.workerRow, { backgroundColor: "#FFFBEB", borderColor: "#FCD34D" }]}>
-              <View style={[styles.workerAvatar, { backgroundColor: "#FDE68A" }]}>
-                <Text style={[styles.workerAvatarText, { color: "#92400E" }]}>{w.name.charAt(0).toUpperCase()}</Text>
-              </View>
-              <View style={styles.workerInfo}>
-                <Text style={[styles.workerName, { color: colors.foreground }]}>{w.name}</Text>
-                <Text style={[styles.workerPhone, { color: colors.mutedForeground }]}>{w.phone}</Text>
-                <Text style={[styles.workerAddress, { color: colors.mutedForeground }]} numberOfLines={1}>{w.address}</Text>
-              </View>
-              <View style={styles.workerActions}>
+            <View key={w.id} style={[styles.pendingWorkerCard, { backgroundColor: "#FFFBEB", borderColor: "#F59E0B" }]}>
+              {/* Worker info */}
+              <View style={styles.pendingWorkerTop}>
+                <View style={[styles.workerAvatar, { backgroundColor: "#FDE68A" }]}>
+                  <Text style={[styles.workerAvatarText, { color: "#92400E" }]}>{w.name.charAt(0).toUpperCase()}</Text>
+                </View>
+                <View style={styles.workerInfo}>
+                  <Text style={[styles.workerName, { color: colors.foreground }]}>{w.name}</Text>
+                  <Text style={[styles.workerPhone, { color: colors.mutedForeground }]}>{w.phone}</Text>
+                  <Text style={[styles.workerAddress, { color: colors.mutedForeground }]} numberOfLines={1}>{w.address}</Text>
+                </View>
                 <TouchableOpacity
-                  style={[styles.actionBtn, { backgroundColor: "#D1FAE5" }]}
-                  onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); approve({ id: w.id }); }}
-                  activeOpacity={0.8}
-                  disabled={approving || rejecting || removing}
-                >
-                  <MaterialIcons name="check" size={18} color="#065F46" />
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[styles.actionBtn, { backgroundColor: "#FEE2E2" }]}
-                  onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); reject({ id: w.id }); }}
-                  activeOpacity={0.8}
-                  disabled={approving || rejecting || removing}
-                >
-                  <MaterialIcons name="close" size={18} color="#DC2626" />
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[styles.actionBtn, { backgroundColor: "#F3F4F6" }]}
+                  style={[styles.pendingDeleteBtn, { backgroundColor: "#F3F4F6" }]}
                   onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy); setRemoveConfirm(w); }}
                   activeOpacity={0.8}
                   disabled={approving || rejecting || removing}
                 >
-                  <MaterialIcons name="delete-outline" size={18} color="#6B7280" />
+                  <MaterialIcons name="delete-outline" size={19} color="#9CA3AF" />
+                </TouchableOpacity>
+              </View>
+
+              {/* Approve / Reject action buttons */}
+              <View style={styles.pendingWorkerBtns}>
+                <TouchableOpacity
+                  style={[styles.approveBtn, { opacity: (approving || rejecting || removing) ? 0.65 : 1 }]}
+                  onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); approve({ id: w.id }); }}
+                  activeOpacity={0.85}
+                  disabled={approving || rejecting || removing}
+                >
+                  {approving
+                    ? <ActivityIndicator size="small" color="#fff" />
+                    : <MaterialIcons name="check-circle" size={24} color="#fff" />
+                  }
+                  <Text style={styles.approveBtnText}>Tasdiqlash</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={[styles.rejectBtn, { opacity: (approving || rejecting || removing) ? 0.65 : 1 }]}
+                  onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); reject({ id: w.id }); }}
+                  activeOpacity={0.85}
+                  disabled={approving || rejecting || removing}
+                >
+                  {rejecting
+                    ? <ActivityIndicator size="small" color="#fff" />
+                    : <MaterialIcons name="cancel" size={24} color="#fff" />
+                  }
+                  <Text style={styles.rejectBtnText}>Rad etish</Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -754,6 +768,20 @@ const styles = StyleSheet.create({
   actionBtn: { width: 34, height: 34, borderRadius: 9, alignItems: "center", justifyContent: "center" },
   statusBadge: { paddingHorizontal: 7, paddingVertical: 2, borderRadius: 7 },
   statusBadgeText: { fontFamily: "Inter_600SemiBold", fontSize: 10 },
+  pendingWorkerCard: { borderRadius: 14, borderWidth: 1.5, padding: 14, marginBottom: 8, gap: 12 },
+  pendingWorkerTop: { flexDirection: "row", alignItems: "center", gap: 10 },
+  pendingDeleteBtn: { width: 36, height: 36, borderRadius: 9, alignItems: "center", justifyContent: "center" },
+  pendingWorkerBtns: { flexDirection: "row", gap: 10 },
+  approveBtn: {
+    flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center",
+    gap: 8, backgroundColor: "#059669", borderRadius: 12, height: 50,
+  },
+  approveBtnText: { fontFamily: "Inter_700Bold", fontSize: 15, color: "#fff" },
+  rejectBtn: {
+    flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center",
+    gap: 8, backgroundColor: "#DC2626", borderRadius: 12, height: 50,
+  },
+  rejectBtnText: { fontFamily: "Inter_700Bold", fontSize: 15, color: "#fff" },
   requestRow: { borderRadius: 12, borderWidth: 1, padding: 12, gap: 10 },
   requestTop: { flexDirection: "row", alignItems: "flex-start", gap: 10 },
   requestWorker: { fontFamily: "Inter_600SemiBold", fontSize: 14 },

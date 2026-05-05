@@ -152,6 +152,27 @@ export function AuthProvider({ children, queryClient }: AuthProviderProps) {
     return { status: data.status ?? "pending" };
   }, [queryClient]);
 
+  // Global periodic check: even approved workers in tabs get auto-logged-out if deleted
+  useEffect(() => {
+    if (!token || role !== "worker") return;
+    const interval = setInterval(async () => {
+      const res = await fetch(`${BASE_URL}/api/auth/me`, {
+        headers: { Authorization: `Bearer ${token}` },
+      }).catch(() => null);
+      if (!res) return;
+      if (res.status === 401 || res.status === 404) {
+        await AsyncStorage.multiRemove([TOKEN_KEY, ROLE_KEY, USER_NAME_KEY, WORKER_ID_KEY]);
+        queryClient?.clear();
+        setToken(null); setUsername(null); setRole(null);
+        setWorkerName(null); setWorkerId(null); setWorkerStatus(null);
+      } else if (res.ok) {
+        const data = (await res.json()) as { status?: string };
+        setWorkerStatus(data.status ?? null);
+      }
+    }, 10000);
+    return () => clearInterval(interval);
+  }, [token, role, queryClient]);
+
   const refreshWorkerStatus = useCallback(async (): Promise<string | null> => {
     if (!token) return null;
     try {
@@ -164,9 +185,20 @@ export function AuthProvider({ children, queryClient }: AuthProviderProps) {
         setWorkerStatus(st);
         return st;
       }
-    } catch { /* ignore */ }
+      // 401 = worker deleted or token invalid → force logout immediately
+      if (res.status === 401 || res.status === 404) {
+        await AsyncStorage.multiRemove([TOKEN_KEY, ROLE_KEY, USER_NAME_KEY, WORKER_ID_KEY]);
+        queryClient?.clear();
+        setToken(null);
+        setUsername(null);
+        setRole(null);
+        setWorkerName(null);
+        setWorkerId(null);
+        setWorkerStatus(null);
+      }
+    } catch { /* ignore network errors */ }
     return null;
-  }, [token]);
+  }, [token, queryClient]);
 
   const logout = useCallback(async () => {
     try {

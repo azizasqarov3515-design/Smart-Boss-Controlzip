@@ -27,7 +27,12 @@ const checkWorkerStatus = async (req: Request, res: Response, next: NextFunction
         .select({ status: workersTable.status })
         .from(workersTable)
         .where(eq(workersTable.id, user.workerId));
-      if (!worker || worker.status !== "approved") {
+      if (!worker) {
+        // Worker deleted — 401 triggers client-side auto-logout
+        res.status(401).json({ error: "Hisobingiz o'chirilgan. Qaytadan ro'yxatdan o'ting." });
+        return;
+      }
+      if (worker.status !== "approved") {
         res.status(403).json({ error: "Ruxsat bekor qilindi. Rahbar tasdig'ini kuting." });
         return;
       }
