@@ -217,10 +217,34 @@ input::placeholder {
   outline-offset: 2px;
 }
 
+html {
+  height: 100%;
+  height: -webkit-fill-available;
+}
+
+body {
+  min-height: 100%;
+  min-height: -webkit-fill-available;
+}
+
+.min-h-dvh {
+  min-height: 100dvh;
+  min-height: -webkit-fill-available;
+}
+
+/* Hide scrollbar on filter chips */
+.scrollbar-hide::-webkit-scrollbar { display: none; }
+.scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+
 @keyframes pulse-slow {
   0%, 100% { opacity: 1; }
   50% { opacity: 0.5; }
 }
 .animate-pulse-slow {
   animation: pulse-slow 2s ease-in-out infinite;
+}
+
+/* Touch feedback */
+@media (hover: none) {
+  button:active { opacity: 0.7; }
 }
