@@ -96,7 +96,6 @@ const FIELDS: Array<{
     label: "Email manzil *",
     placeholder: "example@gmail.com",
     icon: "email",
-    keyboardType: "email-address" as const,
     autoCapitalize: "none" as const,
     hint: "Parolni unutsangiz ushbu emailga yuboriladi",
   },
