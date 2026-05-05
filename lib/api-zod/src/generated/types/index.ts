@@ -14,6 +14,8 @@ export * from "./createDebtPayment";
 export * from "./createDeleteRequest";
 export * from "./createDeleteRequest201";
 export * from "./createProduct";
+export * from "./createProductDeleteRequest";
+export * from "./createProductDeleteRequest201";
 export * from "./createSale";
 export * from "./createSaleItem";
 export * from "./createSalePaymentType";

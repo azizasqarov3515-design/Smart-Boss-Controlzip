@@ -1,6 +1,7 @@
 import {
   useGetProducts,
   useDeleteProduct,
+  useCreateProductDeleteRequest,
   getGetProductsQueryKey,
   getGetDashboardStatsQueryKey,
   type Product,
@@ -11,9 +12,9 @@ import { useRouter } from "expo-router";
 import React, { useCallback, useRef, useState } from "react";
 import {
   ActivityIndicator,
-  Alert,
   Animated,
   FlatList,
+  Modal,
   Platform,
   RefreshControl,
   StyleSheet,
@@ -25,6 +26,7 @@ import {
 import { MaterialIcons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useColors } from "@/hooks/useColors";
+import { useAuth } from "@/contexts/AuthContext";
 
 type SortKey = "name" | "brand" | "costPrice" | "salePrice" | "quantity";
 
@@ -60,13 +62,15 @@ function ProductCard({
   onDelete,
   isEven,
   colors,
+  isWorker,
 }: {
   product: Product;
   query: string;
   onEdit: (p: Product) => void;
-  onDelete: (id: number) => void;
+  onDelete: (p: Product) => void;
   isEven: boolean;
   colors: ReturnType<typeof import("@/hooks/useColors").useColors>;
+  isWorker: boolean;
 }) {
   const slideAnim = useRef(new Animated.Value(0)).current;
   const isLowStock = product.quantity < 5;
@@ -75,20 +79,7 @@ function ProductCard({
 
   const handleDelete = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
-    Alert.alert("O'chirish", `"${product.name}" mahsulotini o'chirmoqchimisiz?`, [
-      { text: "Bekor qilish", style: "cancel" },
-      {
-        text: "O'chirish",
-        style: "destructive",
-        onPress: () => {
-          Animated.timing(slideAnim, {
-            toValue: -400,
-            duration: 220,
-            useNativeDriver: true,
-          }).start(() => onDelete(product.id));
-        },
-      },
-    ]);
+    onDelete(product);
   };
 
   const handleEdit = () => {
@@ -170,10 +161,14 @@ function ProductCard({
             </TouchableOpacity>
             <TouchableOpacity
               onPress={handleDelete}
-              style={[styles.actionBtn, { backgroundColor: "#FEECEC" }]}
+              style={[styles.actionBtn, { backgroundColor: isWorker ? "#FFF3E0" : "#FEECEC" }]}
               activeOpacity={0.7}
             >
-              <MaterialIcons name="delete-outline" size={15} color={colors.destructive} />
+              <MaterialIcons
+                name={isWorker ? "send" : "delete-outline"}
+                size={15}
+                color={isWorker ? "#E65100" : colors.destructive}
+              />
             </TouchableOpacity>
           </View>
         </View>
@@ -188,6 +183,8 @@ export default function ProductsScreen() {
   const router = useRouter();
   const isWeb = Platform.OS === "web";
   const queryClient = useQueryClient();
+  const { role } = useAuth();
+  const isWorker = role === "worker";
 
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
@@ -195,13 +192,26 @@ export default function ProductsScreen() {
   const [sortAsc, setSortAsc] = useState(true);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  // Confirm modal for manager (direct delete) and worker (send request)
+  const [confirmProduct, setConfirmProduct] = useState<Product | null>(null);
+  const [requestSent, setRequestSent] = useState(false);
+
   const { data: products, isLoading, refetch, isRefetching } = useGetProducts();
 
-  const { mutate: deleteProduct } = useDeleteProduct({
+  const { mutate: deleteProduct, isPending: deleting } = useDeleteProduct({
     mutation: {
       onSuccess: () => {
+        setConfirmProduct(null);
         queryClient.invalidateQueries({ queryKey: getGetProductsQueryKey() });
         queryClient.invalidateQueries({ queryKey: getGetDashboardStatsQueryKey() });
+      },
+    },
+  });
+
+  const { mutate: sendDeleteRequest, isPending: sendingRequest } = useCreateProductDeleteRequest({
+    mutation: {
+      onSuccess: () => {
+        setRequestSent(true);
       },
     },
   });
@@ -212,9 +222,29 @@ export default function ProductsScreen() {
     debounceRef.current = setTimeout(() => setDebouncedSearch(text), 120);
   }, []);
 
-  const handleDelete = useCallback((id: number) => {
-    deleteProduct({ id });
-  }, [deleteProduct]);
+  const handleDelete = useCallback((product: Product) => {
+    setRequestSent(false);
+    setConfirmProduct(product);
+  }, []);
+
+  const handleConfirm = useCallback(() => {
+    if (!confirmProduct) return;
+    if (isWorker) {
+      sendDeleteRequest({
+        data: {
+          productIds: [confirmProduct.id],
+          productNames: [confirmProduct.name],
+        },
+      });
+    } else {
+      deleteProduct({ id: confirmProduct.id });
+    }
+  }, [confirmProduct, isWorker, sendDeleteRequest, deleteProduct]);
+
+  const handleCloseModal = useCallback(() => {
+    setConfirmProduct(null);
+    setRequestSent(false);
+  }, []);
 
   const handleEdit = useCallback((product: Product) => {
     router.push({ pathname: "/product-form", params: { id: String(product.id) } });
@@ -288,16 +318,18 @@ export default function ProductsScreen() {
             </TouchableOpacity>
           )}
         </View>
-        <TouchableOpacity
-          style={[styles.addFab, { backgroundColor: colors.primary }]}
-          onPress={() => {
-            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-            router.push("/product-form");
-          }}
-          activeOpacity={0.85}
-        >
-          <MaterialIcons name="add" size={22} color="#fff" />
-        </TouchableOpacity>
+        {!isWorker && (
+          <TouchableOpacity
+            style={[styles.addFab, { backgroundColor: colors.primary }]}
+            onPress={() => {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              router.push("/product-form");
+            }}
+            activeOpacity={0.85}
+          >
+            <MaterialIcons name="add" size={22} color="#fff" />
+          </TouchableOpacity>
+        )}
       </View>
 
       {lowStockCount > 0 && (
@@ -341,7 +373,7 @@ export default function ProductsScreen() {
               ? `"${debouncedSearch}" bo'yicha natija yo'q`
               : "Birinchi mahsulotingizni qo'shing"}
           </Text>
-          {!debouncedSearch && (
+          {!debouncedSearch && !isWorker && (
             <TouchableOpacity
               style={[styles.emptyBtn, { backgroundColor: colors.primary }]}
               onPress={() => router.push("/product-form")}
@@ -363,6 +395,7 @@ export default function ProductsScreen() {
               onDelete={handleDelete}
               isEven={index % 2 === 0}
               colors={colors}
+              isWorker={isWorker}
             />
           )}
           contentContainerStyle={{
@@ -383,6 +416,112 @@ export default function ProductsScreen() {
           keyboardDismissMode="on-drag"
         />
       )}
+
+      {/* Confirm / Request Modal */}
+      <Modal
+        visible={!!confirmProduct}
+        transparent
+        animationType="fade"
+        statusBarTranslucent
+        onRequestClose={handleCloseModal}
+      >
+        <View style={styles.modalBackdrop}>
+          <View style={[styles.modalSheet, { backgroundColor: colors.card }]}>
+            {requestSent ? (
+              <>
+                <View style={[styles.modalIconWrap, { backgroundColor: "#E8F5E9" }]}>
+                  <MaterialIcons name="check-circle" size={32} color="#2E7D32" />
+                </View>
+                <Text style={[styles.modalTitle, { color: colors.foreground }]}>So'rov yuborildi!</Text>
+                <Text style={[styles.modalMsg, { color: colors.mutedForeground }]}>
+                  Rahbar tasdiqlasa, mahsulot o'chiriladi.
+                </Text>
+                <TouchableOpacity
+                  style={[styles.modalConfirmBtn, { backgroundColor: colors.primary }]}
+                  onPress={handleCloseModal}
+                  activeOpacity={0.85}
+                >
+                  <Text style={styles.modalConfirmBtnText}>Yaxshi</Text>
+                </TouchableOpacity>
+              </>
+            ) : isWorker ? (
+              <>
+                <View style={[styles.modalIconWrap, { backgroundColor: "#FFF3E0" }]}>
+                  <MaterialIcons name="send" size={32} color="#E65100" />
+                </View>
+                <Text style={[styles.modalTitle, { color: colors.foreground }]}>O'chirish so'rovi</Text>
+                <Text style={[styles.modalMsg, { color: colors.mutedForeground }]}>
+                  <Text style={{ fontFamily: "Inter_700Bold", color: colors.foreground }}>
+                    "{confirmProduct?.name}"
+                  </Text>
+                  {" "}mahsulotini o'chirish uchun rahbarga so'rov yuborilsinmi?
+                </Text>
+                <View style={styles.modalBtns}>
+                  <TouchableOpacity
+                    style={[styles.modalCancelBtn, { backgroundColor: colors.muted, borderColor: colors.border }]}
+                    onPress={handleCloseModal}
+                    activeOpacity={0.8}
+                    disabled={sendingRequest}
+                  >
+                    <Text style={[styles.modalCancelBtnText, { color: colors.mutedForeground }]}>Yo'q</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.modalConfirmBtn, { backgroundColor: "#E65100", flex: 1 }]}
+                    onPress={handleConfirm}
+                    activeOpacity={0.85}
+                    disabled={sendingRequest}
+                  >
+                    {sendingRequest
+                      ? <ActivityIndicator size="small" color="#fff" />
+                      : <>
+                          <MaterialIcons name="send" size={16} color="#fff" />
+                          <Text style={styles.modalConfirmBtnText}>Ha, yuborish</Text>
+                        </>
+                    }
+                  </TouchableOpacity>
+                </View>
+              </>
+            ) : (
+              <>
+                <View style={[styles.modalIconWrap, { backgroundColor: "#FEE2E2" }]}>
+                  <MaterialIcons name="delete-forever" size={32} color="#DC2626" />
+                </View>
+                <Text style={[styles.modalTitle, { color: colors.foreground }]}>Mahsulotni o'chirish</Text>
+                <Text style={[styles.modalMsg, { color: colors.mutedForeground }]}>
+                  <Text style={{ fontFamily: "Inter_700Bold", color: colors.foreground }}>
+                    "{confirmProduct?.name}"
+                  </Text>
+                  {" "}mahsulotini o'chirasizmi? Bu amalni qaytarib bo'lmaydi.
+                </Text>
+                <View style={styles.modalBtns}>
+                  <TouchableOpacity
+                    style={[styles.modalCancelBtn, { backgroundColor: colors.muted, borderColor: colors.border }]}
+                    onPress={handleCloseModal}
+                    activeOpacity={0.8}
+                    disabled={deleting}
+                  >
+                    <Text style={[styles.modalCancelBtnText, { color: colors.mutedForeground }]}>Yo'q</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.modalConfirmBtn, { backgroundColor: "#DC2626", flex: 1 }]}
+                    onPress={handleConfirm}
+                    activeOpacity={0.85}
+                    disabled={deleting}
+                  >
+                    {deleting
+                      ? <ActivityIndicator size="small" color="#fff" />
+                      : <>
+                          <MaterialIcons name="delete-forever" size={16} color="#fff" />
+                          <Text style={styles.modalConfirmBtnText}>Ha, o'chirish</Text>
+                        </>
+                    }
+                  </TouchableOpacity>
+                </View>
+              </>
+            )}
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -490,4 +629,64 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
+  // Modal styles
+  modalBackdrop: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.55)",
+    alignItems: "center",
+    justifyContent: "center",
+    padding: 24,
+  },
+  modalSheet: {
+    width: "100%",
+    borderRadius: 20,
+    padding: 24,
+    alignItems: "center",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.18,
+    shadowRadius: 24,
+    elevation: 12,
+  },
+  modalIconWrap: {
+    width: 64,
+    height: 64,
+    borderRadius: 18,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 16,
+  },
+  modalTitle: {
+    fontFamily: "Inter_700Bold",
+    fontSize: 18,
+    marginBottom: 10,
+    textAlign: "center",
+  },
+  modalMsg: {
+    fontFamily: "Inter_400Regular",
+    fontSize: 14,
+    textAlign: "center",
+    lineHeight: 21,
+    marginBottom: 22,
+  },
+  modalBtns: { flexDirection: "row", gap: 10, width: "100%" },
+  modalCancelBtn: {
+    flex: 1,
+    height: 48,
+    borderRadius: 12,
+    borderWidth: 1,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  modalCancelBtnText: { fontFamily: "Inter_600SemiBold", fontSize: 15 },
+  modalConfirmBtn: {
+    height: 48,
+    borderRadius: 12,
+    alignItems: "center",
+    justifyContent: "center",
+    flexDirection: "row",
+    gap: 6,
+    paddingHorizontal: 16,
+  },
+  modalConfirmBtnText: { fontFamily: "Inter_600SemiBold", fontSize: 15, color: "#fff" },
 });

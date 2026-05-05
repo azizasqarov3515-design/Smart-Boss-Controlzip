@@ -25,6 +25,8 @@ import type {
   CreateDeleteRequest,
   CreateDeleteRequest201,
   CreateProduct,
+  CreateProductDeleteRequest,
+  CreateProductDeleteRequest201,
   CreateSale,
   Customer,
   CustomerStatement,
@@ -2109,6 +2111,96 @@ export const useCreateDeleteRequest = <
   TContext
 > => {
   return useMutation(getCreateDeleteRequestMutationOptions(options));
+};
+
+/**
+ * @summary Create a product delete request (worker)
+ */
+export const getCreateProductDeleteRequestUrl = () => {
+  return `/api/delete-requests/product`;
+};
+
+export const createProductDeleteRequest = async (
+  createProductDeleteRequest: CreateProductDeleteRequest,
+  options?: RequestInit,
+): Promise<CreateProductDeleteRequest201> => {
+  return customFetch<CreateProductDeleteRequest201>(
+    getCreateProductDeleteRequestUrl(),
+    {
+      ...options,
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...options?.headers },
+      body: JSON.stringify(createProductDeleteRequest),
+    },
+  );
+};
+
+export const getCreateProductDeleteRequestMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createProductDeleteRequest>>,
+    TError,
+    { data: BodyType<CreateProductDeleteRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof createProductDeleteRequest>>,
+  TError,
+  { data: BodyType<CreateProductDeleteRequest> },
+  TContext
+> => {
+  const mutationKey = ["createProductDeleteRequest"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof createProductDeleteRequest>>,
+    { data: BodyType<CreateProductDeleteRequest> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return createProductDeleteRequest(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CreateProductDeleteRequestMutationResult = NonNullable<
+  Awaited<ReturnType<typeof createProductDeleteRequest>>
+>;
+export type CreateProductDeleteRequestMutationBody =
+  BodyType<CreateProductDeleteRequest>;
+export type CreateProductDeleteRequestMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Create a product delete request (worker)
+ */
+export const useCreateProductDeleteRequest = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createProductDeleteRequest>>,
+    TError,
+    { data: BodyType<CreateProductDeleteRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof createProductDeleteRequest>>,
+  TError,
+  { data: BodyType<CreateProductDeleteRequest> },
+  TContext
+> => {
+  return useMutation(getCreateProductDeleteRequestMutationOptions(options));
 };
 
 /**

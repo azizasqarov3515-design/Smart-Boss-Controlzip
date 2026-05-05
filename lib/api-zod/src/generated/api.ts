@@ -385,7 +385,10 @@ export const RemoveWorkerResponse = zod.object({
  */
 export const GetDeleteRequestsResponseItem = zod.object({
   id: zod.number(),
+  type: zod.string(),
   saleIds: zod.array(zod.number()),
+  productIds: zod.array(zod.number()).nullish(),
+  productNames: zod.array(zod.string()).nullish(),
   workerId: zod.number().nullish(),
   workerName: zod.string(),
   status: zod.string(),
@@ -401,6 +404,15 @@ export const GetDeleteRequestsResponse = zod.array(
 
 export const CreateDeleteRequestBody = zod.object({
   saleIds: zod.array(zod.number()).min(1),
+});
+
+/**
+ * @summary Create a product delete request (worker)
+ */
+
+export const CreateProductDeleteRequestBody = zod.object({
+  productIds: zod.array(zod.number()).min(1),
+  productNames: zod.array(zod.string()),
 });
 
 /**

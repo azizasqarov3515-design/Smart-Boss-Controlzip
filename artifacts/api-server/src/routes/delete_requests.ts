@@ -11,6 +11,41 @@ const createDeleteRequestSchema = z.object({
   saleIds: z.array(z.number().int().positive()).min(1),
 });
 
+const createProductDeleteRequestSchema = z.object({
+  productIds: z.array(z.number().int().positive()).min(1),
+  productNames: z.array(z.string()).min(1),
+});
+
+router.post("/delete-requests/product", async (req, res) => {
+  try {
+    const user = res.locals.user;
+    const body = createProductDeleteRequestSchema.parse(req.body);
+
+    const [request] = await db
+      .insert(deleteRequestsTable)
+      .values({
+        type: "product",
+        saleIds: "[]",
+        productIds: JSON.stringify(body.productIds),
+        productNames: JSON.stringify(body.productNames),
+        workerId: user.workerId ?? null,
+        workerName: user.name ?? user.username ?? "Noma'lum",
+        status: "pending",
+      })
+      .returning();
+
+    req.log.info({ requestId: request?.id, workerName: user.name }, "Product delete request created");
+    res.status(201).json({ id: request?.id, status: "pending" });
+  } catch (err) {
+    if (err instanceof z.ZodError) {
+      res.status(400).json({ error: "Noto'g'ri ma'lumot" });
+    } else {
+      req.log.error({ err }, "Failed to create product delete request");
+      res.status(500).json({ error: "So'rov yuborishda xato" });
+    }
+  }
+});
+
 router.post("/delete-requests", async (req, res) => {
   try {
     const user = res.locals.user;
@@ -19,6 +54,7 @@ router.post("/delete-requests", async (req, res) => {
     const [request] = await db
       .insert(deleteRequestsTable)
       .values({
+        type: "sale",
         saleIds: JSON.stringify(body.saleIds),
         workerId: user.workerId ?? null,
         workerName: user.name,
@@ -49,7 +85,10 @@ router.get("/delete-requests", requireManager, async (req, res) => {
     res.json(
       requests.map((r) => ({
         ...r,
+        type: r.type ?? "sale",
         saleIds: JSON.parse(r.saleIds) as number[],
+        productIds: r.productIds ? (JSON.parse(r.productIds) as number[]) : null,
+        productNames: r.productNames ? (JSON.parse(r.productNames) as string[]) : null,
         createdAt: r.createdAt.toISOString(),
       }))
     );
@@ -74,25 +113,35 @@ router.post("/delete-requests/:id/approve", requireManager, async (req, res) => 
       return;
     }
 
-    const saleIds = JSON.parse(request.saleIds) as number[];
-
-    if (saleIds.length > 0) {
-      for (const saleId of saleIds) {
-        const items = await db
-          .select()
-          .from(saleItemsTable)
-          .where(eq(saleItemsTable.saleId, saleId));
-
-        for (const item of items) {
-          if (item.productId) {
-            await db
-              .update(productsTable)
-              .set({ quantity: sql`${productsTable.quantity} + ${item.quantity}` })
-              .where(eq(productsTable.id, item.productId));
-          }
+    if (request.type === "product") {
+      // Handle product delete request
+      if (request.productIds) {
+        const productIds = JSON.parse(request.productIds) as number[];
+        if (productIds.length > 0) {
+          await db.delete(productsTable).where(inArray(productsTable.id, productIds));
         }
       }
-      await db.delete(salesTable).where(inArray(salesTable.id, saleIds));
+    } else {
+      // Handle sale delete request (original logic)
+      const saleIds = JSON.parse(request.saleIds) as number[];
+      if (saleIds.length > 0) {
+        for (const saleId of saleIds) {
+          const items = await db
+            .select()
+            .from(saleItemsTable)
+            .where(eq(saleItemsTable.saleId, saleId));
+
+          for (const item of items) {
+            if (item.productId) {
+              await db
+                .update(productsTable)
+                .set({ quantity: sql`${productsTable.quantity} + ${item.quantity}` })
+                .where(eq(productsTable.id, item.productId));
+            }
+          }
+        }
+        await db.delete(salesTable).where(inArray(salesTable.id, saleIds));
+      }
     }
 
     await db
@@ -100,7 +149,7 @@ router.post("/delete-requests/:id/approve", requireManager, async (req, res) => 
       .set({ status: "approved" })
       .where(eq(deleteRequestsTable.id, id));
 
-    req.log.info({ requestId: id, saleIds }, "Delete request approved");
+    req.log.info({ requestId: id, type: request.type }, "Delete request approved");
     res.json({ ok: true });
   } catch (err) {
     req.log.error({ err }, "Failed to approve delete request");

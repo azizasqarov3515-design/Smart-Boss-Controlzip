@@ -467,6 +467,30 @@ paths:
                   status:
                     type: string
                 required: [id, status]
+  /delete-requests/product:
+    post:
+      operationId: createProductDeleteRequest
+      tags: [deleteRequests]
+      summary: Create a product delete request (worker)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateProductDeleteRequest"
+      responses:
+        "201":
+          description: Product delete request created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: integer
+                  status:
+                    type: string
+                required: [id, status]
   /delete-requests/{id}/approve:
     post:
       operationId: approveDeleteRequest
@@ -644,10 +668,22 @@ components:
       properties:
         id:
           type: integer
+        type:
+          type: string
         saleIds:
           type: array
           items:
             type: integer
+        productIds:
+          type: array
+          items:
+            type: integer
+          nullable: true
+        productNames:
+          type: array
+          items:
+            type: string
+          nullable: true
         workerId:
           type: integer
           nullable: true
@@ -657,7 +693,7 @@ components:
           type: string
         createdAt:
           type: string
-      required: [id, saleIds, workerName, status, createdAt]
+      required: [id, type, saleIds, workerName, status, createdAt]
     CreateDeleteRequest:
       type: object
       properties:
@@ -667,6 +703,19 @@ components:
             type: integer
           minItems: 1
       required: [saleIds]
+    CreateProductDeleteRequest:
+      type: object
+      properties:
+        productIds:
+          type: array
+          items:
+            type: integer
+          minItems: 1
+        productNames:
+          type: array
+          items:
+            type: string
+      required: [productIds, productNames]
     SaleItem:
       type: object
       properties:

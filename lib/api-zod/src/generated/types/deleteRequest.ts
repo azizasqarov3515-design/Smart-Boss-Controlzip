@@ -8,7 +8,10 @@
 
 export interface DeleteRequest {
   id: number;
+  type: string;
   saleIds: number[];
+  productIds?: number[] | null;
+  productNames?: string[] | null;
   workerId?: number | null;
   workerName: string;
   status: string;

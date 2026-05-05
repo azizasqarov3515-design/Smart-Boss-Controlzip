@@ -31,6 +31,7 @@ import {
   getGetDeleteRequestsQueryKey,
   getGetSalesQueryKey,
   getGetDashboardStatsQueryKey,
+  getGetProductsQueryKey,
   type Worker,
   type DeleteRequest,
 } from "@workspace/api-client-react";
@@ -291,12 +292,13 @@ function WorkersSection({ colors }: { colors: ReturnType<typeof useColors> }) {
 function DeleteRequestsSection({ colors }: { colors: ReturnType<typeof useColors> }) {
   const queryClient = useQueryClient();
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: requests, isLoading, refetch } = useGetDeleteRequests({ query: { refetchInterval: 15000 } as any });
+  const { data: requests, isLoading, refetch, isRefetching } = useGetDeleteRequests({ query: { refetchInterval: 10000 } as any });
 
   const invalidate = () => {
     queryClient.invalidateQueries({ queryKey: getGetDeleteRequestsQueryKey() });
     queryClient.invalidateQueries({ queryKey: getGetSalesQueryKey() });
     queryClient.invalidateQueries({ queryKey: getGetDashboardStatsQueryKey() });
+    queryClient.invalidateQueries({ queryKey: getGetProductsQueryKey() });
   };
 
   const { mutate: approve, isPending: approving } = useApproveDeleteRequest({
@@ -321,49 +323,82 @@ function DeleteRequestsSection({ colors }: { colors: ReturnType<typeof useColors
 
   return (
     <View style={{ gap: 10 }}>
-      {(requests ?? []).map((r: DeleteRequest) => (
-        <View key={r.id} style={[styles.requestRow, { backgroundColor: "#FFF7ED", borderColor: "#FDBA74" }]}>
-          <View style={styles.requestTop}>
-            <MaterialIcons name="delete-sweep" size={18} color="#EA580C" />
-            <View style={{ flex: 1 }}>
-              <Text style={[styles.requestWorker, { color: colors.foreground }]}>{r.workerName}</Text>
-              <Text style={[styles.requestSub, { color: colors.mutedForeground }]}>
-                {(r.saleIds as number[]).length} ta savdo o'chirish so'rovi
+      {(requests ?? []).map((r: DeleteRequest) => {
+        const isProduct = r.type === "product";
+        const productNames = (r as any).productNames as string[] | null;
+        const saleIds = r.saleIds as number[];
+        return (
+          <View key={r.id} style={[
+            styles.requestRow,
+            { backgroundColor: isProduct ? "#F0FDF4" : "#FFF7ED", borderColor: isProduct ? "#86EFAC" : "#FDBA74" }
+          ]}>
+            <View style={styles.requestTop}>
+              <MaterialIcons
+                name={isProduct ? "inventory-2" : "delete-sweep"}
+                size={18}
+                color={isProduct ? "#16A34A" : "#EA580C"}
+              />
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.requestWorker, { color: colors.foreground }]}>{r.workerName}</Text>
+                {isProduct ? (
+                  <Text style={[styles.requestSub, { color: colors.mutedForeground }]}>
+                    Mahsulot o'chirish:{" "}
+                    <Text style={{ fontFamily: "Inter_600SemiBold", color: colors.foreground }}>
+                      {productNames?.join(", ") ?? "Mahsulot"}
+                    </Text>
+                  </Text>
+                ) : (
+                  <Text style={[styles.requestSub, { color: colors.mutedForeground }]}>
+                    {saleIds.length} ta savdo o'chirish so'rovi
+                  </Text>
+                )}
+              </View>
+              <Text style={[styles.requestDate, { color: colors.mutedForeground }]}>
+                {new Date(r.createdAt).toLocaleDateString("uz-UZ")}
               </Text>
             </View>
-            <Text style={[styles.requestDate, { color: colors.mutedForeground }]}>
-              {new Date(r.createdAt).toLocaleDateString("uz-UZ")}
-            </Text>
+            <View style={styles.requestBtns}>
+              <TouchableOpacity
+                style={[styles.reqBtn, { backgroundColor: "#D1FAE5", flex: 1 }]}
+                onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); approve({ id: r.id }); }}
+                disabled={approving || rejecting}
+                activeOpacity={0.8}
+              >
+                {approving
+                  ? <ActivityIndicator size="small" color="#065F46" />
+                  : <MaterialIcons name="check" size={16} color="#065F46" />
+                }
+                <Text style={[styles.reqBtnText, { color: "#065F46" }]}>Ha</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.reqBtn, { backgroundColor: "#FEE2E2", flex: 1 }]}
+                onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); reject({ id: r.id }); }}
+                disabled={approving || rejecting}
+                activeOpacity={0.8}
+              >
+                {rejecting
+                  ? <ActivityIndicator size="small" color="#DC2626" />
+                  : <MaterialIcons name="close" size={16} color="#DC2626" />
+                }
+                <Text style={[styles.reqBtnText, { color: "#DC2626" }]}>Yo'q</Text>
+              </TouchableOpacity>
+            </View>
           </View>
-          <View style={styles.requestBtns}>
-            <TouchableOpacity
-              style={[styles.reqBtn, { backgroundColor: "#D1FAE5", flex: 1 }]}
-              onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); approve({ id: r.id }); }}
-              disabled={approving || rejecting}
-              activeOpacity={0.8}
-            >
-              <MaterialIcons name="check" size={16} color="#065F46" />
-              <Text style={[styles.reqBtnText, { color: "#065F46" }]}>Tasdiqlash</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.reqBtn, { backgroundColor: "#FEE2E2", flex: 1 }]}
-              onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); reject({ id: r.id }); }}
-              disabled={approving || rejecting}
-              activeOpacity={0.8}
-            >
-              <MaterialIcons name="close" size={16} color="#DC2626" />
-              <Text style={[styles.reqBtnText, { color: "#DC2626" }]}>Rad etish</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      ))}
+        );
+      })}
       <TouchableOpacity
-        style={[styles.refreshBtn, { borderColor: colors.border }]}
-        onPress={() => refetch()}
+        style={[styles.refreshBtn, { borderColor: colors.border, opacity: isRefetching ? 0.6 : 1 }]}
+        onPress={() => { Haptics.selectionAsync(); refetch(); }}
         activeOpacity={0.8}
+        disabled={isRefetching}
       >
-        <MaterialIcons name="refresh" size={16} color={colors.mutedForeground} />
-        <Text style={[styles.refreshBtnText, { color: colors.mutedForeground }]}>Yangilash</Text>
+        {isRefetching
+          ? <ActivityIndicator size="small" color={colors.mutedForeground} />
+          : <MaterialIcons name="refresh" size={16} color={colors.mutedForeground} />
+        }
+        <Text style={[styles.refreshBtnText, { color: colors.mutedForeground }]}>
+          {isRefetching ? "Yangilanmoqda..." : "Yangilash"}
+        </Text>
       </TouchableOpacity>
     </View>
   );

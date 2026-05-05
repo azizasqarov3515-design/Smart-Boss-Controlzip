@@ -78,7 +78,10 @@ export interface WorkerLoginResponse {
 
 export interface DeleteRequest {
   id: number;
+  type: string;
   saleIds: number[];
+  productIds?: number[] | null;
+  productNames?: string[] | null;
   workerId?: number | null;
   workerName: string;
   status: string;
@@ -88,6 +91,12 @@ export interface DeleteRequest {
 export interface CreateDeleteRequest {
   /** @minItems 1 */
   saleIds: number[];
+}
+
+export interface CreateProductDeleteRequest {
+  /** @minItems 1 */
+  productIds: number[];
+  productNames: string[];
 }
 
 export interface SaleItem {
@@ -214,6 +223,11 @@ export type RemoveWorker200 = {
 };
 
 export type CreateDeleteRequest201 = {
+  id: number;
+  status: string;
+};
+
+export type CreateProductDeleteRequest201 = {
   id: number;
   status: string;
 };
