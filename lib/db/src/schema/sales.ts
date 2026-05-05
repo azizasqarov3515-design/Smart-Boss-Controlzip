@@ -6,6 +6,7 @@ import { customersTable } from "./customers";
 
 export const salesTable = pgTable("sales", {
   id: serial("id").primaryKey(),
+  managerId: integer("manager_id"),
   totalAmount: numeric("total_amount", { precision: 14, scale: 2 }).notNull(),
   itemCount: integer("item_count").notNull().default(0),
   note: text("note"),

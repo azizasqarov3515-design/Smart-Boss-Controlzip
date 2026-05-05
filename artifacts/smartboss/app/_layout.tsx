@@ -39,7 +39,14 @@ const queryClient = new QueryClient({
   },
 });
 
-const PUBLIC_SEGMENTS = ["role-select", "login", "worker-login", "worker-register", "worker-pending"];
+const PUBLIC_SEGMENTS = [
+  "role-select",
+  "login",
+  "manager-register",
+  "worker-login",
+  "worker-register",
+  "worker-pending",
+];
 
 function RootLayoutNav() {
   const { isAuthenticated, isLoading, role, workerStatus } = useAuth();
@@ -56,29 +63,23 @@ function RootLayoutNav() {
       return;
     }
 
-    // Authenticated: check role-based routing
     if (role === "worker") {
       if (workerStatus === "pending") {
         if (currentSegment !== "worker-pending") router.replace("/worker-pending");
         return;
       }
       if (workerStatus === "rejected") {
-        // Stay on worker-pending so it can show the rejection message inline.
-        // Only redirect if the user is on some other non-public screen.
         if (currentSegment !== "worker-pending" && currentSegment !== "worker-login" && currentSegment !== "worker-register") {
           router.replace("/worker-pending");
         }
         return;
       }
       if (workerStatus === "approved") {
-        // approved worker — send to tabs if on a public/auth screen
         if (isPublic) router.replace("/(tabs)");
         return;
       }
-      // workerStatus is null (still loading) — stay put
       return;
     } else {
-      // manager — send to tabs if on a public/auth screen
       if (isPublic) router.replace("/(tabs)");
     }
   }, [isAuthenticated, isLoading, role, workerStatus, segments, router]);
@@ -95,6 +96,7 @@ function RootLayoutNav() {
     <Stack screenOptions={{ headerBackTitle: "Orqaga" }}>
       <Stack.Screen name="role-select" options={{ headerShown: false }} />
       <Stack.Screen name="login" options={{ headerShown: false }} />
+      <Stack.Screen name="manager-register" options={{ headerShown: false }} />
       <Stack.Screen name="worker-login" options={{ headerShown: false }} />
       <Stack.Screen name="worker-register" options={{ headerShown: false }} />
       <Stack.Screen name="worker-pending" options={{ headerShown: false }} />

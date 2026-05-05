@@ -1,6 +1,6 @@
 import { db } from "@workspace/db";
 import { customersTable, debtPaymentsTable, salesTable } from "@workspace/db/schema";
-import { eq, desc } from "drizzle-orm";
+import { and, eq, desc } from "drizzle-orm";
 import { Router } from "express";
 import { z } from "zod";
 
@@ -54,9 +54,12 @@ function mapCustomer(c: typeof customersTable.$inferSelect) {
 // GET /customers
 router.get("/customers", async (req, res) => {
   try {
+    const managerId = res.locals.user?.managerId;
+    const condition = managerId !== undefined ? eq(customersTable.managerId, managerId) : undefined;
     const customers = await db
       .select()
       .from(customersTable)
+      .where(condition)
       .orderBy(desc(customersTable.createdAt));
     res.json(customers.map(mapCustomer));
   } catch (err) {
@@ -69,9 +72,11 @@ router.get("/customers", async (req, res) => {
 router.post("/customers", async (req, res) => {
   try {
     const body = customerInputSchema.parse(req.body);
+    const managerId = res.locals.user?.managerId ?? null;
     const [customer] = await db
       .insert(customersTable)
       .values({
+        managerId,
         name: body.name,
         phone: body.phone,
         address: body.address,
@@ -94,10 +99,11 @@ router.post("/customers", async (req, res) => {
 router.get("/customers/:id", async (req, res) => {
   try {
     const id = parseInt(req.params["id"] ?? "0", 10);
-    const [customer] = await db
-      .select()
-      .from(customersTable)
-      .where(eq(customersTable.id, id));
+    const managerId = res.locals.user?.managerId;
+    const condition = managerId !== undefined
+      ? and(eq(customersTable.id, id), eq(customersTable.managerId, managerId))
+      : eq(customersTable.id, id);
+    const [customer] = await db.select().from(customersTable).where(condition);
     if (!customer) {
       res.status(404).json({ error: "Mijoz topilmadi" });
       return;
@@ -114,6 +120,10 @@ router.put("/customers/:id", async (req, res) => {
   try {
     const id = parseInt(req.params["id"] ?? "0", 10);
     const body = customerInputSchema.parse(req.body);
+    const managerId = res.locals.user?.managerId;
+    const condition = managerId !== undefined
+      ? and(eq(customersTable.id, id), eq(customersTable.managerId, managerId))
+      : eq(customersTable.id, id);
     const [updated] = await db
       .update(customersTable)
       .set({
@@ -123,7 +133,7 @@ router.put("/customers/:id", async (req, res) => {
         debtLimit: body.debtLimit,
         note: body.note,
       })
-      .where(eq(customersTable.id, id))
+      .where(condition)
       .returning();
     if (!updated) {
       res.status(404).json({ error: "Mijoz topilmadi" });
@@ -144,9 +154,13 @@ router.put("/customers/:id", async (req, res) => {
 router.delete("/customers/:id", async (req, res) => {
   try {
     const id = parseInt(req.params["id"] ?? "0", 10);
+    const managerId = res.locals.user?.managerId;
+    const condition = managerId !== undefined
+      ? and(eq(customersTable.id, id), eq(customersTable.managerId, managerId))
+      : eq(customersTable.id, id);
     const [deleted] = await db
       .delete(customersTable)
-      .where(eq(customersTable.id, id))
+      .where(condition)
       .returning();
     if (!deleted) {
       res.status(404).json({ error: "Mijoz topilmadi" });
@@ -189,10 +203,12 @@ router.post("/customers/:id/payments", async (req, res) => {
     const id = parseInt(req.params["id"] ?? "0", 10);
     const body = debtPaymentInputSchema.parse(req.body);
 
-    const [customer] = await db
-      .select()
-      .from(customersTable)
-      .where(eq(customersTable.id, id));
+    const managerId = res.locals.user?.managerId;
+    const condition = managerId !== undefined
+      ? and(eq(customersTable.id, id), eq(customersTable.managerId, managerId))
+      : eq(customersTable.id, id);
+
+    const [customer] = await db.select().from(customersTable).where(condition);
     if (!customer) {
       res.status(404).json({ error: "Mijoz topilmadi" });
       return;
@@ -246,10 +262,11 @@ router.post("/customers/:id/payments", async (req, res) => {
 router.get("/customers/:id/statement", async (req, res) => {
   try {
     const id = parseInt(req.params["id"] ?? "0", 10);
-    const [customer] = await db
-      .select()
-      .from(customersTable)
-      .where(eq(customersTable.id, id));
+    const managerId = res.locals.user?.managerId;
+    const condition = managerId !== undefined
+      ? and(eq(customersTable.id, id), eq(customersTable.managerId, managerId))
+      : eq(customersTable.id, id);
+    const [customer] = await db.select().from(customersTable).where(condition);
     if (!customer) {
       res.status(404).json({ error: "Mijoz topilmadi" });
       return;

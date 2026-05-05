@@ -2,16 +2,25 @@ import { Router } from "express";
 import { db } from "@workspace/db";
 import { productsTable } from "@workspace/db/schema";
 import { saleItemsTable, salesTable } from "@workspace/db/schema";
+import { eq } from "drizzle-orm";
 
 const router = Router();
 
 router.get("/backup/download", async (req, res) => {
   try {
-    const [products, sales, saleItems] = await Promise.all([
-      db.select().from(productsTable).orderBy(productsTable.id),
-      db.select().from(salesTable).orderBy(salesTable.id),
-      db.select().from(saleItemsTable).orderBy(saleItemsTable.id),
+    const managerId = res.locals.user?.managerId;
+    const mgrProdCond = managerId !== undefined ? eq(productsTable.managerId, managerId) : undefined;
+    const mgrSaleCond = managerId !== undefined ? eq(salesTable.managerId, managerId) : undefined;
+
+    const [products, sales] = await Promise.all([
+      db.select().from(productsTable).where(mgrProdCond).orderBy(productsTable.id),
+      db.select().from(salesTable).where(mgrSaleCond).orderBy(salesTable.id),
     ]);
+
+    const saleIds = sales.map((s) => s.id);
+    const saleItems = saleIds.length > 0
+      ? await db.select().from(saleItemsTable).orderBy(saleItemsTable.id)
+      : [];
 
     const backup = {
       exportedAt: new Date().toISOString(),

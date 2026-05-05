@@ -1,7 +1,8 @@
-import { numeric, pgTable, serial, text, timestamp } from "drizzle-orm/pg-core";
+import { integer, numeric, pgTable, serial, text, timestamp } from "drizzle-orm/pg-core";
 
 export const customersTable = pgTable("customers", {
   id: serial("id").primaryKey(),
+  managerId: integer("manager_id"),
   name: text("name").notNull(),
   phone: text("phone").notNull(),
   address: text("address"),

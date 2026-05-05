@@ -2,6 +2,7 @@ import { integer, pgTable, serial, text, timestamp } from "drizzle-orm/pg-core";
 
 export const deleteRequestsTable = pgTable("delete_requests", {
   id: serial("id").primaryKey(),
+  managerId: integer("manager_id"),
   type: text("type").notNull().default("sale"),
   saleIds: text("sale_ids").notNull().default("[]"),
   productIds: text("product_ids"),

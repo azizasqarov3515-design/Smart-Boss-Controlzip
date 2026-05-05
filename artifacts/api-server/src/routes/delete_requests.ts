@@ -1,6 +1,6 @@
 import { db } from "@workspace/db";
 import { deleteRequestsTable, salesTable, saleItemsTable, productsTable } from "@workspace/db/schema";
-import { eq, inArray, sql } from "drizzle-orm";
+import { and, eq, inArray, sql } from "drizzle-orm";
 import { Router } from "express";
 import { requireManager } from "../lib/auth";
 import { z } from "zod";
@@ -20,16 +20,18 @@ router.post("/delete-requests/product", async (req, res) => {
   try {
     const user = res.locals.user;
     const body = createProductDeleteRequestSchema.parse(req.body);
+    const managerId = user.managerId ?? null;
 
     const [request] = await db
       .insert(deleteRequestsTable)
       .values({
+        managerId,
         type: "product",
         saleIds: "[]",
         productIds: JSON.stringify(body.productIds),
         productNames: JSON.stringify(body.productNames),
         workerId: user.workerId ?? null,
-        workerName: user.name ?? user.username ?? "Noma'lum",
+        workerName: user.name ?? "Noma'lum",
         status: "pending",
       })
       .returning();
@@ -50,10 +52,12 @@ router.post("/delete-requests", async (req, res) => {
   try {
     const user = res.locals.user;
     const body = createDeleteRequestSchema.parse(req.body);
+    const managerId = user.managerId ?? null;
 
     const [request] = await db
       .insert(deleteRequestsTable)
       .values({
+        managerId,
         type: "sale",
         saleIds: JSON.stringify(body.saleIds),
         workerId: user.workerId ?? null,
@@ -76,10 +80,15 @@ router.post("/delete-requests", async (req, res) => {
 
 router.get("/delete-requests", requireManager, async (req, res) => {
   try {
+    const managerId = res.locals.user?.managerId;
+    const condition = managerId !== undefined
+      ? and(eq(deleteRequestsTable.status, "pending"), eq(deleteRequestsTable.managerId, managerId))
+      : eq(deleteRequestsTable.status, "pending");
+
     const requests = await db
       .select()
       .from(deleteRequestsTable)
-      .where(eq(deleteRequestsTable.status, "pending"))
+      .where(condition)
       .orderBy(deleteRequestsTable.createdAt);
 
     res.json(
@@ -103,10 +112,15 @@ router.post("/delete-requests/:id/approve", requireManager, async (req, res) => 
     const id = parseInt(String(req.params.id), 10);
     if (isNaN(id)) { res.status(400).json({ error: "Noto'g'ri ID" }); return; }
 
+    const managerId = res.locals.user?.managerId;
+    const condition = managerId !== undefined
+      ? and(eq(deleteRequestsTable.id, id), eq(deleteRequestsTable.managerId, managerId))
+      : eq(deleteRequestsTable.id, id);
+
     const [request] = await db
       .select()
       .from(deleteRequestsTable)
-      .where(eq(deleteRequestsTable.id, id));
+      .where(condition);
 
     if (!request || request.status !== "pending") {
       res.status(404).json({ error: "So'rov topilmadi" });
@@ -114,7 +128,6 @@ router.post("/delete-requests/:id/approve", requireManager, async (req, res) => 
     }
 
     if (request.type === "product") {
-      // Handle product delete request
       if (request.productIds) {
         const productIds = JSON.parse(request.productIds) as number[];
         if (productIds.length > 0) {
@@ -122,7 +135,6 @@ router.post("/delete-requests/:id/approve", requireManager, async (req, res) => 
         }
       }
     } else {
-      // Handle sale delete request (original logic)
       const saleIds = JSON.parse(request.saleIds) as number[];
       if (saleIds.length > 0) {
         for (const saleId of saleIds) {
@@ -162,10 +174,15 @@ router.post("/delete-requests/:id/reject", requireManager, async (req, res) => {
     const id = parseInt(String(req.params.id), 10);
     if (isNaN(id)) { res.status(400).json({ error: "Noto'g'ri ID" }); return; }
 
+    const managerId = res.locals.user?.managerId;
+    const condition = managerId !== undefined
+      ? and(eq(deleteRequestsTable.id, id), eq(deleteRequestsTable.managerId, managerId))
+      : eq(deleteRequestsTable.id, id);
+
     const [request] = await db
       .update(deleteRequestsTable)
       .set({ status: "rejected" })
-      .where(eq(deleteRequestsTable.id, id))
+      .where(condition)
       .returning();
 
     if (!request) { res.status(404).json({ error: "So'rov topilmadi" }); return; }

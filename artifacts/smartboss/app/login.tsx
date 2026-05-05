@@ -1,7 +1,6 @@
 import React, { useState } from "react";
 import {
   ActivityIndicator,
-  Alert,
   KeyboardAvoidingView,
   Platform,
   StyleSheet,
@@ -14,27 +13,29 @@ import { MaterialIcons } from "@expo/vector-icons";
 import { useColors } from "@/hooks/useColors";
 import { useAuth } from "@/contexts/AuthContext";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useRouter } from "expo-router";
 
 export default function LoginScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const { login } = useAuth();
+  const router = useRouter();
 
-  const [username, setUsername] = useState("");
+  const [loginCode, setLoginCode] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const handleLogin = async () => {
-    if (!username.trim() || !password.trim()) {
+    if (!loginCode.trim() || !password.trim()) {
       setError("Login va parolni kiriting");
       return;
     }
     setLoading(true);
     setError(null);
     try {
-      await login(username.trim(), password);
+      await login(loginCode.trim().toUpperCase(), password);
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : "Login amalga oshmadi";
       setError(msg);
@@ -54,42 +55,45 @@ export default function LoginScreen() {
             <MaterialIcons name="business" size={44} color="#fff" />
           </View>
           <Text style={[styles.appName, { color: colors.foreground }]}>SMARTBOSScontrol</Text>
-          <Text style={[styles.appSub, { color: colors.mutedForeground }]}>Boshqaruv tizimi</Text>
+          <Text style={[styles.appSub, { color: colors.mutedForeground }]}>Rahbar tizimga kirish</Text>
         </View>
 
         <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
           <Text style={[styles.cardTitle, { color: colors.foreground }]}>Tizimga kirish</Text>
 
           <View style={styles.fieldWrap}>
-            <Text style={[styles.label, { color: colors.mutedForeground }]}>Login</Text>
+            <Text style={[styles.label, { color: colors.mutedForeground }]}>Login (8 ta katta harf/raqam)</Text>
             <View style={[styles.inputRow, { backgroundColor: colors.background, borderColor: error ? "#E53935" : colors.border }]}>
               <MaterialIcons name="person" size={20} color={colors.mutedForeground} style={styles.inputIcon} />
               <TextInput
                 style={[styles.input, { color: colors.foreground }]}
-                placeholder="Admin login"
+                placeholder="Masalan: AB12CD34"
                 placeholderTextColor={colors.mutedForeground}
-                value={username}
-                onChangeText={(t) => { setUsername(t); setError(null); }}
-                autoCapitalize="none"
+                value={loginCode}
+                onChangeText={(t) => { setLoginCode(t.toUpperCase()); setError(null); }}
+                autoCapitalize="characters"
                 autoCorrect={false}
+                maxLength={8}
                 returnKeyType="next"
               />
             </View>
           </View>
 
           <View style={styles.fieldWrap}>
-            <Text style={[styles.label, { color: colors.mutedForeground }]}>Parol</Text>
+            <Text style={[styles.label, { color: colors.mutedForeground }]}>Parol (6 ta raqam)</Text>
             <View style={[styles.inputRow, { backgroundColor: colors.background, borderColor: error ? "#E53935" : colors.border }]}>
               <MaterialIcons name="lock" size={20} color={colors.mutedForeground} style={styles.inputIcon} />
               <TextInput
                 style={[styles.input, { color: colors.foreground }]}
-                placeholder="Parolni kiriting"
+                placeholder="6 xonali raqamli parol"
                 placeholderTextColor={colors.mutedForeground}
                 value={password}
                 onChangeText={(t) => { setPassword(t); setError(null); }}
                 secureTextEntry={!showPassword}
+                keyboardType="numeric"
                 autoCapitalize="none"
                 autoCorrect={false}
+                maxLength={6}
                 returnKeyType="done"
                 onSubmitEditing={handleLogin}
               />
@@ -124,9 +128,22 @@ export default function LoginScreen() {
         </View>
 
         <View style={styles.footer}>
-          <MaterialIcons name="security" size={14} color={colors.mutedForeground} />
-          <Text style={[styles.footerText, { color: colors.mutedForeground }]}>Faqat admin kirishi mumkin</Text>
+          <Text style={[styles.footerText, { color: colors.mutedForeground }]}>
+            Hali ro'yxatdan o'tmaganmisiz?
+          </Text>
+          <TouchableOpacity onPress={() => router.push("/manager-register")} activeOpacity={0.7}>
+            <Text style={[styles.footerLink, { color: colors.primary }]}>Ro'yxatdan o'ting</Text>
+          </TouchableOpacity>
         </View>
+
+        <TouchableOpacity
+          style={styles.backBtn}
+          onPress={() => router.replace("/role-select")}
+          activeOpacity={0.7}
+        >
+          <MaterialIcons name="arrow-back" size={18} color={colors.mutedForeground} />
+          <Text style={[styles.backText, { color: colors.mutedForeground }]}>Orqaga</Text>
+        </TouchableOpacity>
       </View>
     </KeyboardAvoidingView>
   );
@@ -135,7 +152,7 @@ export default function LoginScreen() {
 const styles = StyleSheet.create({
   root: { flex: 1 },
   container: { flex: 1, paddingHorizontal: 24, justifyContent: "center" },
-  logoWrap: { alignItems: "center", marginBottom: 36 },
+  logoWrap: { alignItems: "center", marginBottom: 28 },
   logoCircle: {
     width: 80, height: 80, borderRadius: 22,
     alignItems: "center", justifyContent: "center",
@@ -169,6 +186,9 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.3, shadowRadius: 8, elevation: 4,
   },
   loginBtnText: { fontFamily: "Inter_600SemiBold", fontSize: 16, color: "#fff" },
-  footer: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 5, marginTop: 24 },
-  footerText: { fontFamily: "Inter_400Regular", fontSize: 12 },
+  footer: { flexDirection: "row", justifyContent: "center", alignItems: "center", gap: 6, marginTop: 20 },
+  footerText: { fontFamily: "Inter_400Regular", fontSize: 13 },
+  footerLink: { fontFamily: "Inter_600SemiBold", fontSize: 13 },
+  backBtn: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 4, marginTop: 12 },
+  backText: { fontFamily: "Inter_400Regular", fontSize: 13 },
 });

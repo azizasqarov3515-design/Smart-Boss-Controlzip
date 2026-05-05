@@ -41,6 +41,7 @@ export default function WorkerRegisterScreen() {
   const [address, setAddress] = useState("");
   const [phone, setPhone] = useState("+998 ");
   const [password, setPassword] = useState("");
+  const [managerLoginCode, setManagerLoginCode] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -59,6 +60,7 @@ export default function WorkerRegisterScreen() {
     const phoneDigits = phone.replace(/\D/g, "");
     if (phoneDigits.length < 12) newErrors["phone"] = "To'liq telefon raqam kiriting (+998 XX XXX XX XX)";
     if (!password || password.length < 4) newErrors["password"] = "Parol kamida 4 ta belgi bo'lishi kerak";
+    if (!/^[A-Z0-9]{8}$/.test(managerLoginCode)) newErrors["managerLoginCode"] = "Do'kon kodi 8 ta katta harf/raqamdan iborat";
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -71,7 +73,7 @@ export default function WorkerRegisterScreen() {
       const res = await fetch(`${BASE_URL}/api/auth/worker-register`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: name.trim(), address: address.trim(), phone, password }),
+        body: JSON.stringify({ name: name.trim(), address: address.trim(), phone, password, managerLoginCode }),
       });
       const data = (await res.json()) as { id?: number; name?: string; status?: string; error?: string; code?: string };
       if (!res.ok) {
@@ -195,14 +197,43 @@ export default function WorkerRegisterScreen() {
                 onChangeText={(t) => { setPassword(t); setErrors((e) => ({ ...e, password: "" })); }}
                 secureTextEntry={!showPassword}
                 autoCapitalize="none"
-                returnKeyType="done"
-                onSubmitEditing={handleRegister}
+                returnKeyType="next"
               />
               <TouchableOpacity onPress={() => setShowPassword((v) => !v)} activeOpacity={0.7} style={styles.eyeBtn}>
                 <MaterialIcons name={showPassword ? "visibility-off" : "visibility"} size={20} color={colors.mutedForeground} />
               </TouchableOpacity>
             </View>
             {fieldError("password")}
+          </View>
+
+          <View style={styles.fieldWrap}>
+            <Text style={[styles.label, { color: colors.mutedForeground }]}>
+              <Text style={{ color: "#DC2626" }}>* </Text>Do'kon kodi (Rahbar login kodi)
+            </Text>
+            <View style={[styles.inputRow, { backgroundColor: colors.background, borderColor: errors["managerLoginCode"] ? "#E53935" : colors.border }]}>
+              <MaterialIcons name="store" size={20} color={colors.mutedForeground} style={styles.inputIcon} />
+              <TextInput
+                style={[styles.input, { color: colors.foreground }]}
+                placeholder="Masalan: AB12CD34"
+                placeholderTextColor={colors.mutedForeground}
+                value={managerLoginCode}
+                onChangeText={(t) => { setManagerLoginCode(t.toUpperCase()); setErrors((e) => ({ ...e, managerLoginCode: "" })); }}
+                autoCapitalize="characters"
+                autoCorrect={false}
+                maxLength={8}
+                returnKeyType="done"
+                onSubmitEditing={handleRegister}
+              />
+              <View style={[styles.charBadge, { backgroundColor: /^[A-Z0-9]{8}$/.test(managerLoginCode) ? "#4CAF50" : colors.border }]}>
+                <Text style={[styles.charBadgeText, { color: /^[A-Z0-9]{8}$/.test(managerLoginCode) ? "#fff" : colors.mutedForeground }]}>
+                  {managerLoginCode.length}/8
+                </Text>
+              </View>
+            </View>
+            {fieldError("managerLoginCode")}
+            <Text style={[styles.hintText, { color: colors.mutedForeground }]}>
+              Rahbaringizdan 8 xonali do'kon kodini oling
+            </Text>
           </View>
 
           {apiError && (
@@ -277,4 +308,10 @@ const styles = StyleSheet.create({
     borderRadius: 14, borderWidth: 1, padding: 14,
   },
   infoText: { fontFamily: "Inter_400Regular", fontSize: 12, flex: 1, lineHeight: 18 },
+  charBadge: {
+    paddingHorizontal: 8, paddingVertical: 3,
+    borderRadius: 8, marginLeft: 4,
+  },
+  charBadgeText: { fontFamily: "Inter_600SemiBold", fontSize: 11 },
+  hintText: { fontFamily: "Inter_400Regular", fontSize: 11, marginTop: 4, marginLeft: 2 },
 });

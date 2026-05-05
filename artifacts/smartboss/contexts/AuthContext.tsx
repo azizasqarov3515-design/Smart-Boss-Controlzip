@@ -11,6 +11,8 @@ const TOKEN_KEY = "smartboss_auth_token";
 const ROLE_KEY = "smartboss_auth_role";
 const USER_NAME_KEY = "smartboss_auth_name";
 const WORKER_ID_KEY = "smartboss_auth_worker_id";
+const MANAGER_ID_KEY = "smartboss_auth_manager_id";
+const STORE_NAME_KEY = "smartboss_auth_store_name";
 
 export type UserRole = "manager" | "worker";
 
@@ -21,9 +23,11 @@ interface AuthContextType {
   workerName: string | null;
   workerId: number | null;
   workerStatus: string | null;
+  managerId: number | null;
+  storeName: string | null;
   isAuthenticated: boolean;
   isLoading: boolean;
-  login: (username: string, password: string) => Promise<void>;
+  login: (loginCode: string, password: string) => Promise<void>;
   loginWorker: (phone: string, password: string) => Promise<{ status: string }>;
   logout: () => Promise<void>;
   downloadBackup: () => Promise<string>;
@@ -44,7 +48,22 @@ export function AuthProvider({ children, queryClient }: AuthProviderProps) {
   const [workerName, setWorkerName] = useState<string | null>(null);
   const [workerId, setWorkerId] = useState<number | null>(null);
   const [workerStatus, setWorkerStatus] = useState<string | null>(null);
+  const [managerId, setManagerId] = useState<number | null>(null);
+  const [storeName, setStoreName] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+
+  const clearAll = useCallback(async () => {
+    await AsyncStorage.multiRemove([TOKEN_KEY, ROLE_KEY, USER_NAME_KEY, WORKER_ID_KEY, MANAGER_ID_KEY, STORE_NAME_KEY]);
+    queryClient?.clear();
+    setToken(null);
+    setUsername(null);
+    setRole(null);
+    setWorkerName(null);
+    setWorkerId(null);
+    setWorkerStatus(null);
+    setManagerId(null);
+    setStoreName(null);
+  }, [queryClient]);
 
   useEffect(() => {
     setAuthTokenGetter(() => token);
@@ -52,18 +71,9 @@ export function AuthProvider({ children, queryClient }: AuthProviderProps) {
   }, [token]);
 
   useEffect(() => {
-    setOnUnauthorized(() => {
-      AsyncStorage.multiRemove([TOKEN_KEY, ROLE_KEY, USER_NAME_KEY, WORKER_ID_KEY]);
-      queryClient?.clear();
-      setToken(null);
-      setUsername(null);
-      setRole(null);
-      setWorkerName(null);
-      setWorkerId(null);
-      setWorkerStatus(null);
-    });
+    setOnUnauthorized(() => { void clearAll(); });
     return () => { setOnUnauthorized(null); };
-  }, [queryClient]);
+  }, [clearAll]);
 
   useEffect(() => {
     let cancelled = false;
@@ -81,19 +91,23 @@ export function AuthProvider({ children, queryClient }: AuthProviderProps) {
               role?: string;
               workerId?: number;
               status?: string;
+              managerId?: number;
+              storeName?: string;
             };
             setToken(stored);
             const r = (data.role as UserRole) ?? "manager";
             setRole(r);
             if (r === "manager") {
-              setUsername(data.username ?? "admin");
+              setUsername(data.username ?? data.name ?? "Rahbar");
+              setManagerId(data.managerId ?? null);
+              setStoreName(data.storeName ?? null);
             } else {
               setWorkerName(data.name ?? null);
               setWorkerId(data.workerId ?? null);
               setWorkerStatus(data.status ?? null);
             }
           } else if (!cancelled) {
-            await AsyncStorage.multiRemove([TOKEN_KEY, ROLE_KEY, USER_NAME_KEY, WORKER_ID_KEY]);
+            await AsyncStorage.multiRemove([TOKEN_KEY, ROLE_KEY, USER_NAME_KEY, WORKER_ID_KEY, MANAGER_ID_KEY, STORE_NAME_KEY]);
           }
         }
       } catch {
@@ -106,17 +120,28 @@ export function AuthProvider({ children, queryClient }: AuthProviderProps) {
     return () => { cancelled = true; };
   }, []);
 
-  const login = useCallback(async (usernameInput: string, password: string) => {
+  const login = useCallback(async (loginCode: string, password: string) => {
     const res = await fetch(`${BASE_URL}/api/auth/login`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ username: usernameInput, password }),
+      body: JSON.stringify({ login: loginCode, password }),
     });
-    const data = (await res.json()) as { token?: string; username?: string; error?: string };
+    const data = (await res.json()) as {
+      token?: string;
+      name?: string;
+      username?: string;
+      managerId?: number;
+      storeName?: string;
+      error?: string;
+    };
     if (!res.ok) throw new Error(data.error ?? "Login amalga oshmadi");
     await AsyncStorage.setItem(TOKEN_KEY, data.token!);
+    if (data.managerId) await AsyncStorage.setItem(MANAGER_ID_KEY, String(data.managerId));
+    if (data.storeName) await AsyncStorage.setItem(STORE_NAME_KEY, data.storeName);
     setToken(data.token!);
-    setUsername(data.username!);
+    setUsername(data.username ?? data.name ?? "Rahbar");
+    setManagerId(data.managerId ?? null);
+    setStoreName(data.storeName ?? null);
     setRole("manager");
     setWorkerName(null);
     setWorkerId(null);
@@ -148,11 +173,12 @@ export function AuthProvider({ children, queryClient }: AuthProviderProps) {
     setWorkerId(data.workerId ?? null);
     setWorkerStatus(data.status ?? "pending");
     setUsername(null);
+    setManagerId(null);
+    setStoreName(null);
     queryClient?.clear();
     return { status: data.status ?? "pending" };
   }, [queryClient]);
 
-  // Global periodic check: even approved workers in tabs get auto-logged-out if deleted
   useEffect(() => {
     if (!token || role !== "worker") return;
     const interval = setInterval(async () => {
@@ -161,17 +187,14 @@ export function AuthProvider({ children, queryClient }: AuthProviderProps) {
       }).catch(() => null);
       if (!res) return;
       if (res.status === 401 || res.status === 404) {
-        await AsyncStorage.multiRemove([TOKEN_KEY, ROLE_KEY, USER_NAME_KEY, WORKER_ID_KEY]);
-        queryClient?.clear();
-        setToken(null); setUsername(null); setRole(null);
-        setWorkerName(null); setWorkerId(null); setWorkerStatus(null);
+        await clearAll();
       } else if (res.ok) {
         const data = (await res.json()) as { status?: string };
         setWorkerStatus(data.status ?? null);
       }
     }, 10000);
     return () => clearInterval(interval);
-  }, [token, role, queryClient]);
+  }, [token, role, clearAll]);
 
   const refreshWorkerStatus = useCallback(async (): Promise<string | null> => {
     if (!token) return null;
@@ -185,20 +208,12 @@ export function AuthProvider({ children, queryClient }: AuthProviderProps) {
         setWorkerStatus(st);
         return st;
       }
-      // 401 = worker deleted or token invalid → force logout immediately
       if (res.status === 401 || res.status === 404) {
-        await AsyncStorage.multiRemove([TOKEN_KEY, ROLE_KEY, USER_NAME_KEY, WORKER_ID_KEY]);
-        queryClient?.clear();
-        setToken(null);
-        setUsername(null);
-        setRole(null);
-        setWorkerName(null);
-        setWorkerId(null);
-        setWorkerStatus(null);
+        await clearAll();
       }
     } catch { /* ignore network errors */ }
     return null;
-  }, [token, queryClient]);
+  }, [token, clearAll]);
 
   const logout = useCallback(async () => {
     try {
@@ -209,15 +224,8 @@ export function AuthProvider({ children, queryClient }: AuthProviderProps) {
         });
       }
     } catch { /* ignore */ }
-    await AsyncStorage.multiRemove([TOKEN_KEY, ROLE_KEY, USER_NAME_KEY, WORKER_ID_KEY]);
-    queryClient?.clear();
-    setToken(null);
-    setUsername(null);
-    setRole(null);
-    setWorkerName(null);
-    setWorkerId(null);
-    setWorkerStatus(null);
-  }, [token, queryClient]);
+    await clearAll();
+  }, [token, clearAll]);
 
   const downloadBackup = useCallback(async (): Promise<string> => {
     const res = await fetch(`${BASE_URL}/api/backup/download`, {
@@ -237,6 +245,8 @@ export function AuthProvider({ children, queryClient }: AuthProviderProps) {
         workerName,
         workerId,
         workerStatus,
+        managerId,
+        storeName,
         isAuthenticated: !!token,
         isLoading,
         login,

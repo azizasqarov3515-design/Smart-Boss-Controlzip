@@ -1,6 +1,6 @@
 import { db } from "@workspace/db";
 import { customersTable, productsTable, saleItemsTable, salesTable } from "@workspace/db/schema";
-import { eq, sql } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import { Router } from "express";
 import { z } from "zod";
 
@@ -51,12 +51,15 @@ function mapSaleRow(
 
 router.get("/sales", async (req, res) => {
   try {
+    const managerId = res.locals.user?.managerId;
+    const condition = managerId !== undefined ? eq(salesTable.managerId, managerId) : undefined;
+
     const sales = await db
       .select()
       .from(salesTable)
+      .where(condition)
       .orderBy(sql`${salesTable.createdAt} desc`);
 
-    // Batch load customer names
     const customerIds = [...new Set(sales.map((s) => s.customerId).filter(Boolean) as number[])];
     const customerMap = new Map<number, string>();
     if (customerIds.length > 0) {
@@ -90,23 +93,25 @@ router.get("/sales", async (req, res) => {
 router.post("/sales", async (req, res) => {
   try {
     const body = createSaleSchema.parse(req.body);
+    const managerId = res.locals.user?.managerId ?? null;
 
-    // Validate debt requires customer
     if (body.paymentType === "debt" && !body.customerId) {
       res.status(400).json({ error: "Qarz uchun mijoz tanlanishi shart" });
       return;
     }
 
-    // Fetch all products in one query
     const productIds = body.items.map((i) => i.productId);
+    const mgrProdCond = managerId !== null
+      ? and(sql`${productsTable.id} = ANY(${sql.raw(`ARRAY[${productIds.join(",")}]`)})`, eq(productsTable.managerId, managerId))
+      : sql`${productsTable.id} = ANY(${sql.raw(`ARRAY[${productIds.join(",")}]`)})`;
+
     const products = await db
       .select()
       .from(productsTable)
-      .where(sql`${productsTable.id} = ANY(${sql.raw(`ARRAY[${productIds.join(",")}]`)})`);
+      .where(mgrProdCond);
 
     const productMap = new Map(products.map((p) => [p.id, p]));
 
-    // Validate stock availability
     for (const item of body.items) {
       const product = productMap.get(item.productId);
       if (!product) {
@@ -121,7 +126,6 @@ router.post("/sales", async (req, res) => {
       }
     }
 
-    // Calculate totals
     let totalAmount = 0;
     const saleItemsData = body.items.map((item) => {
       const product = productMap.get(item.productId)!;
@@ -140,7 +144,6 @@ router.post("/sales", async (req, res) => {
 
     const totalItemCount = body.items.reduce((sum, i) => sum + i.quantity, 0);
 
-    // Determine paid/debt amounts
     const paidAmount =
       body.paymentType === "debt"
         ? (body.paidAmount ?? 0)
@@ -148,13 +151,12 @@ router.post("/sales", async (req, res) => {
     const debtAmount =
       body.paymentType === "debt" ? totalAmount - paidAmount : 0;
 
-    // Validate customer debt limit if applicable
     let customerName: string | null = null;
     if (body.customerId) {
-      const [customer] = await db
-        .select()
-        .from(customersTable)
-        .where(eq(customersTable.id, body.customerId));
+      const custCond = managerId !== null
+        ? and(eq(customersTable.id, body.customerId), eq(customersTable.managerId, managerId))
+        : eq(customersTable.id, body.customerId);
+      const [customer] = await db.select().from(customersTable).where(custCond);
       if (!customer) {
         res.status(404).json({ error: "Mijoz topilmadi" });
         return;
@@ -170,11 +172,11 @@ router.post("/sales", async (req, res) => {
       }
     }
 
-    // Create sale + items + decrement stock + update customer debt in a single transaction
     const saleResult = await db.transaction(async (tx) => {
       const [sale] = await tx
         .insert(salesTable)
         .values({
+          managerId,
           totalAmount: String(totalAmount),
           itemCount: totalItemCount,
           note: body.note ?? null,
@@ -190,7 +192,6 @@ router.post("/sales", async (req, res) => {
         .values(saleItemsData.map((d) => ({ ...d, saleId: sale.id })))
         .returning();
 
-      // Decrement stock for each product
       for (const item of body.items) {
         await tx
           .update(productsTable)
@@ -198,7 +199,6 @@ router.post("/sales", async (req, res) => {
           .where(eq(productsTable.id, item.productId));
       }
 
-      // Update customer debt if debt sale
       if (body.customerId && debtAmount > 0) {
         await tx
           .update(customersTable)
@@ -222,15 +222,17 @@ router.post("/sales", async (req, res) => {
   }
 });
 
-// Helper: delete one sale and restore stock/debt
-async function deleteSaleById(saleId: number) {
-  const [sale] = await db.select().from(salesTable).where(eq(salesTable.id, saleId));
+async function deleteSaleById(saleId: number, managerId: number | null) {
+  const condition = managerId !== null
+    ? and(eq(salesTable.id, saleId), eq(salesTable.managerId, managerId))
+    : eq(salesTable.id, saleId);
+
+  const [sale] = await db.select().from(salesTable).where(condition);
   if (!sale) return null;
 
   const items = await db.select().from(saleItemsTable).where(eq(saleItemsTable.saleId, saleId));
 
   await db.transaction(async (tx) => {
-    // Restore stock for each item
     for (const item of items) {
       if (item.productId != null) {
         await tx
@@ -239,7 +241,6 @@ async function deleteSaleById(saleId: number) {
           .where(eq(productsTable.id, item.productId));
       }
     }
-    // Restore customer debt if debt sale
     if (sale.customerId && sale.debtAmount && parseFloat(sale.debtAmount) > 0) {
       await tx
         .update(customersTable)
@@ -248,7 +249,6 @@ async function deleteSaleById(saleId: number) {
         })
         .where(eq(customersTable.id, sale.customerId));
     }
-    // Delete items and sale
     await tx.delete(saleItemsTable).where(eq(saleItemsTable.saleId, saleId));
     await tx.delete(salesTable).where(eq(salesTable.id, saleId));
   });
@@ -260,7 +260,8 @@ router.delete("/sales/:id", async (req, res) => {
   try {
     const id = parseInt(req.params["id"] ?? "0", 10);
     if (!id) { res.status(400).json({ error: "Invalid id" }); return; }
-    const deleted = await deleteSaleById(id);
+    const managerId = res.locals.user?.managerId ?? null;
+    const deleted = await deleteSaleById(id, managerId);
     if (!deleted) { res.status(404).json({ error: "Sale not found" }); return; }
     res.json({ success: true });
   } catch (err) {
@@ -276,10 +277,12 @@ router.post("/sales/bulk-delete", async (req, res) => {
       deleteAll: z.boolean().nullable().optional(),
     });
     const body = schema.parse(req.body);
+    const managerId = res.locals.user?.managerId ?? null;
 
     let saleIds: number[];
     if (body.deleteAll) {
-      const all = await db.select({ id: salesTable.id }).from(salesTable);
+      const condition = managerId !== null ? eq(salesTable.managerId, managerId) : undefined;
+      const all = await db.select({ id: salesTable.id }).from(salesTable).where(condition);
       saleIds = all.map((s) => s.id);
     } else if (body.ids && body.ids.length > 0) {
       saleIds = body.ids;
@@ -288,7 +291,7 @@ router.post("/sales/bulk-delete", async (req, res) => {
     }
 
     for (const id of saleIds) {
-      await deleteSaleById(id);
+      await deleteSaleById(id, managerId);
     }
 
     res.json({ deleted: saleIds.length });
@@ -308,10 +311,15 @@ router.get("/products/barcode/:barcode", async (req, res) => {
       res.status(400).json({ error: "Barcode required" });
       return;
     }
+    const managerId = res.locals.user?.managerId;
+    const condition = managerId !== undefined
+      ? and(eq(productsTable.barcode, barcode), eq(productsTable.managerId, managerId))
+      : eq(productsTable.barcode, barcode);
+
     const [product] = await db
       .select()
       .from(productsTable)
-      .where(eq(productsTable.barcode, barcode))
+      .where(condition)
       .limit(1);
 
     if (!product) {

@@ -1,6 +1,6 @@
 import { db } from "@workspace/db";
 import { workersTable } from "@workspace/db/schema";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { Router } from "express";
 import { requireManager } from "../lib/auth";
 
@@ -8,6 +8,9 @@ const router = Router();
 
 router.get("/workers", requireManager, async (req, res) => {
   try {
+    const managerId = res.locals.user?.managerId;
+    const condition = managerId !== undefined ? eq(workersTable.managerId, managerId) : undefined;
+
     const workers = await db
       .select({
         id: workersTable.id,
@@ -18,6 +21,7 @@ router.get("/workers", requireManager, async (req, res) => {
         createdAt: workersTable.createdAt,
       })
       .from(workersTable)
+      .where(condition)
       .orderBy(workersTable.createdAt);
 
     res.json(workers.map((w) => ({ ...w, createdAt: w.createdAt.toISOString() })));
@@ -32,10 +36,15 @@ router.post("/workers/:id/approve", requireManager, async (req, res) => {
     const id = parseInt(String(req.params.id), 10);
     if (isNaN(id)) { res.status(400).json({ error: "Noto'g'ri ID" }); return; }
 
+    const managerId = res.locals.user?.managerId;
+    const condition = managerId !== undefined
+      ? and(eq(workersTable.id, id), eq(workersTable.managerId, managerId))
+      : eq(workersTable.id, id);
+
     const [worker] = await db
       .update(workersTable)
       .set({ status: "approved" })
-      .where(eq(workersTable.id, id))
+      .where(condition)
       .returning();
 
     if (!worker) { res.status(404).json({ error: "Ishchi topilmadi" }); return; }
@@ -52,10 +61,15 @@ router.post("/workers/:id/reject", requireManager, async (req, res) => {
     const id = parseInt(String(req.params.id), 10);
     if (isNaN(id)) { res.status(400).json({ error: "Noto'g'ri ID" }); return; }
 
+    const managerId = res.locals.user?.managerId;
+    const condition = managerId !== undefined
+      ? and(eq(workersTable.id, id), eq(workersTable.managerId, managerId))
+      : eq(workersTable.id, id);
+
     const [worker] = await db
       .update(workersTable)
       .set({ status: "rejected" })
-      .where(eq(workersTable.id, id))
+      .where(condition)
       .returning();
 
     if (!worker) { res.status(404).json({ error: "Ishchi topilmadi" }); return; }
@@ -72,9 +86,14 @@ router.delete("/workers/:id", requireManager, async (req, res) => {
     const id = parseInt(String(req.params.id), 10);
     if (isNaN(id)) { res.status(400).json({ error: "Noto'g'ri ID" }); return; }
 
+    const managerId = res.locals.user?.managerId;
+    const condition = managerId !== undefined
+      ? and(eq(workersTable.id, id), eq(workersTable.managerId, managerId))
+      : eq(workersTable.id, id);
+
     const [worker] = await db
       .delete(workersTable)
-      .where(eq(workersTable.id, id))
+      .where(condition)
       .returning();
 
     if (!worker) { res.status(404).json({ error: "Ishchi topilmadi" }); return; }

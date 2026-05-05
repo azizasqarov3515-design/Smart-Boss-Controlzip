@@ -1,13 +1,11 @@
 import { db } from "@workspace/db";
 import { productsTable } from "@workspace/db/schema";
-import { eq, sql } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import { Router } from "express";
 import { z } from "zod";
 
 const router = Router();
 
-// Independent input schema — does NOT extend drizzle-zod (zod/v4 vs zod v3 incompatibility).
-// Prices are stored as PG numeric (string) so we coerce number→string before insert.
 const productInputSchema = z.object({
   name: z.string().trim().min(1, "Nomi kiritilishi shart"),
   brand: z.string().trim().min(1, "Brendi kiritilishi shart"),
@@ -26,6 +24,7 @@ const productInputSchema = z.object({
 
 type ProductRow = {
   id: number;
+  managerId: number | null;
   name: string;
   brand: string;
   costPrice: string;
@@ -51,9 +50,12 @@ function mapProduct(p: ProductRow) {
 // GET /products
 router.get("/products", async (req, res) => {
   try {
+    const managerId = res.locals.user?.managerId;
+    const condition = managerId !== undefined ? eq(productsTable.managerId, managerId) : undefined;
     const products = await db
       .select()
       .from(productsTable)
+      .where(condition)
       .orderBy(productsTable.createdAt);
     res.json(products.map(mapProduct));
   } catch (err) {
@@ -71,9 +73,11 @@ router.post("/products", async (req, res) => {
   }
   try {
     const d = parsed.data;
+    const managerId = res.locals.user?.managerId ?? null;
     const [product] = await db
       .insert(productsTable)
       .values({
+        managerId,
         name: d.name,
         brand: d.brand,
         costPrice: d.costPrice,
@@ -89,14 +93,18 @@ router.post("/products", async (req, res) => {
   }
 });
 
-// GET /products/barcode/:barcode  — must be before /:id
+// GET /products/barcode/:barcode — must be before /:id
 router.get("/products/barcode/:barcode", async (req, res) => {
   try {
     const barcode = req.params["barcode"]!;
+    const managerId = res.locals.user?.managerId;
+    const condition = managerId !== undefined
+      ? and(eq(productsTable.barcode, barcode), eq(productsTable.managerId, managerId))
+      : eq(productsTable.barcode, barcode);
     const [product] = await db
       .select()
       .from(productsTable)
-      .where(eq(productsTable.barcode, barcode))
+      .where(condition)
       .limit(1);
     if (!product) {
       res.status(404).json({ error: "Product not found" });
@@ -123,6 +131,10 @@ router.put("/products/:id", async (req, res) => {
   }
   try {
     const d = parsed.data;
+    const managerId = res.locals.user?.managerId;
+    const condition = managerId !== undefined
+      ? and(eq(productsTable.id, id), eq(productsTable.managerId, managerId))
+      : eq(productsTable.id, id);
     const [product] = await db
       .update(productsTable)
       .set({
@@ -133,7 +145,7 @@ router.put("/products/:id", async (req, res) => {
         quantity: d.quantity,
         barcode: d.barcode,
       })
-      .where(eq(productsTable.id, id))
+      .where(condition)
       .returning();
     if (!product) {
       res.status(404).json({ error: "Product not found" });
@@ -154,7 +166,11 @@ router.delete("/products/:id", async (req, res) => {
     return;
   }
   try {
-    await db.delete(productsTable).where(eq(productsTable.id, id));
+    const managerId = res.locals.user?.managerId;
+    const condition = managerId !== undefined
+      ? and(eq(productsTable.id, id), eq(productsTable.managerId, managerId))
+      : eq(productsTable.id, id);
+    await db.delete(productsTable).where(condition);
     res.status(204).send();
   } catch (err) {
     req.log.error({ err }, "Failed to delete product");
@@ -165,6 +181,9 @@ router.delete("/products/:id", async (req, res) => {
 // GET /dashboard/stats
 router.get("/dashboard/stats", async (req, res) => {
   try {
+    const managerId = res.locals.user?.managerId;
+    const mgrCond = managerId !== undefined ? eq(productsTable.managerId, managerId) : undefined;
+
     const [stats] = await db
       .select({
         totalProducts: sql<number>`count(*)::int`,
@@ -173,23 +192,30 @@ router.get("/dashboard/stats", async (req, res) => {
         totalSaleValue: sql<number>`coalesce(sum(${productsTable.salePrice}::numeric * ${productsTable.quantity}), 0)::numeric`,
         lowStockCount: sql<number>`count(case when ${productsTable.quantity} < 5 then 1 end)::int`,
       })
-      .from(productsTable);
+      .from(productsTable)
+      .where(mgrCond);
 
     const { customersTable, salesTable, saleItemsTable } = await import("@workspace/db/schema");
 
+    const custCond = managerId !== undefined ? eq(customersTable.managerId, managerId) : undefined;
     const [debtStats] = await db
       .select({
         totalDebt: sql<number>`coalesce(sum(${customersTable.totalDebt}::numeric), 0)::numeric`,
       })
-      .from(customersTable);
+      .from(customersTable)
+      .where(custCond);
 
-    // Today's net profit = sum of (unit_price - cost_price) * quantity for today's sales
+    const mgrSaleCond = managerId !== undefined
+      ? sql`s.manager_id = ${managerId}`
+      : sql`1=1`;
+
     const profitResult = await db.execute(sql`
       SELECT COALESCE(SUM((si.unit_price::numeric - p.cost_price::numeric) * si.quantity), 0) AS today_net_profit
       FROM ${saleItemsTable} si
       JOIN ${salesTable} s ON si.sale_id = s.id
       JOIN ${productsTable} p ON si.product_id = p.id
       WHERE s.created_at::date = CURRENT_DATE
+        AND ${mgrSaleCond}
     `);
     const profitStats = profitResult.rows[0] as Record<string, unknown> | undefined;
 

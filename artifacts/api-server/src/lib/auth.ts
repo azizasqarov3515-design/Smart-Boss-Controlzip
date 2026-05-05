@@ -22,6 +22,7 @@ export interface TokenPayload {
   sub: string;
   role: "manager" | "worker";
   name: string;
+  managerId?: number;
   workerId?: number;
   iat: number;
   exp: number;
