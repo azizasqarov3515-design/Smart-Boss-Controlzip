@@ -10,6 +10,7 @@ export const managersTable = pgTable("managers", {
   storeId: text("store_id").notNull().unique(),
   login: text("login").notNull().unique(),
   passwordHash: text("password_hash").notNull(),
+  telegramChatId: text("telegram_chat_id"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 

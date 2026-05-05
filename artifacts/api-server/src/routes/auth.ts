@@ -15,37 +15,15 @@ import { generateToken, revokeToken, extractBearerToken, requireAuth } from "../
 
 const router = Router();
 
-function maskPhone(phone: string): string {
-  const d = phone.replace(/\D/g, "");
-  if (d.length < 11) return phone;
-  const local = d.startsWith("998") ? d.slice(3) : d.slice(d.length - 9);
-  return `+998 ${local.slice(0, 2)}* *** **${local.slice(7)}`;
-}
-
-async function sendEskizSms(phone: string, message: string): Promise<void> {
-  const email = process.env["ESKIZ_EMAIL"];
-  const password = process.env["ESKIZ_PASSWORD"];
-  if (!email || !password) throw Object.assign(new Error("SMS_NOT_CONFIGURED"), { code: "SMS_NOT_CONFIGURED" });
-
-  const authRes = await fetch("https://notify.eskiz.uz/api/auth/login", {
+async function sendTelegramMessage(chatId: string, text: string): Promise<void> {
+  const token = process.env["TELEGRAM_BOT_TOKEN"];
+  if (!token) throw Object.assign(new Error("TELEGRAM_NOT_CONFIGURED"), { code: "TELEGRAM_NOT_CONFIGURED" });
+  const res = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ email, password }),
+    body: JSON.stringify({ chat_id: chatId, text }),
   });
-  if (!authRes.ok) throw Object.assign(new Error("SMS_AUTH_FAILED"), { code: "SMS_AUTH_FAILED" });
-  const authData = (await authRes.json()) as { data?: { token?: string } };
-  const token = authData.data?.token;
-  if (!token) throw Object.assign(new Error("SMS_AUTH_FAILED"), { code: "SMS_AUTH_FAILED" });
-
-  const digits = phone.replace(/\D/g, "");
-  const mobilePhone = digits.startsWith("998") ? digits : "998" + digits;
-
-  const smsRes = await fetch("https://notify.eskiz.uz/api/message/sms/send", {
-    method: "POST",
-    headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-    body: JSON.stringify({ mobile_phone: mobilePhone, message, from: "4546" }),
-  });
-  if (!smsRes.ok) throw Object.assign(new Error("SMS_SEND_FAILED"), { code: "SMS_SEND_FAILED" });
+  if (!res.ok) throw Object.assign(new Error("TELEGRAM_SEND_FAILED"), { code: "TELEGRAM_SEND_FAILED" });
 }
 
 function hashPassword(password: string): string {
@@ -375,38 +353,53 @@ router.post("/auth/forgot-credentials", async (req, res) => {
     const body = schema.parse(req.body);
     const normalizedInput = body.phone.replace(/\D/g, "");
     const [manager] = await db
-      .select({ id: managersTable.id, login: managersTable.login, storeName: managersTable.storeName, phone: managersTable.phone })
+      .select({
+        id: managersTable.id,
+        login: managersTable.login,
+        storeName: managersTable.storeName,
+        telegramChatId: managersTable.telegramChatId,
+      })
       .from(managersTable)
-      .where(
-        sql`regexp_replace(${managersTable.phone}, '[^0-9]', '', 'g') = ${normalizedInput}`
-      );
+      .where(sql`regexp_replace(${managersTable.phone}, '[^0-9]', '', 'g') = ${normalizedInput}`);
 
     if (!manager) {
       res.status(404).json({ error: "Bu telefon raqam tizimda ro'yxatdan o'tmagan", code: "NOT_FOUND" });
       return;
     }
 
-    const tempPassword = String(Math.floor(100000 + Math.random() * 900000));
-    const passwordHash = hashPassword(tempPassword);
-    await db.update(managersTable).set({ passwordHash }).where(eq(managersTable.id, manager.id));
-
-    const smsText = `SMARTBOSScontrol\nLogin: ${manager.login}\nVaqtinchalik parol: ${tempPassword}\nKirganingizdan keyin parolni yangilang.`;
-    try {
-      await sendEskizSms(manager.phone, smsText);
-      req.log.info({ managerId: manager.id }, "SMS sent via Eskiz");
-    } catch (smsErr: unknown) {
-      const code = (smsErr as { code?: string }).code;
-      if (code === "SMS_NOT_CONFIGURED") {
-        req.log.warn({ managerId: manager.id }, "SMS not configured — ESKIZ_EMAIL/ESKIZ_PASSWORD not set");
-        res.status(503).json({ error: "SMS xizmati ulanmagan. Administrator bilan bog'laning.", code: "SMS_NOT_CONFIGURED" });
-        return;
-      }
-      req.log.error({ err: smsErr }, "SMS send failed");
-      res.status(502).json({ error: "SMS yuborishda xato yuz berdi. Keyinroq urinib ko'ring.", code: "SMS_SEND_FAILED" });
+    if (!manager.telegramChatId) {
+      res.status(503).json({
+        error: "Telegram botga ulanmadingiz. @smartcontrol_yordamchi_bot ni oching va login kodingizni yuboring.",
+        code: "TELEGRAM_NOT_LINKED",
+        botUsername: "smartcontrol_yordamchi_bot",
+      });
       return;
     }
 
-    res.json({ masked_phone: maskPhone(manager.phone), storeName: manager.storeName });
+    const tempPassword = String(Math.floor(100000 + Math.random() * 900000));
+    const msgText =
+      `🔐 SMARTBOSScontrol — Kirish ma'lumotlari\n\n` +
+      `Login: ${manager.login}\n` +
+      `Vaqtinchalik parol: ${tempPassword}\n\n` +
+      `⚠️ Kirganingizdan keyin yangi parol o'rnating.`;
+
+    try {
+      await sendTelegramMessage(manager.telegramChatId, msgText);
+    } catch (tgErr: unknown) {
+      const code = (tgErr as { code?: string }).code;
+      req.log.error({ err: tgErr }, "Telegram send failed in forgot-credentials");
+      if (code === "TELEGRAM_NOT_CONFIGURED") {
+        res.status(503).json({ error: "Telegram bot ulanmagan. Administrator bilan bog'laning.", code: "TELEGRAM_NOT_CONFIGURED" });
+      } else {
+        res.status(502).json({ error: "Telegram xabar yuborishda xato. Keyinroq urinib ko'ring.", code: "TELEGRAM_SEND_FAILED" });
+      }
+      return;
+    }
+
+    const passwordHash = hashPassword(tempPassword);
+    await db.update(managersTable).set({ passwordHash }).where(eq(managersTable.id, manager.id));
+    req.log.info({ managerId: manager.id }, "Temp password sent via Telegram and DB updated");
+    res.json({ ok: true, storeName: manager.storeName });
   } catch (err) {
     if (err instanceof z.ZodError) {
       res.status(400).json({ error: "Telefon raqamni kiriting" });
@@ -414,6 +407,34 @@ router.post("/auth/forgot-credentials", async (req, res) => {
       req.log.error({ err }, "Forgot credentials failed");
       res.status(500).json({ error: "Xato yuz berdi" });
     }
+  }
+});
+
+router.get("/auth/telegram-link-status", requireAuth, async (req, res) => {
+  const user = res.locals.user;
+  if (!user.managerId) { res.json({ linked: false }); return; }
+  try {
+    const [manager] = await db
+      .select({ telegramChatId: managersTable.telegramChatId })
+      .from(managersTable)
+      .where(eq(managersTable.id, user.managerId));
+    res.json({ linked: !!manager?.telegramChatId });
+  } catch (err) {
+    req.log.error({ err }, "Telegram link status check failed");
+    res.json({ linked: false });
+  }
+});
+
+router.delete("/auth/telegram-link", requireAuth, async (req, res) => {
+  const user = res.locals.user;
+  if (!user.managerId) { res.status(403).json({ error: "Faqat rahbar" }); return; }
+  try {
+    await db.update(managersTable).set({ telegramChatId: null }).where(eq(managersTable.id, user.managerId));
+    req.log.info({ managerId: user.managerId }, "Telegram unlinked");
+    res.json({ ok: true });
+  } catch (err) {
+    req.log.error({ err }, "Telegram unlink failed");
+    res.status(500).json({ error: "Xato yuz berdi" });
   }
 });
 
