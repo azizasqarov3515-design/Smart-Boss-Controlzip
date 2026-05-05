@@ -26,6 +26,7 @@ import {
   KeyboardAvoidingView,
   Modal,
   Platform,
+  RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
@@ -318,7 +319,7 @@ export default function POSScreen() {
   const [customerSearch, setCustomerSearch] = useState("");
   const successAnim = useRef(new Animated.Value(0)).current;
 
-  const { data: products, isLoading: productsLoading } = useGetProducts();
+  const { data: products, isLoading: productsLoading, refetch: refetchProducts, isRefetching: productsRefetching } = useGetProducts();
   const { data: customers, refetch: refetchCustomers, isLoading: customersLoading } = useGetCustomers();
 
   useEffect(() => {
@@ -1031,6 +1032,14 @@ export default function POSScreen() {
                 padding: 14,
                 paddingBottom: insets.bottom + 80,
               }}
+              refreshControl={
+                <RefreshControl
+                  refreshing={productsRefetching}
+                  onRefresh={refetchProducts}
+                  tintColor={colors.primary}
+                  colors={[colors.primary]}
+                />
+              }
               renderItem={({ item: p }) => {
                 const inCart = cart.get(p.id);
                 return (

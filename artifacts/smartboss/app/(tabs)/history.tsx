@@ -22,6 +22,7 @@ import {
   Modal,
   Platform,
   RefreshControl,
+  ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -444,16 +445,22 @@ export default function HistoryScreen() {
       </View>
 
       {isLoading ? (
-        <View style={styles.loader}>
+        <ScrollView
+          contentContainerStyle={styles.loader}
+          refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={colors.primary} colors={[colors.primary]} />}
+        >
           <ActivityIndicator size="large" color={colors.primary} />
           <Text style={[styles.loadingText, { color: colors.mutedForeground }]}>Yuklanmoqda...</Text>
-        </View>
+        </ScrollView>
       ) : (sales?.length ?? 0) === 0 ? (
-        <View style={styles.emptyState}>
+        <ScrollView
+          contentContainerStyle={styles.emptyState}
+          refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={colors.primary} colors={[colors.primary]} />}
+        >
           <MaterialIcons name="receipt-long" size={64} color={colors.border} />
           <Text style={[styles.emptyTitle, { color: colors.foreground }]}>Tranzaksiyalar yo'q</Text>
           <Text style={[styles.emptySub, { color: colors.mutedForeground }]}>Kassa bo'limidan birinchi sotuvni amalga oshiring</Text>
-        </View>
+        </ScrollView>
       ) : (
         <FlatList
           data={sales}

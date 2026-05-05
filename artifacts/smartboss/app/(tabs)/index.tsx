@@ -60,13 +60,15 @@ function WorkerDashboard() {
   const router = useRouter();
   const { workerName } = useAuth();
   const isWeb = Platform.OS === "web";
-  const [refreshing, setRefreshing] = useState(false);
 
-  const onRefresh = async () => {
-    setRefreshing(true);
+  const { refetch: refetchProducts, isRefetching: r1 } = useGetProducts();
+  const { refetch: refetchSales, isRefetching: r2 } = useGetSales();
+  const isRefreshing = r1 || r2;
+
+  const onRefresh = () => {
     Haptics.selectionAsync();
-    await new Promise((resolve) => setTimeout(resolve, 800));
-    setRefreshing(false);
+    refetchProducts();
+    refetchSales();
   };
 
   return (
@@ -75,7 +77,7 @@ function WorkerDashboard() {
       contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 90, paddingTop: isWeb ? 20 : 16 }]}
       showsVerticalScrollIndicator={false}
       refreshControl={
-        <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} colors={[colors.primary]} />
+        <RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} tintColor={colors.primary} colors={[colors.primary]} />
       }
     >
       <View style={styles.header}>

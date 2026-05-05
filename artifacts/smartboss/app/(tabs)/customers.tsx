@@ -249,11 +249,17 @@ export default function CustomersScreen() {
 
       {/* List */}
       {isLoading ? (
-        <View style={styles.center}>
+        <ScrollView
+          contentContainerStyle={styles.center}
+          refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={colors.primary} colors={[colors.primary]} />}
+        >
           <ActivityIndicator size="large" color={colors.primary} />
-        </View>
+        </ScrollView>
       ) : list.length === 0 ? (
-        <View style={styles.center}>
+        <ScrollView
+          contentContainerStyle={styles.center}
+          refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={colors.primary} colors={[colors.primary]} />}
+        >
           <MaterialIcons name="people" size={56} color={colors.mutedForeground} />
           <Text style={[styles.emptyTitle, { color: colors.foreground }]}>
             {search ? "Topilmadi" : "Mijozlar yo'q"}
@@ -261,7 +267,7 @@ export default function CustomersScreen() {
           <Text style={[styles.emptySubtitle, { color: colors.mutedForeground }]}>
             {search ? "Boshqa so'z kiriting" : "+ tugmasi bilan mijoz qo'shing"}
           </Text>
-        </View>
+        </ScrollView>
       ) : (
         <FlatList
           data={list}
