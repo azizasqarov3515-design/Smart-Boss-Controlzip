@@ -27,6 +27,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useColors } from "@/hooks/useColors";
 import { StatCard } from "@/components/StatCard";
 import { LiveClock } from "@/components/LiveClock";
+import { WebRefreshBar } from "@/components/WebRefreshBar";
 import { useAuth } from "@/contexts/AuthContext";
 
 function formatMoney(amount: number) {
@@ -80,6 +81,7 @@ function WorkerDashboard() {
         <RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} tintColor={colors.primary} colors={[colors.primary]} />
       }
     >
+      <WebRefreshBar refreshing={isRefreshing} onRefresh={onRefresh} />
       <View style={styles.header}>
         <View style={styles.headerLeft}>
           <Text style={[styles.greeting, { color: colors.mutedForeground }]}>Xush kelibsiz, {workerName ?? "Sotuvchi"}</Text>
@@ -223,6 +225,7 @@ export default function DashboardScreen() {
       showsVerticalScrollIndicator={false}
       refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} tintColor={colors.primary} colors={[colors.primary]} />}
     >
+      <WebRefreshBar refreshing={isRefreshing} onRefresh={onRefresh} />
       <View style={styles.header}>
         <View style={styles.headerLeft}>
           <Text style={[styles.greeting, { color: colors.mutedForeground }]}>Xush kelibsiz, {username ?? "Rahbar"}</Text>

@@ -37,6 +37,7 @@ import {
   buildWaybillHtml,
 } from "@/utils/pdfTemplates";
 import { generateAndSharePdf, type DocType } from "@/utils/generatePdf";
+import { WebRefreshBar } from "@/components/WebRefreshBar";
 
 function formatMoney(n: number) {
   return n.toLocaleString("uz-UZ") + " UZS";
@@ -349,6 +350,7 @@ export default function HistoryScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
+      <WebRefreshBar refreshing={isRefetching} onRefresh={refetch} />
 
       {/* Selection action bar */}
       {selectionMode ? (

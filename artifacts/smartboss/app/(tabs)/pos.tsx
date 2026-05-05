@@ -37,6 +37,7 @@ import {
 import { MaterialIcons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useColors } from "@/hooks/useColors";
+import { WebRefreshBar } from "@/components/WebRefreshBar";
 
 type CartItem = {
   product: Product;
@@ -1020,6 +1021,7 @@ export default function POSScreen() {
             </View>
           </View>
 
+          <WebRefreshBar refreshing={productsRefetching} onRefresh={refetchProducts} />
           {productsLoading ? (
             <View style={styles.loader}>
               <ActivityIndicator size="large" color={colors.primary} />

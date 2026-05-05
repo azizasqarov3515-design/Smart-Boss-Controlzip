@@ -27,6 +27,7 @@ import { MaterialIcons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useColors } from "@/hooks/useColors";
 import { useAuth } from "@/contexts/AuthContext";
+import { WebRefreshBar } from "@/components/WebRefreshBar";
 
 type SortKey = "name" | "brand" | "costPrice" | "salePrice" | "quantity";
 
@@ -289,6 +290,7 @@ export default function ProductsScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
+      <WebRefreshBar refreshing={isRefetching} onRefresh={refetch} />
       <View style={[styles.topBar, { paddingTop: isWeb ? 20 : 12, paddingHorizontal: 16 }]}>
         <View
           style={[

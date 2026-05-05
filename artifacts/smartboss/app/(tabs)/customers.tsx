@@ -28,6 +28,7 @@ import {
 import { MaterialIcons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useColors } from "@/hooks/useColors";
+import { WebRefreshBar } from "@/components/WebRefreshBar";
 
 function formatMoney(n: number) {
   return n.toLocaleString("uz-UZ") + " UZS";
@@ -197,6 +198,7 @@ export default function CustomersScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
+      <WebRefreshBar refreshing={isRefetching} onRefresh={refetch} />
       {/* Stats row */}
       {(customers?.length ?? 0) > 0 && (
         <View style={[styles.statsRow, { backgroundColor: colors.card, borderBottomColor: colors.border }]}>

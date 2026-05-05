@@ -19,6 +19,7 @@ import { useColors } from "@/hooks/useColors";
 import { useSettings, type Seller, type StoreSettings } from "@/hooks/useSettings";
 import { useTheme } from "@/contexts/ThemeContext";
 import { useAuth } from "@/contexts/AuthContext";
+import { WebRefreshBar } from "@/components/WebRefreshBar";
 import {
   useGetWorkers,
   useApproveWorker,
@@ -553,6 +554,7 @@ export default function SettingsScreen() {
             />
           }
         >
+          <WebRefreshBar refreshing={managerRefreshing} onRefresh={handleManagerRefresh} />
           {/* Workers management */}
           <SectionCard title="Ishchilar arizalari" icon="badge" colors={colors} badge={pendingWorkers?.length}>
             <WorkersSection colors={colors} />
