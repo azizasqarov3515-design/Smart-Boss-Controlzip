@@ -63,7 +63,11 @@ function RootLayoutNav() {
         return;
       }
       if (workerStatus === "rejected") {
-        if (currentSegment !== "worker-login") router.replace("/worker-login");
+        // Stay on worker-pending so it can show the rejection message inline.
+        // Only redirect if the user is on some other non-public screen.
+        if (currentSegment !== "worker-pending" && currentSegment !== "worker-login" && currentSegment !== "worker-register") {
+          router.replace("/worker-pending");
+        }
         return;
       }
       if (workerStatus === "approved") {

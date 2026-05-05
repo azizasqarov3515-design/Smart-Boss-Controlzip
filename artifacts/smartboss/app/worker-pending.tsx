@@ -17,22 +17,24 @@ export default function WorkerPendingScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const { logout, refreshWorkerStatus, workerName } = useAuth();
+  const { logout, refreshWorkerStatus, workerName, workerStatus } = useAuth();
   const [checking, setChecking] = useState(false);
 
-  // On mount — immediately check status in case already approved
+  // On mount — immediately check status
   useEffect(() => {
     refreshWorkerStatus();
   }, [refreshWorkerStatus]);
 
-  // Auto-poll every 5 seconds — update workerStatus in context,
-  // _layout.tsx handles routing based on workerStatus change
+  // Auto-poll every 5 seconds — _layout.tsx routes to tabs when approved
   useEffect(() => {
+    // Stop polling if rejected (no point continuing)
+    if (workerStatus === "rejected") return;
+
     const interval = setInterval(async () => {
       await refreshWorkerStatus();
     }, 5000);
     return () => clearInterval(interval);
-  }, [refreshWorkerStatus]);
+  }, [refreshWorkerStatus, workerStatus]);
 
   const handleCheck = async () => {
     setChecking(true);
@@ -42,10 +44,71 @@ export default function WorkerPendingScreen() {
   };
 
   const handleLogout = async () => {
+    Haptics.selectionAsync();
     await logout();
     router.replace("/role-select");
   };
 
+  const handleRetry = async () => {
+    Haptics.selectionAsync();
+    await logout();
+    router.replace("/worker-register");
+  };
+
+  // ── REJECTED STATE ──────────────────────────────────────────────────────────
+  if (workerStatus === "rejected") {
+    return (
+      <View style={[styles.root, { backgroundColor: colors.background, paddingTop: insets.top + 20, paddingBottom: insets.bottom + 32 }]}>
+        <View style={styles.content}>
+          <View style={[styles.iconWrap, { backgroundColor: "#FEE2E2" }]}>
+            <MaterialIcons name="cancel" size={56} color="#DC2626" />
+          </View>
+
+          <Text style={[styles.title, { color: "#DC2626" }]}>Rad etildi</Text>
+
+          {workerName && (
+            <View style={[styles.nameBadge, { backgroundColor: colors.muted, borderColor: colors.border }]}>
+              <MaterialIcons name="person" size={16} color={colors.mutedForeground} />
+              <Text style={[styles.nameBadgeText, { color: colors.foreground }]}>{workerName}</Text>
+            </View>
+          )}
+
+          <View style={[styles.rejectedCard, { backgroundColor: "#FEF2F2", borderColor: "#FECACA" }]}>
+            <MaterialIcons name="error-outline" size={22} color="#DC2626" />
+            <Text style={[styles.rejectedMsg, { color: "#DC2626" }]}>
+              Rahbar sizga rad javobini berdi
+            </Text>
+          </View>
+
+          <Text style={[styles.desc, { color: colors.mutedForeground }]}>
+            Arizangiz rahbar tomonidan rad etildi.{"\n"}
+            Qayta ro'yxatdan o'tishingiz yoki{"\n"}
+            boshqa telefon raqami bilan urinib ko'ring.
+          </Text>
+
+          <TouchableOpacity
+            style={[styles.checkBtn, { backgroundColor: colors.primary }]}
+            onPress={handleRetry}
+            activeOpacity={0.85}
+          >
+            <MaterialIcons name="person-add" size={20} color="#fff" />
+            <Text style={styles.checkBtnText}>Qayta ro'yxatdan o'tish</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.logoutBtn, { borderColor: colors.border }]}
+            onPress={handleLogout}
+            activeOpacity={0.8}
+          >
+            <MaterialIcons name="logout" size={18} color={colors.mutedForeground} />
+            <Text style={[styles.logoutBtnText, { color: colors.mutedForeground }]}>Chiqish</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    );
+  }
+
+  // ── PENDING STATE ───────────────────────────────────────────────────────────
   return (
     <View style={[styles.root, { backgroundColor: colors.background, paddingTop: insets.top + 20, paddingBottom: insets.bottom + 32 }]}>
       <View style={styles.content}>
@@ -119,6 +182,14 @@ const styles = StyleSheet.create({
     marginBottom: 18,
   },
   nameBadgeText: { fontFamily: "Inter_600SemiBold", fontSize: 15 },
+  rejectedCard: {
+    flexDirection: "row", alignItems: "center", gap: 10,
+    width: "100%", borderRadius: 14, borderWidth: 1.5,
+    paddingHorizontal: 16, paddingVertical: 14, marginBottom: 18,
+  },
+  rejectedMsg: {
+    fontFamily: "Inter_700Bold", fontSize: 15, flex: 1,
+  },
   desc: {
     fontFamily: "Inter_400Regular", fontSize: 14,
     textAlign: "center", lineHeight: 22, marginBottom: 24,
