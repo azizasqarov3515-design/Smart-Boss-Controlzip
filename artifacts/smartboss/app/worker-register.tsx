@@ -15,6 +15,7 @@ import { useColors } from "@/hooks/useColors";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import * as Haptics from "expo-haptics";
+import { useAuth } from "@/contexts/AuthContext";
 
 const BASE_URL = process.env.EXPO_PUBLIC_DOMAIN ? `https://${process.env.EXPO_PUBLIC_DOMAIN}` : "";
 
@@ -34,6 +35,7 @@ export default function WorkerRegisterScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const router = useRouter();
+  const { loginWorker } = useAuth();
 
   const [name, setName] = useState("");
   const [address, setAddress] = useState("");
@@ -74,13 +76,17 @@ export default function WorkerRegisterScreen() {
       const data = (await res.json()) as { id?: number; name?: string; status?: string; error?: string; code?: string };
       if (!res.ok) {
         if (data.code === "PENDING") {
+          // Already registered — just login to get a token and go to pending screen
+          await loginWorker(phone, password);
           router.replace("/worker-pending");
         } else {
           setApiError(data.error ?? "Ro'yxatdan o'tishda xato");
         }
         return;
       }
+      // Registration successful — auto-login to get token, then go to pending screen
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      await loginWorker(phone, password);
       router.replace("/worker-pending");
     } catch {
       setApiError("Server bilan bog'lanishda xato");
