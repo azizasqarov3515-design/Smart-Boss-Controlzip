@@ -244,8 +244,9 @@ export default function HistoryScreen() {
   const insets = useSafeAreaInsets();
   const isWeb = Platform.OS === "web";
   const queryClient = useQueryClient();
-  const { role, workerName } = useAuth();
+  const { role, workerName, managerId } = useAuth();
   const isWorker = role === "worker";
+  const { settings } = useSettings(managerId);
 
   const [selectionMode, setSelectionMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
@@ -256,7 +257,6 @@ export default function HistoryScreen() {
 
   const { data: sales, isLoading, refetch, isRefetching } = useGetSales();
   const { data: customers } = useGetCustomers();
-  const { settings } = useSettings();
 
   const invalidateAll = useCallback(() => {
     queryClient.invalidateQueries({ queryKey: getGetSalesQueryKey() });

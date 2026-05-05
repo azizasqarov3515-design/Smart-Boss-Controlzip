@@ -1,4 +1,5 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { clearManagerSettings } from "@/hooks/useSettings";
 import { setAuthTokenGetter, setOnUnauthorized } from "@workspace/api-client-react";
 import type { QueryClient } from "@tanstack/react-query";
 import React, { createContext, useCallback, useContext, useEffect, useState } from "react";
@@ -272,8 +273,9 @@ export function AuthProvider({ children, queryClient }: AuthProviderProps) {
     });
     const data = (await res.json()) as { ok?: boolean; error?: string };
     if (!res.ok) throw new Error(data.error ?? "Hisobni o'chirishda xato");
+    if (managerId) await clearManagerSettings(managerId);
     await clearAll();
-  }, [token, clearAll]);
+  }, [token, managerId, clearAll]);
 
   return (
     <AuthContext.Provider

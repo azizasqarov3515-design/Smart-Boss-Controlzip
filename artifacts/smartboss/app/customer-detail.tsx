@@ -35,6 +35,7 @@ import { MaterialIcons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useColors } from "@/hooks/useColors";
 import { useSettings } from "@/hooks/useSettings";
+import { useAuth } from "@/contexts/AuthContext";
 
 function formatMoney(n: number) {
   return n.toLocaleString("uz-UZ") + " UZS";
@@ -129,7 +130,8 @@ export default function CustomerDetailScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const queryClient = useQueryClient();
-  const { settings } = useSettings();
+  const { managerId } = useAuth();
+  const { settings } = useSettings(managerId);
   const params = useLocalSearchParams<{ id: string }>();
   const customerId = parseInt(params.id ?? "0", 10);
 

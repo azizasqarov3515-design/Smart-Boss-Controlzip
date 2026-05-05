@@ -422,9 +422,9 @@ function DeleteRequestsSection({ colors }: { colors: ReturnType<typeof useColors
 export default function SettingsScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
-  const { settings, saveSettings, isLoading } = useSettings();
   const { mode: themeMode, setMode: setThemeMode } = useTheme();
-  const { role, managerLogin, managerStoreId, deleteAccount } = useAuth();
+  const { role, managerId, managerLogin, managerStoreId, deleteAccount } = useAuth();
+  const { settings, saveSettings, isLoading } = useSettings(managerId);
   const queryClient = useQueryClient();
 
   const [storeName, setStoreName] = useState("");
