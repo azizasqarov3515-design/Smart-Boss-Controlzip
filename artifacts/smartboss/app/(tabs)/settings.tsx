@@ -169,7 +169,7 @@ function WorkersSection({ colors }: { colors: ReturnType<typeof useColors> }) {
                   style={[styles.actionBtn, { backgroundColor: "#D1FAE5" }]}
                   onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); approve({ id: w.id }); }}
                   activeOpacity={0.8}
-                  disabled={approving || rejecting}
+                  disabled={approving || rejecting || removing}
                 >
                   <MaterialIcons name="check" size={18} color="#065F46" />
                 </TouchableOpacity>
@@ -177,9 +177,17 @@ function WorkersSection({ colors }: { colors: ReturnType<typeof useColors> }) {
                   style={[styles.actionBtn, { backgroundColor: "#FEE2E2" }]}
                   onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); reject({ id: w.id }); }}
                   activeOpacity={0.8}
-                  disabled={approving || rejecting}
+                  disabled={approving || rejecting || removing}
                 >
                   <MaterialIcons name="close" size={18} color="#DC2626" />
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.actionBtn, { backgroundColor: "#F3F4F6" }]}
+                  onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy); setRemoveConfirm(w); }}
+                  activeOpacity={0.8}
+                  disabled={approving || rejecting || removing}
+                >
+                  <MaterialIcons name="delete-outline" size={18} color="#6B7280" />
                 </TouchableOpacity>
               </View>
             </View>
@@ -204,10 +212,11 @@ function WorkersSection({ colors }: { colors: ReturnType<typeof useColors> }) {
               </View>
               <TouchableOpacity
                 style={[styles.actionBtn, { backgroundColor: "#FEE2E2" }]}
-                onPress={() => setRemoveConfirm(w)}
+                onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy); setRemoveConfirm(w); }}
                 activeOpacity={0.8}
+                disabled={removing}
               >
-                <MaterialIcons name="person-remove" size={17} color="#DC2626" />
+                <MaterialIcons name="delete-outline" size={18} color="#DC2626" />
               </TouchableOpacity>
             </View>
           ))}
@@ -246,20 +255,21 @@ function WorkersSection({ colors }: { colors: ReturnType<typeof useColors> }) {
         <View style={styles.confirmBackdrop}>
           <View style={[styles.confirmSheet, { backgroundColor: colors.card }]}>
             <View style={[styles.confirmIconWrap, { backgroundColor: "#FEE2E2" }]}>
-              <MaterialIcons name="person-remove" size={28} color="#DC2626" />
+              <MaterialIcons name="delete-forever" size={28} color="#DC2626" />
             </View>
-            <Text style={[styles.confirmTitle, { color: colors.foreground }]}>Ishchini chiqarish</Text>
+            <Text style={[styles.confirmTitle, { color: colors.foreground }]}>Ishchini o'chirish</Text>
             <Text style={[styles.confirmMsg, { color: colors.mutedForeground }]}>
               <Text style={{ fontFamily: "Inter_700Bold", color: colors.foreground }}>{removeConfirm?.name}</Text>
-              {" "}ni tizimdan chiqarasizmi?
+              {" "}ni tizimdan butunlay o'chirasizmi? Bu amalni qaytarib bo'lmaydi.
             </Text>
             <View style={styles.confirmBtns}>
               <TouchableOpacity
                 style={[styles.confirmCancelBtn, { backgroundColor: colors.muted, borderColor: colors.border }]}
                 onPress={() => setRemoveConfirm(null)}
                 activeOpacity={0.8}
+                disabled={removing}
               >
-                <Text style={[styles.confirmCancelText, { color: colors.mutedForeground }]}>Bekor</Text>
+                <Text style={[styles.confirmCancelText, { color: colors.mutedForeground }]}>Yo'q</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.confirmDeleteBtn, { backgroundColor: "#DC2626" }]}
@@ -267,8 +277,8 @@ function WorkersSection({ colors }: { colors: ReturnType<typeof useColors> }) {
                 activeOpacity={0.85}
                 disabled={removing}
               >
-                {removing ? <ActivityIndicator size="small" color="#fff" /> : <MaterialIcons name="person-remove" size={16} color="#fff" />}
-                <Text style={styles.confirmDeleteText}>Chiqarish</Text>
+                {removing ? <ActivityIndicator size="small" color="#fff" /> : <MaterialIcons name="delete-forever" size={16} color="#fff" />}
+                <Text style={styles.confirmDeleteText}>Ha, o'chirish</Text>
               </TouchableOpacity>
             </View>
           </View>

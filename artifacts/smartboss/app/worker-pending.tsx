@@ -20,30 +20,25 @@ export default function WorkerPendingScreen() {
   const { logout, refreshWorkerStatus, workerName } = useAuth();
   const [checking, setChecking] = useState(false);
 
+  // On mount — immediately check status in case already approved
+  useEffect(() => {
+    refreshWorkerStatus();
+  }, [refreshWorkerStatus]);
+
+  // Auto-poll every 5 seconds — update workerStatus in context,
+  // _layout.tsx handles routing based on workerStatus change
   useEffect(() => {
     const interval = setInterval(async () => {
-      const status = await refreshWorkerStatus();
-      if (status === "approved") {
-        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-        router.replace("/(tabs)");
-      } else if (status === "rejected") {
-        router.replace("/worker-login");
-      }
-    }, 10000);
+      await refreshWorkerStatus();
+    }, 5000);
     return () => clearInterval(interval);
-  }, [refreshWorkerStatus, router]);
+  }, [refreshWorkerStatus]);
 
   const handleCheck = async () => {
     setChecking(true);
     Haptics.selectionAsync();
-    const status = await refreshWorkerStatus();
+    await refreshWorkerStatus();
     setChecking(false);
-    if (status === "approved") {
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      router.replace("/(tabs)");
-    } else if (status === "rejected") {
-      router.replace("/worker-login");
-    }
   };
 
   const handleLogout = async () => {
@@ -76,7 +71,7 @@ export default function WorkerPendingScreen() {
           <View style={styles.infoRow}>
             <MaterialIcons name="info-outline" size={18} color={colors.primary} />
             <Text style={[styles.infoText, { color: colors.mutedForeground }]}>
-              Har 10 soniyada avtomatik tekshiriladi
+              Har 5 soniyada avtomatik tekshiriladi
             </Text>
           </View>
         </View>

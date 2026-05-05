@@ -73,17 +73,16 @@ router.delete("/workers/:id", requireManager, async (req, res) => {
     if (isNaN(id)) { res.status(400).json({ error: "Noto'g'ri ID" }); return; }
 
     const [worker] = await db
-      .update(workersTable)
-      .set({ status: "rejected" })
+      .delete(workersTable)
       .where(eq(workersTable.id, id))
       .returning();
 
     if (!worker) { res.status(404).json({ error: "Ishchi topilmadi" }); return; }
-    req.log.info({ workerId: id }, "Worker removed");
+    req.log.info({ workerId: id }, "Worker deleted");
     res.json({ ok: true });
   } catch (err) {
-    req.log.error({ err }, "Failed to remove worker");
-    res.status(500).json({ error: "Ishchini chiqarishda xato" });
+    req.log.error({ err }, "Failed to delete worker");
+    res.status(500).json({ error: "Ishchini o'chirishda xato" });
   }
 });
 
