@@ -424,7 +424,7 @@ export default function SettingsScreen() {
   const insets = useSafeAreaInsets();
   const { settings, saveSettings, isLoading } = useSettings();
   const { mode: themeMode, setMode: setThemeMode } = useTheme();
-  const { role } = useAuth();
+  const { role, managerLogin, managerStoreId, deleteAccount } = useAuth();
   const queryClient = useQueryClient();
 
   const [storeName, setStoreName] = useState("");
@@ -441,6 +441,10 @@ export default function SettingsScreen() {
   const [sellerPhone, setSellerPhone] = useState("");
   const [sellerError, setSellerError] = useState<string | null>(null);
   const [deleteSellerConfirm, setDeleteSellerConfirm] = useState<Seller | null>(null);
+
+  const [deleteAccountModal, setDeleteAccountModal] = useState(false);
+  const [deletingAccount, setDeletingAccount] = useState(false);
+  const [deleteAccountError, setDeleteAccountError] = useState<string | null>(null);
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data: pendingWorkers } = useGetWorkers({ query: { enabled: role === "manager", refetchInterval: 15000, select: (d: Worker[]) => d.filter((w) => w.status === "pending") } as any });
@@ -497,6 +501,17 @@ export default function SettingsScreen() {
     setSellers((prev) => prev.filter((s) => s.id !== deleteSellerConfirm.id));
     setDeleteSellerConfirm(null);
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+  };
+
+  const handleDeleteAccount = async () => {
+    setDeletingAccount(true);
+    setDeleteAccountError(null);
+    try {
+      await deleteAccount();
+    } catch (e: unknown) {
+      setDeleteAccountError(e instanceof Error ? e.message : "Xato yuz berdi");
+      setDeletingAccount(false);
+    }
   };
 
   if (isLoading) {
@@ -584,6 +599,41 @@ export default function SettingsScreen() {
             <Field label="Do'kon nomi *" value={storeName} onChangeText={setStoreName} placeholder="SMARTBOSS" colors={colors} />
             <Field label="Tavsif (kichik yozuv)" value={storeSubtitle} onChangeText={setStoreSubtitle} placeholder="Android mobil aksessuarlar do'koni" colors={colors} />
             <Field label="Do'kon manzili" value={storeAddress} onChangeText={setStoreAddress} placeholder="Shahar, ko'cha, bino..." colors={colors} />
+
+            {/* Credentials display */}
+            {(managerLogin || managerStoreId) && (
+              <View style={[styles.credentialsBox, { backgroundColor: colors.muted, borderColor: colors.border }]}>
+                <View style={styles.credentialsHeaderRow}>
+                  <MaterialIcons name="admin-panel-settings" size={16} color={colors.primary} />
+                  <Text style={[styles.credentialsTitle, { color: colors.foreground }]}>Kirish ma'lumotlari</Text>
+                </View>
+                {managerLogin && (
+                  <View style={styles.credentialRow}>
+                    <Text style={[styles.credentialLabel, { color: colors.mutedForeground }]}>Login</Text>
+                    <View style={[styles.credentialValueWrap, { backgroundColor: colors.background, borderColor: colors.border }]}>
+                      <MaterialIcons name="person" size={14} color={colors.primary} />
+                      <Text style={[styles.credentialValue, { color: colors.foreground }]}>{managerLogin}</Text>
+                    </View>
+                  </View>
+                )}
+                <View style={styles.credentialRow}>
+                  <Text style={[styles.credentialLabel, { color: colors.mutedForeground }]}>Parol</Text>
+                  <View style={[styles.credentialValueWrap, { backgroundColor: colors.background, borderColor: colors.border }]}>
+                    <MaterialIcons name="lock" size={14} color={colors.primary} />
+                    <Text style={[styles.credentialValue, { color: colors.mutedForeground }]}>••••••</Text>
+                  </View>
+                </View>
+                {managerStoreId && (
+                  <View style={styles.credentialRow}>
+                    <Text style={[styles.credentialLabel, { color: colors.mutedForeground }]}>Do'kon ID</Text>
+                    <View style={[styles.credentialValueWrap, { backgroundColor: colors.background, borderColor: colors.border }]}>
+                      <MaterialIcons name="store" size={14} color={colors.primary} />
+                      <Text style={[styles.credentialValue, { color: colors.foreground, letterSpacing: 1 }]}>{managerStoreId}</Text>
+                    </View>
+                  </View>
+                )}
+              </View>
+            )}
           </SectionCard>
 
           {/* Sellers */}
@@ -627,6 +677,21 @@ export default function SettingsScreen() {
               Birinchi sotuvchi faktura, chek va yuk xatida asosiy sotuvchi sifatida ko'rsatiladi.
             </Text>
           </View>
+
+          {/* Delete account */}
+          <SectionCard title="Xavfli zona" icon="warning" colors={colors}>
+            <Text style={[styles.dangerDesc, { color: colors.mutedForeground }]}>
+              Hisobingizni o'chirsangiz, barcha ma'lumotlar (mahsulotlar, sotuvlar, mijozlar, ishchilar) qaytarib bo'lmasdan o'chib ketadi.
+            </Text>
+            <TouchableOpacity
+              style={styles.deleteAccountBtn}
+              onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy); setDeleteAccountModal(true); setDeleteAccountError(null); }}
+              activeOpacity={0.85}
+            >
+              <MaterialIcons name="delete-forever" size={20} color="#DC2626" />
+              <Text style={styles.deleteAccountBtnText}>Profilni yo'q qilish</Text>
+            </TouchableOpacity>
+          </SectionCard>
         </ScrollView>
       </KeyboardAvoidingView>
 
@@ -695,6 +760,59 @@ export default function SettingsScreen() {
               <TouchableOpacity style={[styles.confirmDeleteBtn, { backgroundColor: "#DC2626" }]} onPress={confirmDeleteSeller} activeOpacity={0.85}>
                 <MaterialIcons name="delete" size={16} color="#fff" />
                 <Text style={styles.confirmDeleteText}>O'chirish</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Delete account confirmation modal */}
+      <Modal
+        visible={deleteAccountModal}
+        transparent
+        animationType="slide"
+        statusBarTranslucent
+        onRequestClose={() => { if (!deletingAccount) setDeleteAccountModal(false); }}
+      >
+        <View style={styles.confirmBackdrop}>
+          <View style={[styles.confirmSheet, { backgroundColor: colors.card }]}>
+            <View style={[styles.confirmIconWrap, { backgroundColor: "#FEE2E2" }]}>
+              <MaterialIcons name="delete-forever" size={32} color="#DC2626" />
+            </View>
+            <Text style={[styles.confirmTitle, { color: colors.foreground }]}>Profilni yo'q qilish</Text>
+            <Text style={[styles.confirmMsg, { color: colors.mutedForeground }]}>
+              Barcha{" "}
+              <Text style={{ fontFamily: "Inter_700Bold", color: "#DC2626" }}>mahsulotlar, sotuvlar, mijozlar va ishchilar</Text>
+              {" "}ma'lumotlari butunlay o'chib ketadi.{"\n"}Bu amalni qaytarib bo'lmaydi!
+            </Text>
+
+            {deleteAccountError && (
+              <View style={[styles.errorBox, { marginBottom: 12, marginTop: -8 }]}>
+                <MaterialIcons name="error-outline" size={14} color="#DC2626" />
+                <Text style={[styles.errorText, { flex: 1 }]}>{deleteAccountError}</Text>
+              </View>
+            )}
+
+            <View style={styles.confirmBtns}>
+              <TouchableOpacity
+                style={[styles.confirmCancelBtn, { backgroundColor: colors.muted, borderColor: colors.border }]}
+                onPress={() => setDeleteAccountModal(false)}
+                activeOpacity={0.8}
+                disabled={deletingAccount}
+              >
+                <Text style={[styles.confirmCancelText, { color: colors.mutedForeground }]}>Yo'q</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.confirmDeleteBtn, { backgroundColor: "#DC2626", opacity: deletingAccount ? 0.7 : 1 }]}
+                onPress={handleDeleteAccount}
+                activeOpacity={0.85}
+                disabled={deletingAccount}
+              >
+                {deletingAccount
+                  ? <ActivityIndicator size="small" color="#fff" />
+                  : <MaterialIcons name="delete-forever" size={18} color="#fff" />
+                }
+                <Text style={styles.confirmDeleteText}>Ha, o'chir</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -793,4 +911,20 @@ const styles = StyleSheet.create({
   refreshBtn: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, borderRadius: 10, borderWidth: 1, paddingVertical: 9 },
   refreshBtnText: { fontFamily: "Inter_400Regular", fontSize: 12 },
   centerRow: { alignItems: "center", paddingVertical: 12 },
+  // Credentials display
+  credentialsBox: { borderRadius: 12, borderWidth: 1, padding: 14, gap: 10 },
+  credentialsHeaderRow: { flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 2 },
+  credentialsTitle: { fontFamily: "Inter_700Bold", fontSize: 13 },
+  credentialRow: { flexDirection: "row", alignItems: "center", gap: 10 },
+  credentialLabel: { fontFamily: "Inter_500Medium", fontSize: 12, width: 70 },
+  credentialValueWrap: { flex: 1, flexDirection: "row", alignItems: "center", gap: 6, borderRadius: 8, borderWidth: 1, paddingHorizontal: 10, paddingVertical: 7 },
+  credentialValue: { fontFamily: "Inter_600SemiBold", fontSize: 14 },
+  // Danger zone
+  dangerDesc: { fontFamily: "Inter_400Regular", fontSize: 13, lineHeight: 18 },
+  deleteAccountBtn: {
+    flexDirection: "row", alignItems: "center", justifyContent: "center",
+    gap: 8, borderRadius: 12, borderWidth: 1.5, borderColor: "#DC2626",
+    paddingVertical: 13, marginTop: 4,
+  },
+  deleteAccountBtnText: { fontFamily: "Inter_700Bold", fontSize: 14, color: "#DC2626" },
 });

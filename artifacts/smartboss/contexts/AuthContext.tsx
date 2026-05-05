@@ -13,6 +13,9 @@ const USER_NAME_KEY = "smartboss_auth_name";
 const WORKER_ID_KEY = "smartboss_auth_worker_id";
 const MANAGER_ID_KEY = "smartboss_auth_manager_id";
 const STORE_NAME_KEY = "smartboss_auth_store_name";
+const MANAGER_LOGIN_KEY = "smartboss_auth_manager_login";
+const MANAGER_STORE_ID_KEY = "smartboss_auth_manager_store_id";
+const MANAGER_PHONE_KEY = "smartboss_auth_manager_phone";
 
 export type UserRole = "manager" | "worker";
 
@@ -25,6 +28,9 @@ interface AuthContextType {
   workerStatus: string | null;
   managerId: number | null;
   storeName: string | null;
+  managerLogin: string | null;
+  managerStoreId: string | null;
+  managerPhone: string | null;
   isAuthenticated: boolean;
   isLoading: boolean;
   login: (loginCode: string, password: string) => Promise<void>;
@@ -32,6 +38,7 @@ interface AuthContextType {
   logout: () => Promise<void>;
   downloadBackup: () => Promise<string>;
   refreshWorkerStatus: () => Promise<string | null>;
+  deleteAccount: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -50,10 +57,13 @@ export function AuthProvider({ children, queryClient }: AuthProviderProps) {
   const [workerStatus, setWorkerStatus] = useState<string | null>(null);
   const [managerId, setManagerId] = useState<number | null>(null);
   const [storeName, setStoreName] = useState<string | null>(null);
+  const [managerLogin, setManagerLogin] = useState<string | null>(null);
+  const [managerStoreId, setManagerStoreId] = useState<string | null>(null);
+  const [managerPhone, setManagerPhone] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   const clearAll = useCallback(async () => {
-    await AsyncStorage.multiRemove([TOKEN_KEY, ROLE_KEY, USER_NAME_KEY, WORKER_ID_KEY, MANAGER_ID_KEY, STORE_NAME_KEY]);
+    await AsyncStorage.multiRemove([TOKEN_KEY, ROLE_KEY, USER_NAME_KEY, WORKER_ID_KEY, MANAGER_ID_KEY, STORE_NAME_KEY, MANAGER_LOGIN_KEY, MANAGER_STORE_ID_KEY, MANAGER_PHONE_KEY]);
     queryClient?.clear();
     setToken(null);
     setUsername(null);
@@ -63,6 +73,9 @@ export function AuthProvider({ children, queryClient }: AuthProviderProps) {
     setWorkerStatus(null);
     setManagerId(null);
     setStoreName(null);
+    setManagerLogin(null);
+    setManagerStoreId(null);
+    setManagerPhone(null);
   }, [queryClient]);
 
   useEffect(() => {
@@ -93,6 +106,9 @@ export function AuthProvider({ children, queryClient }: AuthProviderProps) {
               status?: string;
               managerId?: number;
               storeName?: string;
+              login?: string;
+              storeId?: string;
+              phone?: string;
             };
             setToken(stored);
             const r = (data.role as UserRole) ?? "manager";
@@ -101,6 +117,9 @@ export function AuthProvider({ children, queryClient }: AuthProviderProps) {
               setUsername(data.username ?? data.name ?? "Rahbar");
               setManagerId(data.managerId ?? null);
               setStoreName(data.storeName ?? null);
+              setManagerLogin(data.login ?? null);
+              setManagerStoreId(data.storeId ?? null);
+              setManagerPhone(data.phone ?? null);
             } else {
               setWorkerName(data.name ?? null);
               setWorkerId(data.workerId ?? null);
@@ -132,16 +151,25 @@ export function AuthProvider({ children, queryClient }: AuthProviderProps) {
       username?: string;
       managerId?: number;
       storeName?: string;
+      login?: string;
+      storeId?: string;
+      phone?: string;
       error?: string;
     };
     if (!res.ok) throw new Error(data.error ?? "Login amalga oshmadi");
     await AsyncStorage.setItem(TOKEN_KEY, data.token!);
     if (data.managerId) await AsyncStorage.setItem(MANAGER_ID_KEY, String(data.managerId));
     if (data.storeName) await AsyncStorage.setItem(STORE_NAME_KEY, data.storeName);
+    if (data.login) await AsyncStorage.setItem(MANAGER_LOGIN_KEY, data.login);
+    if (data.storeId) await AsyncStorage.setItem(MANAGER_STORE_ID_KEY, data.storeId);
+    if (data.phone) await AsyncStorage.setItem(MANAGER_PHONE_KEY, data.phone);
     setToken(data.token!);
     setUsername(data.username ?? data.name ?? "Rahbar");
     setManagerId(data.managerId ?? null);
     setStoreName(data.storeName ?? null);
+    setManagerLogin(data.login ?? null);
+    setManagerStoreId(data.storeId ?? null);
+    setManagerPhone(data.phone ?? null);
     setRole("manager");
     setWorkerName(null);
     setWorkerId(null);
@@ -236,6 +264,17 @@ export function AuthProvider({ children, queryClient }: AuthProviderProps) {
     return JSON.stringify(data, null, 2);
   }, [token]);
 
+  const deleteAccount = useCallback(async () => {
+    if (!token) throw new Error("Tizimga kirmagan");
+    const res = await fetch(`${BASE_URL}/api/auth/manager-account`, {
+      method: "DELETE",
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    const data = (await res.json()) as { ok?: boolean; error?: string };
+    if (!res.ok) throw new Error(data.error ?? "Hisobni o'chirishda xato");
+    await clearAll();
+  }, [token, clearAll]);
+
   return (
     <AuthContext.Provider
       value={{
@@ -247,6 +286,9 @@ export function AuthProvider({ children, queryClient }: AuthProviderProps) {
         workerStatus,
         managerId,
         storeName,
+        managerLogin,
+        managerStoreId,
+        managerPhone,
         isAuthenticated: !!token,
         isLoading,
         login,
@@ -254,6 +296,7 @@ export function AuthProvider({ children, queryClient }: AuthProviderProps) {
         logout,
         downloadBackup,
         refreshWorkerStatus,
+        deleteAccount,
       }}
     >
       {children}

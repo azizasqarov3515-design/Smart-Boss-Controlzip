@@ -1,6 +1,13 @@
 import crypto from "crypto";
 import { db } from "@workspace/db";
-import { workersTable, managersTable } from "@workspace/db/schema";
+import {
+  workersTable,
+  managersTable,
+  productsTable,
+  salesTable,
+  customersTable,
+  deleteRequestsTable,
+} from "@workspace/db/schema";
 import { and, eq } from "drizzle-orm";
 import { Router } from "express";
 import { z } from "zod";
@@ -141,6 +148,9 @@ router.post("/auth/login", async (req, res) => {
         managerId: manager.id,
         storeName: manager.storeName,
         storeAddress: manager.storeAddress,
+        login: manager.login,
+        storeId: manager.storeId,
+        phone: manager.phone,
       });
       return;
     }
@@ -169,6 +179,7 @@ const workerRegisterSchema = z.object({
   name: z.string().min(2),
   phone: z.string().regex(/^\+998 \d{2} \d{3} \d{2} \d{2}$/),
   password: z.string().min(4),
+  address: z.string().optional().default(""),
   storeName: z.string().trim().min(2, "Do'kon nomini kiriting"),
   storeId: z.string().regex(/^[A-Z]{2}\d{8}$/, "Do'kon ID noto'g'ri"),
 });
@@ -313,6 +324,8 @@ router.get("/auth/me", requireAuth, async (req, res) => {
         storeName: manager.storeName,
         storeAddress: manager.storeAddress,
         login: manager.login,
+        storeId: manager.storeId,
+        phone: manager.phone,
       });
     } catch {
       res.json({ name: user.name, role: "manager", managerId: user.managerId });
@@ -320,6 +333,62 @@ router.get("/auth/me", requireAuth, async (req, res) => {
   } else {
     const adminUsername = process.env["ADMIN_USERNAME"] ?? "admin";
     res.json({ username: adminUsername, name: "Rahbar", role: "manager" });
+  }
+});
+
+router.post("/auth/forgot-credentials", async (req, res) => {
+  const schema = z.object({ phone: z.string().min(7) });
+  try {
+    const body = schema.parse(req.body);
+    const [manager] = await db
+      .select({ id: managersTable.id, login: managersTable.login, storeName: managersTable.storeName, phone: managersTable.phone })
+      .from(managersTable)
+      .where(eq(managersTable.phone, body.phone));
+
+    if (!manager) {
+      res.status(404).json({ error: "Bu telefon raqam tizimda ro'yxatdan o'tmagan", code: "NOT_FOUND" });
+      return;
+    }
+
+    const tempPassword = String(Math.floor(100000 + Math.random() * 900000));
+    const passwordHash = hashPassword(tempPassword);
+    await db.update(managersTable).set({ passwordHash }).where(eq(managersTable.id, manager.id));
+
+    req.log.info({ managerId: manager.id }, "Temp password generated");
+    res.json({ login: manager.login, tempPassword, storeName: manager.storeName });
+  } catch (err) {
+    if (err instanceof z.ZodError) {
+      res.status(400).json({ error: "Telefon raqamni kiriting" });
+    } else {
+      req.log.error({ err }, "Forgot credentials failed");
+      res.status(500).json({ error: "Xato yuz berdi" });
+    }
+  }
+});
+
+router.delete("/auth/manager-account", requireAuth, async (req, res) => {
+  const user = res.locals.user;
+  if (!user.managerId) {
+    res.status(403).json({ error: "Faqat rahbar o'z hisobini o'chira oladi" });
+    return;
+  }
+  try {
+    const mid = user.managerId;
+    await db.delete(deleteRequestsTable).where(eq(deleteRequestsTable.managerId, mid));
+    await db.delete(salesTable).where(eq(salesTable.managerId, mid));
+    await db.delete(customersTable).where(eq(customersTable.managerId, mid));
+    await db.delete(productsTable).where(eq(productsTable.managerId, mid));
+    await db.delete(workersTable).where(eq(workersTable.managerId, mid));
+    await db.delete(managersTable).where(eq(managersTable.id, mid));
+
+    const token = extractBearerToken(req.headers["authorization"]);
+    if (token) revokeToken(token);
+
+    req.log.info({ managerId: mid }, "Manager account fully deleted");
+    res.json({ ok: true });
+  } catch (err) {
+    req.log.error({ err }, "Manager account deletion failed");
+    res.status(500).json({ error: "Hisobni o'chirishda xato yuz berdi" });
   }
 });
 

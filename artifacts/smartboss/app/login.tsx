@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
+  Modal,
   Platform,
   StyleSheet,
   Text,
@@ -15,6 +16,22 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 
+const BASE_URL = process.env.EXPO_PUBLIC_DOMAIN
+  ? `https://${process.env.EXPO_PUBLIC_DOMAIN}`
+  : "";
+
+function formatPhone(text: string): string {
+  const digits = text.replace(/\D/g, "");
+  let local = digits.startsWith("998") ? digits.slice(3) : digits;
+  local = local.slice(0, 9);
+  let result = "+998";
+  if (local.length > 0) result += " " + local.slice(0, 2);
+  if (local.length > 2) result += " " + local.slice(2, 5);
+  if (local.length > 5) result += " " + local.slice(5, 7);
+  if (local.length > 7) result += " " + local.slice(7, 9);
+  return result;
+}
+
 export default function LoginScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
@@ -26,6 +43,16 @@ export default function LoginScreen() {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Forgot password state
+  const [forgotModal, setForgotModal] = useState(false);
+  const [forgotPhone, setForgotPhone] = useState("+998 ");
+  const [forgotLoading, setForgotLoading] = useState(false);
+  const [forgotError, setForgotError] = useState<string | null>(null);
+  const [forgotStep, setForgotStep] = useState<"phone" | "result">("phone");
+  const [recoveredLogin, setRecoveredLogin] = useState("");
+  const [recoveredPassword, setRecoveredPassword] = useState("");
+  const [recoveredStore, setRecoveredStore] = useState("");
 
   const handleLogin = async () => {
     if (!loginCode.trim() || !password.trim()) {
@@ -42,6 +69,57 @@ export default function LoginScreen() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const phoneDigits = forgotPhone.replace(/\D/g, "");
+  const phoneValid = phoneDigits.length >= 12;
+
+  const handleForgotPhone = (text: string) => {
+    if (text.length < 5) { setForgotPhone("+998 "); return; }
+    setForgotPhone(formatPhone(text));
+    setForgotError(null);
+  };
+
+  const handleSendSms = async () => {
+    if (!phoneValid) { setForgotError("To'liq telefon raqam kiriting"); return; }
+    setForgotLoading(true);
+    setForgotError(null);
+    try {
+      const res = await fetch(`${BASE_URL}/api/auth/forgot-credentials`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ phone: forgotPhone }),
+      });
+      const data = (await res.json()) as { login?: string; tempPassword?: string; storeName?: string; error?: string; code?: string };
+      if (!res.ok) {
+        setForgotError(data.error ?? "Xato yuz berdi");
+        return;
+      }
+      setRecoveredLogin(data.login ?? "");
+      setRecoveredPassword(data.tempPassword ?? "");
+      setRecoveredStore(data.storeName ?? "");
+      setForgotStep("result");
+    } catch {
+      setForgotError("Server bilan bog'lanishda xato");
+    } finally {
+      setForgotLoading(false);
+    }
+  };
+
+  const closeForgotModal = () => {
+    setForgotModal(false);
+    setForgotPhone("+998 ");
+    setForgotError(null);
+    setForgotStep("phone");
+    setRecoveredLogin("");
+    setRecoveredPassword("");
+    setRecoveredStore("");
+  };
+
+  const useRecoveredCredentials = () => {
+    setLoginCode(recoveredLogin);
+    setPassword(recoveredPassword);
+    closeForgotModal();
   };
 
   return (
@@ -104,9 +182,19 @@ export default function LoginScreen() {
           </View>
 
           {error && (
-            <View style={styles.errorRow}>
-              <MaterialIcons name="error-outline" size={15} color="#E53935" />
-              <Text style={styles.errorText}>{error}</Text>
+            <View style={styles.errorBlock}>
+              <View style={styles.errorRow}>
+                <MaterialIcons name="error-outline" size={15} color="#E53935" />
+                <Text style={styles.errorText}>{error}</Text>
+              </View>
+              <TouchableOpacity
+                style={styles.forgotBtn}
+                onPress={() => { setForgotModal(true); setForgotStep("phone"); }}
+                activeOpacity={0.7}
+              >
+                <MaterialIcons name="help-outline" size={14} color={colors.primary} />
+                <Text style={[styles.forgotText, { color: colors.primary }]}>Login yoki parolni unutdingizmi?</Text>
+              </TouchableOpacity>
             </View>
           )}
 
@@ -145,6 +233,125 @@ export default function LoginScreen() {
           <Text style={[styles.backText, { color: colors.mutedForeground }]}>Orqaga</Text>
         </TouchableOpacity>
       </View>
+
+      {/* Forgot credentials modal */}
+      <Modal
+        visible={forgotModal}
+        transparent
+        animationType="slide"
+        statusBarTranslucent
+        onRequestClose={closeForgotModal}
+      >
+        <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === "ios" ? "padding" : "height"}>
+          <View style={styles.modalBackdrop}>
+            <View style={[styles.modalSheet, { backgroundColor: colors.card }]}>
+              <View style={[styles.modalHeader, { borderBottomColor: colors.border }]}>
+                <View style={styles.modalTitleRow}>
+                  <MaterialIcons name="lock-reset" size={22} color={colors.primary} />
+                  <Text style={[styles.modalTitle, { color: colors.foreground }]}>
+                    {forgotStep === "phone" ? "Login / Parol tiklash" : "Ma'lumotlar yuborildi"}
+                  </Text>
+                </View>
+                <TouchableOpacity onPress={closeForgotModal} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+                  <MaterialIcons name="close" size={22} color={colors.mutedForeground} />
+                </TouchableOpacity>
+              </View>
+
+              <View style={styles.modalBody}>
+                {forgotStep === "phone" ? (
+                  <>
+                    <Text style={[styles.modalDesc, { color: colors.mutedForeground }]}>
+                      Ro'yxatdan o'tishda ishlatgan telefon raqamingizni kiriting. Tizim login va yangi vaqtinchalik parolni ko'rsatadi.
+                    </Text>
+
+                    <View style={styles.fieldWrap}>
+                      <Text style={[styles.label, { color: colors.mutedForeground }]}>Telefon raqamingiz</Text>
+                      <View style={[styles.inputRow, { backgroundColor: colors.background, borderColor: forgotError ? "#E53935" : (phoneValid ? "#4CAF50" : colors.border) }]}>
+                        <MaterialIcons name="phone" size={20} color={colors.mutedForeground} style={styles.inputIcon} />
+                        <TextInput
+                          style={[styles.input, { color: colors.foreground }]}
+                          placeholder="+998 XX XXX XX XX"
+                          placeholderTextColor={colors.mutedForeground}
+                          value={forgotPhone}
+                          onChangeText={handleForgotPhone}
+                          keyboardType="phone-pad"
+                          returnKeyType="done"
+                          autoFocus
+                        />
+                        {phoneValid && <MaterialIcons name="check-circle" size={18} color="#4CAF50" />}
+                      </View>
+                    </View>
+
+                    {forgotError && (
+                      <View style={styles.errorRow}>
+                        <MaterialIcons name="error-outline" size={14} color="#E53935" />
+                        <Text style={[styles.errorText, { flex: 1 }]}>{forgotError}</Text>
+                      </View>
+                    )}
+
+                    <TouchableOpacity
+                      style={[styles.smsBtn, { backgroundColor: phoneValid ? "#1565C0" : colors.border, opacity: forgotLoading ? 0.75 : 1 }]}
+                      onPress={handleSendSms}
+                      activeOpacity={0.85}
+                      disabled={!phoneValid || forgotLoading}
+                    >
+                      {forgotLoading ? (
+                        <ActivityIndicator size="small" color="#fff" />
+                      ) : (
+                        <>
+                          <MaterialIcons name="sms" size={20} color={phoneValid ? "#fff" : colors.mutedForeground} />
+                          <Text style={[styles.smsBtnText, { color: phoneValid ? "#fff" : colors.mutedForeground }]}>
+                            SMS xabarnoma olish
+                          </Text>
+                        </>
+                      )}
+                    </TouchableOpacity>
+                  </>
+                ) : (
+                  <>
+                    <View style={[styles.smsResultBox, { backgroundColor: "#E8F5E9", borderColor: "#4CAF50" }]}>
+                      <View style={styles.smsResultHeader}>
+                        <MaterialIcons name="mark-email-read" size={24} color="#2E7D32" />
+                        <Text style={[styles.smsResultTitle, { color: "#2E7D32" }]}>
+                          {recoveredStore} — tizim ma'lumotlari
+                        </Text>
+                      </View>
+                      <View style={styles.smsResultDivider} />
+
+                      <View style={styles.credRow}>
+                        <Text style={styles.credLabel}>Login:</Text>
+                        <View style={[styles.credValueBox, { backgroundColor: "#fff" }]}>
+                          <Text style={[styles.credValue, { color: "#1B5E20" }]}>{recoveredLogin}</Text>
+                        </View>
+                      </View>
+
+                      <View style={styles.credRow}>
+                        <Text style={styles.credLabel}>Yangi parol:</Text>
+                        <View style={[styles.credValueBox, { backgroundColor: "#fff" }]}>
+                          <Text style={[styles.credValue, { color: "#1B5E20" }]}>{recoveredPassword}</Text>
+                        </View>
+                      </View>
+
+                      <Text style={[styles.smsNote, { color: "#558B2F" }]}>
+                        ⚠️ Kirganingizdan keyin yangi parol o'rnating
+                      </Text>
+                    </View>
+
+                    <TouchableOpacity
+                      style={[styles.useCredsBtn, { backgroundColor: colors.primary }]}
+                      onPress={useRecoveredCredentials}
+                      activeOpacity={0.85}
+                    >
+                      <MaterialIcons name="login" size={18} color="#fff" />
+                      <Text style={styles.useCredsBtnText}>Bu ma'lumotlar bilan kirish</Text>
+                    </TouchableOpacity>
+                  </>
+                )}
+              </View>
+            </View>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
     </KeyboardAvoidingView>
   );
 }
@@ -177,8 +384,11 @@ const styles = StyleSheet.create({
   inputIcon: { marginRight: 8 },
   input: { flex: 1, fontFamily: "Inter_400Regular", fontSize: 15, paddingVertical: 0 },
   eyeBtn: { padding: 4 },
-  errorRow: { flexDirection: "row", alignItems: "center", gap: 5, marginBottom: 12, marginTop: -4 },
+  errorBlock: { marginBottom: 12, marginTop: -4, gap: 8 },
+  errorRow: { flexDirection: "row", alignItems: "center", gap: 5 },
   errorText: { fontFamily: "Inter_400Regular", fontSize: 13, color: "#E53935", flex: 1 },
+  forgotBtn: { flexDirection: "row", alignItems: "center", gap: 4 },
+  forgotText: { fontFamily: "Inter_500Medium", fontSize: 13 },
   loginBtn: {
     flexDirection: "row", alignItems: "center", justifyContent: "center",
     gap: 8, borderRadius: 14, height: 52, marginTop: 8,
@@ -191,4 +401,36 @@ const styles = StyleSheet.create({
   footerLink: { fontFamily: "Inter_600SemiBold", fontSize: 13 },
   backBtn: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 4, marginTop: 12 },
   backText: { fontFamily: "Inter_400Regular", fontSize: 13 },
+  // Modal
+  modalBackdrop: { flex: 1, backgroundColor: "rgba(0,0,0,0.5)", justifyContent: "flex-end" },
+  modalSheet: { borderTopLeftRadius: 28, borderTopRightRadius: 28, paddingBottom: 32 },
+  modalHeader: {
+    flexDirection: "row", alignItems: "center", justifyContent: "space-between",
+    paddingHorizontal: 20, paddingVertical: 16, borderBottomWidth: 1,
+  },
+  modalTitleRow: { flexDirection: "row", alignItems: "center", gap: 8 },
+  modalTitle: { fontFamily: "Inter_700Bold", fontSize: 17 },
+  modalBody: { padding: 20, gap: 16 },
+  modalDesc: { fontFamily: "Inter_400Regular", fontSize: 13, lineHeight: 19 },
+  smsBtn: {
+    flexDirection: "row", alignItems: "center", justifyContent: "center",
+    gap: 8, borderRadius: 14, height: 52,
+  },
+  smsBtnText: { fontFamily: "Inter_600SemiBold", fontSize: 15 },
+  smsResultBox: {
+    borderRadius: 16, borderWidth: 1.5, padding: 16, gap: 10,
+  },
+  smsResultHeader: { flexDirection: "row", alignItems: "center", gap: 8 },
+  smsResultTitle: { fontFamily: "Inter_700Bold", fontSize: 14, flex: 1 },
+  smsResultDivider: { height: 1, backgroundColor: "#A5D6A7", marginVertical: 2 },
+  credRow: { flexDirection: "row", alignItems: "center", gap: 10 },
+  credLabel: { fontFamily: "Inter_500Medium", fontSize: 13, color: "#388E3C", width: 90 },
+  credValueBox: { flex: 1, borderRadius: 8, paddingHorizontal: 12, paddingVertical: 8 },
+  credValue: { fontFamily: "Inter_700Bold", fontSize: 18, letterSpacing: 2 },
+  smsNote: { fontFamily: "Inter_400Regular", fontSize: 11, marginTop: 4 },
+  useCredsBtn: {
+    flexDirection: "row", alignItems: "center", justifyContent: "center",
+    gap: 8, borderRadius: 14, height: 50,
+  },
+  useCredsBtnText: { fontFamily: "Inter_600SemiBold", fontSize: 15, color: "#fff" },
 });
