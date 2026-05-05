@@ -6,7 +6,6 @@ import healthRouter from "./health";
 import productsRouter from "./products";
 import salesRouter from "./sales";
 import authRouter from "./auth";
-import telegramRouter from "./telegram";
 import backupRouter from "./backup";
 import customersRouter from "./customers";
 import workersRouter from "./workers";
@@ -17,8 +16,6 @@ const router: IRouter = Router();
 
 router.use(healthRouter);
 router.use(authRouter);
-router.use(telegramRouter);
-
 router.use(requireAuth);
 
 const checkWorkerStatus = async (req: Request, res: Response, next: NextFunction) => {

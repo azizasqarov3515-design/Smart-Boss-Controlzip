@@ -25,6 +25,7 @@ interface FormState {
   fullName: string;
   address: string;
   phone: string;
+  email: string;
   storeName: string;
   storeAddress: string;
   storeId: string;
@@ -36,6 +37,7 @@ const EMPTY: FormState = {
   fullName: "",
   address: "",
   phone: "",
+  email: "",
   storeName: "",
   storeAddress: "",
   storeId: "",
@@ -55,11 +57,16 @@ function validateStoreId(v: string) {
   return /^[A-Z]{2}\d{8}$/.test(v);
 }
 
+function validateEmail(v: string) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
+}
+
 function isFormValid(f: FormState) {
   return (
     f.fullName.trim().length >= 2 &&
     f.address.trim().length >= 2 &&
     f.phone.trim().length >= 7 &&
+    validateEmail(f.email) &&
     f.storeName.trim().length >= 2 &&
     f.storeAddress.trim().length >= 2 &&
     validateStoreId(f.storeId) &&
@@ -84,6 +91,15 @@ const FIELDS: Array<{
   { key: "fullName", label: "Ism Familiya", placeholder: "To'liq ism familiyangiz", icon: "person", autoCapitalize: "words" },
   { key: "address", label: "Yashash joyi", placeholder: "Shahar, ko'cha, uy raqami", icon: "home", autoCapitalize: "words" },
   { key: "phone", label: "Telefon raqami", placeholder: "+998 90 123 45 67", icon: "phone", keyboardType: "phone-pad" },
+  {
+    key: "email",
+    label: "Email manzil *",
+    placeholder: "example@gmail.com",
+    icon: "email",
+    keyboardType: "email-address" as const,
+    autoCapitalize: "none" as const,
+    hint: "Parolni unutsangiz ushbu emailga yuboriladi",
+  },
   { key: "storeName", label: "Do'kon nomi", placeholder: "Do'koningiz nomi", icon: "store", autoCapitalize: "words" },
   { key: "storeAddress", label: "Do'kon manzili", placeholder: "Do'kon joylashgan manzil", icon: "location-on", autoCapitalize: "words" },
   {
@@ -139,6 +155,7 @@ export default function ManagerRegisterScreen() {
     if (form.fullName.trim().length < 2) newErrors.fullName = "Kamida 2 ta harf";
     if (form.address.trim().length < 2) newErrors.address = "Yashash joyi kiritilishi shart";
     if (form.phone.trim().length < 7) newErrors.phone = "Telefon raqami kiritilishi shart";
+    if (!validateEmail(form.email)) newErrors.email = "To'g'ri email manzil kiriting (masalan: user@gmail.com)";
     if (form.storeName.trim().length < 2) newErrors.storeName = "Do'kon nomi kiritilishi shart";
     if (form.storeAddress.trim().length < 2) newErrors.storeAddress = "Do'kon manzili kiritilishi shart";
     if (!validateStoreId(form.storeId)) newErrors.storeId = "2 katta harf + 8 raqam (masalan: AB12345678)";
@@ -160,6 +177,7 @@ export default function ManagerRegisterScreen() {
           fullName: form.fullName.trim(),
           address: form.address.trim(),
           phone: form.phone.trim(),
+          email: form.email.trim().toLowerCase(),
           storeName: form.storeName.trim(),
           storeAddress: form.storeAddress.trim(),
           storeId: form.storeId,

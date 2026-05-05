@@ -2,7 +2,6 @@ import React, { useState } from "react";
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
-  Linking,
   Modal,
   Platform,
   StyleSheet,
@@ -20,8 +19,6 @@ import { useRouter } from "expo-router";
 const BASE_URL = process.env.EXPO_PUBLIC_DOMAIN
   ? `https://${process.env.EXPO_PUBLIC_DOMAIN}`
   : "";
-
-const BOT_USERNAME = "smartcontrol_yordamchi_bot";
 
 function formatPhone(text: string): string {
   const digits = text.replace(/\D/g, "");
@@ -53,7 +50,7 @@ export default function LoginScreen() {
   const [forgotError, setForgotError] = useState<string | null>(null);
   const [forgotStep, setForgotStep] = useState<"phone" | "sent">("phone");
   const [sentStore, setSentStore] = useState("");
-  const [notLinkedBot, setNotLinkedBot] = useState<string | null>(null);
+  const [sentEmail, setSentEmail] = useState("");
 
   const handleLogin = async () => {
     if (!loginCode.trim() || !password.trim()) {
@@ -78,14 +75,12 @@ export default function LoginScreen() {
     if (text.length < 5) { setForgotPhone("+998 "); return; }
     setForgotPhone(formatPhone(text));
     setForgotError(null);
-    setNotLinkedBot(null);
   };
 
   const handleSend = async () => {
     if (!phoneValid) { setForgotError("To'liq telefon raqam kiriting"); return; }
     setForgotLoading(true);
     setForgotError(null);
-    setNotLinkedBot(null);
     try {
       const res = await fetch(`${BASE_URL}/api/auth/forgot-credentials`, {
         method: "POST",
@@ -95,22 +90,16 @@ export default function LoginScreen() {
       const data = (await res.json()) as {
         ok?: boolean;
         storeName?: string;
+        maskedEmail?: string;
         error?: string;
         code?: string;
-        botUsername?: string;
       };
       if (!res.ok) {
-        if (data.code === "TELEGRAM_NOT_LINKED") {
-          setNotLinkedBot(data.botUsername ?? BOT_USERNAME);
-          setForgotError(
-            `Telegram botga ulanmadingiz. Quyidagi botni oching va login kodingizni yuboring.`,
-          );
-        } else {
-          setForgotError(data.error ?? "Xato yuz berdi");
-        }
+        setForgotError(data.error ?? "Xato yuz berdi");
         return;
       }
       setSentStore(data.storeName ?? "");
+      setSentEmail(data.maskedEmail ?? "");
       setForgotStep("sent");
     } catch {
       setForgotError("Server bilan bog'lanishda xato");
@@ -125,7 +114,7 @@ export default function LoginScreen() {
     setForgotError(null);
     setForgotStep("phone");
     setSentStore("");
-    setNotLinkedBot(null);
+    setSentEmail("");
   };
 
   return (
@@ -238,7 +227,7 @@ export default function LoginScreen() {
                 <View style={styles.modalTitleRow}>
                   <MaterialIcons name="lock-reset" size={22} color={colors.primary} />
                   <Text style={[styles.modalTitle, { color: colors.foreground }]}>
-                    {forgotStep === "phone" ? "Parolni tiklash" : "Telegram xabar yuborildi"}
+                    {forgotStep === "phone" ? "Parolni tiklash" : "Email yuborildi"}
                   </Text>
                 </View>
                 <TouchableOpacity onPress={closeForgotModal} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
@@ -250,7 +239,7 @@ export default function LoginScreen() {
                 {forgotStep === "phone" ? (
                   <>
                     <Text style={[styles.modalDesc, { color: colors.mutedForeground }]}>
-                      Ro'yxatdan o'tishda ishlatgan telefon raqamingizni kiriting. Login va yangi vaqtinchalik parol Telegram botga yuboriladi.
+                      Ro'yxatdan o'tishda ishlatgan telefon raqamingizni kiriting. Login va yangi vaqtinchalik parol elektron pochtangizga yuboriladi.
                     </Text>
 
                     <View style={styles.fieldWrap}>
@@ -272,35 +261,23 @@ export default function LoginScreen() {
                     </View>
 
                     {forgotError && (
-                      <View style={{ gap: 8 }}>
-                        <View style={styles.errorRow}>
-                          <MaterialIcons name="error-outline" size={14} color="#E53935" />
-                          <Text style={[styles.errorText, { flex: 1 }]}>{forgotError}</Text>
-                        </View>
-                        {notLinkedBot && (
-                          <TouchableOpacity
-                            style={[styles.botLinkBtn, { backgroundColor: "#E3F2FD", borderColor: "#1565C0" }]}
-                            onPress={() => void Linking.openURL(`https://t.me/${notLinkedBot}`)}
-                            activeOpacity={0.85}
-                          >
-                            <MaterialIcons name="send" size={16} color="#1565C0" />
-                            <Text style={[styles.botLinkText, { color: "#1565C0" }]}>@{notLinkedBot} ni oching</Text>
-                          </TouchableOpacity>
-                        )}
+                      <View style={styles.errorRow}>
+                        <MaterialIcons name="error-outline" size={14} color="#E53935" />
+                        <Text style={[styles.errorText, { flex: 1 }]}>{forgotError}</Text>
                       </View>
                     )}
 
                     <TouchableOpacity
-                      style={[styles.smsBtn, { backgroundColor: phoneValid ? "#1565C0" : colors.border, opacity: forgotLoading ? 0.75 : 1 }]}
+                      style={[styles.sendBtn, { backgroundColor: phoneValid ? colors.primary : colors.border, opacity: forgotLoading ? 0.75 : 1 }]}
                       onPress={handleSend}
                       activeOpacity={0.85}
                       disabled={!phoneValid || forgotLoading}
                     >
                       {forgotLoading ? <ActivityIndicator size="small" color="#fff" /> : (
                         <>
-                          <MaterialIcons name="send" size={20} color={phoneValid ? "#fff" : colors.mutedForeground} />
-                          <Text style={[styles.smsBtnText, { color: phoneValid ? "#fff" : colors.mutedForeground }]}>
-                            Telegram orqali olish
+                          <MaterialIcons name="email" size={20} color={phoneValid ? "#fff" : colors.mutedForeground} />
+                          <Text style={[styles.sendBtnText, { color: phoneValid ? "#fff" : colors.mutedForeground }]}>
+                            Email orqali olish
                           </Text>
                         </>
                       )}
@@ -310,12 +287,14 @@ export default function LoginScreen() {
                   <>
                     <View style={[styles.sentBox, { backgroundColor: "#E8F5E9", borderColor: "#4CAF50" }]}>
                       <View style={styles.sentIconRow}>
-                        <MaterialIcons name="mark-chat-read" size={32} color="#2E7D32" />
-                        <Text style={[styles.sentTitle, { color: "#2E7D32" }]}>Telegram xabar yuborildi!</Text>
+                        <MaterialIcons name="mark-email-read" size={32} color="#2E7D32" />
+                        <Text style={[styles.sentTitle, { color: "#2E7D32" }]}>Email yuborildi!</Text>
                       </View>
                       <View style={[styles.sentDivider, { backgroundColor: "#A5D6A7" }]} />
                       <Text style={[styles.sentDesc, { color: "#388E3C" }]}>
-                        {sentStore ? `"${sentStore}" ` : ""}hisobiga bog'langan Telegram botga login va vaqtinchalik parol yuborildi.
+                        {sentStore ? `"${sentStore}" ` : ""}hisobiga bog'langan{" "}
+                        <Text style={{ fontFamily: "Inter_700Bold" }}>{sentEmail}</Text>
+                        {" "}manziliga login va vaqtinchalik parol yuborildi.
                       </Text>
                       <Text style={[styles.sentNote, { color: "#558B2F" }]}>
                         ⚠️ Kirganingizdan keyin yangi doimiy parol o'rnating
@@ -323,7 +302,7 @@ export default function LoginScreen() {
                     </View>
 
                     <Text style={[styles.sentHint, { color: colors.mutedForeground }]}>
-                      Xabar kelmagan bo'lsa, @{BOT_USERNAME} botini ochib login kodingizni yuboring va qayta urinib ko'ring.
+                      Xat spam papkasiga tushgan bo'lishi mumkin. Tekshirib ko'ring.
                     </Text>
 
                     <TouchableOpacity
@@ -399,21 +378,16 @@ const styles = StyleSheet.create({
   modalTitle: { fontFamily: "Inter_700Bold", fontSize: 17 },
   modalBody: { padding: 20, gap: 16 },
   modalDesc: { fontFamily: "Inter_400Regular", fontSize: 13, lineHeight: 19 },
-  smsBtn: {
+  sendBtn: {
     flexDirection: "row", alignItems: "center", justifyContent: "center",
     gap: 8, borderRadius: 14, height: 52,
   },
-  smsBtnText: { fontFamily: "Inter_600SemiBold", fontSize: 15 },
-  botLinkBtn: {
-    flexDirection: "row", alignItems: "center", justifyContent: "center",
-    gap: 8, borderRadius: 12, borderWidth: 1.5, paddingVertical: 10,
-  },
-  botLinkText: { fontFamily: "Inter_600SemiBold", fontSize: 14 },
+  sendBtnText: { fontFamily: "Inter_600SemiBold", fontSize: 15 },
   sentBox: { borderRadius: 16, borderWidth: 1.5, padding: 16, gap: 10 },
   sentIconRow: { flexDirection: "row", alignItems: "center", gap: 10 },
   sentTitle: { fontFamily: "Inter_700Bold", fontSize: 15, flex: 1 },
   sentDivider: { height: 1, marginVertical: 2 },
-  sentDesc: { fontFamily: "Inter_400Regular", fontSize: 14, lineHeight: 22 },
+  sentDesc: { fontFamily: "Inter_400Regular", fontSize: 13, lineHeight: 20 },
   sentNote: { fontFamily: "Inter_500Medium", fontSize: 11 },
   sentHint: { fontFamily: "Inter_400Regular", fontSize: 12, lineHeight: 18, textAlign: "center" },
   closeBtn: {

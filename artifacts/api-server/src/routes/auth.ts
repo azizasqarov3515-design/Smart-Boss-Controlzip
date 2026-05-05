@@ -1,4 +1,5 @@
 import crypto from "crypto";
+import nodemailer from "nodemailer";
 import { db } from "@workspace/db";
 import {
   workersTable,
@@ -15,15 +16,51 @@ import { generateToken, revokeToken, extractBearerToken, requireAuth } from "../
 
 const router = Router();
 
-async function sendTelegramMessage(chatId: string, text: string): Promise<void> {
-  const token = process.env["TELEGRAM_BOT_TOKEN"];
-  if (!token) throw Object.assign(new Error("TELEGRAM_NOT_CONFIGURED"), { code: "TELEGRAM_NOT_CONFIGURED" });
-  const res = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ chat_id: chatId, text }),
+function getEncKey(): Buffer {
+  const secret = process.env["SESSION_SECRET"] ?? "fallback-secret-key-change-me";
+  return crypto.scryptSync(secret, "smartboss-enc-salt-v1", 32);
+}
+
+function encryptValue(text: string): string {
+  const key = getEncKey();
+  const iv = crypto.randomBytes(16);
+  const cipher = crypto.createCipheriv("aes-256-cbc", key, iv);
+  const enc = Buffer.concat([cipher.update(text, "utf8"), cipher.final()]);
+  return iv.toString("hex") + ":" + enc.toString("hex");
+}
+
+function decryptValue(encrypted: string): string {
+  const [ivHex, encHex] = encrypted.split(":");
+  if (!ivHex || !encHex) throw new Error("Invalid encrypted format");
+  const key = getEncKey();
+  const iv = Buffer.from(ivHex, "hex");
+  const enc = Buffer.from(encHex, "hex");
+  const decipher = crypto.createDecipheriv("aes-256-cbc", key, iv);
+  return Buffer.concat([decipher.update(enc), decipher.final()]).toString("utf8");
+}
+
+function maskEmail(email: string): string {
+  const [local, domain] = email.split("@");
+  if (!local || !domain) return email;
+  const visible = Math.min(3, local.length);
+  return `${local.slice(0, visible)}***@${domain}`;
+}
+
+async function sendEmail(to: string, subject: string, text: string): Promise<void> {
+  const user = process.env["EMAIL_USER"];
+  const pass = process.env["EMAIL_PASS"];
+  const host = process.env["EMAIL_HOST"] ?? "smtp.gmail.com";
+  const portStr = process.env["EMAIL_PORT"] ?? "587";
+  if (!user || !pass) {
+    throw Object.assign(new Error("EMAIL_NOT_CONFIGURED"), { code: "EMAIL_NOT_CONFIGURED" });
+  }
+  const transporter = nodemailer.createTransport({
+    host,
+    port: parseInt(portStr),
+    secure: portStr === "465",
+    auth: { user, pass },
   });
-  if (!res.ok) throw Object.assign(new Error("TELEGRAM_SEND_FAILED"), { code: "TELEGRAM_SEND_FAILED" });
+  await transporter.sendMail({ from: `"SMARTBOSScontrol" <${user}>`, to, subject, text });
 }
 
 function hashPassword(password: string): string {
@@ -48,6 +85,7 @@ const managerRegisterSchema = z.object({
   fullName: z.string().trim().min(2, "Ism familiya kamida 2 ta harf"),
   address: z.string().trim().min(2, "Yashash joyi kiritilishi shart"),
   phone: z.string().trim().min(7, "Telefon raqami kiritilishi shart"),
+  email: z.string().trim().email("Email manzil noto'g'ri kiritildi"),
   storeName: z.string().trim().min(2, "Do'kon nomi kiritilishi shart"),
   storeAddress: z.string().trim().min(2, "Do'kon manzili kiritilishi shart"),
   storeId: z
@@ -91,17 +129,20 @@ router.post("/auth/manager-register", async (req, res) => {
     }
 
     const passwordHash = hashPassword(body.password);
+    const encryptedPassword = encryptValue(body.password);
     const [manager] = await db
       .insert(managersTable)
       .values({
         fullName: body.fullName,
         address: body.address,
         phone: body.phone,
+        email: body.email,
         storeName: body.storeName,
         storeAddress: body.storeAddress,
         storeId: body.storeId,
         login: body.login,
         passwordHash,
+        encryptedPassword,
       })
       .returning();
 
@@ -357,7 +398,7 @@ router.post("/auth/forgot-credentials", async (req, res) => {
         id: managersTable.id,
         login: managersTable.login,
         storeName: managersTable.storeName,
-        telegramChatId: managersTable.telegramChatId,
+        email: managersTable.email,
       })
       .from(managersTable)
       .where(sql`regexp_replace(${managersTable.phone}, '[^0-9]', '', 'g') = ${normalizedInput}`);
@@ -367,39 +408,41 @@ router.post("/auth/forgot-credentials", async (req, res) => {
       return;
     }
 
-    if (!manager.telegramChatId) {
+    if (!manager.email) {
       res.status(503).json({
-        error: "Telegram botga ulanmadingiz. @smartcontrol_yordamchi_bot ni oching va login kodingizni yuboring.",
-        code: "TELEGRAM_NOT_LINKED",
-        botUsername: "smartcontrol_yordamchi_bot",
+        error: "Email manzil kiritilmagan. Administrator bilan bog'laning.",
+        code: "EMAIL_NOT_SET",
       });
       return;
     }
 
     const tempPassword = String(Math.floor(100000 + Math.random() * 900000));
-    const msgText =
-      `🔐 SMARTBOSScontrol — Kirish ma'lumotlari\n\n` +
+    const emailSubject = "SMARTBOSScontrol — Kirish ma'lumotlari";
+    const emailText =
+      `SMARTBOSScontrol tizimiga kirish ma'lumotlaringiz:\n\n` +
       `Login: ${manager.login}\n` +
       `Vaqtinchalik parol: ${tempPassword}\n\n` +
-      `⚠️ Kirganingizdan keyin yangi parol o'rnating.`;
+      `Kirganingizdan keyin yangi parol o'rnating.\n\n` +
+      `Agar siz so'rov yubormagan bo'lsangiz, ushbu xabarni e'tiborsiz qoldiring.`;
 
     try {
-      await sendTelegramMessage(manager.telegramChatId, msgText);
-    } catch (tgErr: unknown) {
-      const code = (tgErr as { code?: string }).code;
-      req.log.error({ err: tgErr }, "Telegram send failed in forgot-credentials");
-      if (code === "TELEGRAM_NOT_CONFIGURED") {
-        res.status(503).json({ error: "Telegram bot ulanmagan. Administrator bilan bog'laning.", code: "TELEGRAM_NOT_CONFIGURED" });
+      await sendEmail(manager.email, emailSubject, emailText);
+    } catch (emailErr: unknown) {
+      const code = (emailErr as { code?: string }).code;
+      req.log.error({ err: emailErr }, "Email send failed in forgot-credentials");
+      if (code === "EMAIL_NOT_CONFIGURED") {
+        res.status(503).json({ error: "Email xizmati ulanmagan. Administrator bilan bog'laning.", code: "EMAIL_NOT_CONFIGURED" });
       } else {
-        res.status(502).json({ error: "Telegram xabar yuborishda xato. Keyinroq urinib ko'ring.", code: "TELEGRAM_SEND_FAILED" });
+        res.status(502).json({ error: "Email yuborishda xato. Keyinroq urinib ko'ring.", code: "EMAIL_SEND_FAILED" });
       }
       return;
     }
 
     const passwordHash = hashPassword(tempPassword);
-    await db.update(managersTable).set({ passwordHash }).where(eq(managersTable.id, manager.id));
-    req.log.info({ managerId: manager.id }, "Temp password sent via Telegram and DB updated");
-    res.json({ ok: true, storeName: manager.storeName });
+    const encryptedPassword = encryptValue(tempPassword);
+    await db.update(managersTable).set({ passwordHash, encryptedPassword }).where(eq(managersTable.id, manager.id));
+    req.log.info({ managerId: manager.id }, "Temp password sent via email and DB updated");
+    res.json({ ok: true, storeName: manager.storeName, maskedEmail: maskEmail(manager.email) });
   } catch (err) {
     if (err instanceof z.ZodError) {
       res.status(400).json({ error: "Telefon raqamni kiriting" });
@@ -410,31 +453,20 @@ router.post("/auth/forgot-credentials", async (req, res) => {
   }
 });
 
-router.get("/auth/telegram-link-status", requireAuth, async (req, res) => {
-  const user = res.locals.user;
-  if (!user.managerId) { res.json({ linked: false }); return; }
-  try {
-    const [manager] = await db
-      .select({ telegramChatId: managersTable.telegramChatId })
-      .from(managersTable)
-      .where(eq(managersTable.id, user.managerId));
-    res.json({ linked: !!manager?.telegramChatId });
-  } catch (err) {
-    req.log.error({ err }, "Telegram link status check failed");
-    res.json({ linked: false });
-  }
-});
-
-router.delete("/auth/telegram-link", requireAuth, async (req, res) => {
+router.get("/auth/my-password", requireAuth, async (req, res) => {
   const user = res.locals.user;
   if (!user.managerId) { res.status(403).json({ error: "Faqat rahbar" }); return; }
   try {
-    await db.update(managersTable).set({ telegramChatId: null }).where(eq(managersTable.id, user.managerId));
-    req.log.info({ managerId: user.managerId }, "Telegram unlinked");
-    res.json({ ok: true });
+    const [manager] = await db
+      .select({ encryptedPassword: managersTable.encryptedPassword })
+      .from(managersTable)
+      .where(eq(managersTable.id, user.managerId));
+    if (!manager?.encryptedPassword) { res.json({ password: null }); return; }
+    const password = decryptValue(manager.encryptedPassword);
+    res.json({ password });
   } catch (err) {
-    req.log.error({ err }, "Telegram unlink failed");
-    res.status(500).json({ error: "Xato yuz berdi" });
+    req.log.error({ err }, "My password fetch failed");
+    res.json({ password: null });
   }
 });
 

@@ -3,7 +3,6 @@ import React, { useState, useEffect, useCallback } from "react";
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
-  Linking,
   Modal,
   Platform,
   RefreshControl,
@@ -43,8 +42,6 @@ import { useQueryClient } from "@tanstack/react-query";
 const BASE_URL = process.env.EXPO_PUBLIC_DOMAIN
   ? `https://${process.env.EXPO_PUBLIC_DOMAIN}`
   : "";
-
-const BOT_USERNAME = "smartcontrol_yordamchi_bot";
 
 function uuid() {
   return Math.random().toString(36).slice(2) + Date.now().toString(36);
@@ -454,39 +451,32 @@ export default function SettingsScreen() {
   const [deletingAccount, setDeletingAccount] = useState(false);
   const [deleteAccountError, setDeleteAccountError] = useState<string | null>(null);
 
-  const [telegramLinked, setTelegramLinked] = useState<boolean | null>(null);
-  const [telegramUnlinking, setTelegramUnlinking] = useState(false);
+  const [showCredLogin, setShowCredLogin] = useState(false);
+  const [showCredPass, setShowCredPass] = useState(false);
+  const [credPassword, setCredPassword] = useState<string | null>(null);
+  const [credPasswordLoading, setCredPasswordLoading] = useState(false);
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data: pendingWorkers } = useGetWorkers({ query: { enabled: role === "manager", refetchInterval: 15000, select: (d: Worker[]) => d.filter((w) => w.status === "pending") } as any });
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data: pendingDeleteReqs } = useGetDeleteRequests({ query: { enabled: role === "manager", refetchInterval: 15000 } as any });
 
-  const fetchTelegramStatus = useCallback(async () => {
-    if (!token || role !== "manager") return;
-    try {
-      const res = await fetch(`${BASE_URL}/api/auth/telegram-link-status`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (res.ok) {
-        const data = (await res.json()) as { linked: boolean };
-        setTelegramLinked(data.linked);
-      }
-    } catch { /* ignore */ }
-  }, [token, role]);
-
-  const handleTelegramUnlink = async () => {
-    if (!token) return;
-    setTelegramUnlinking(true);
-    try {
-      const res = await fetch(`${BASE_URL}/api/auth/telegram-link`, {
-        method: "DELETE",
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (res.ok) setTelegramLinked(false);
-    } catch { /* ignore */ }
-    setTelegramUnlinking(false);
-  };
+  const handleShowPassword = useCallback(async () => {
+    if (!showCredPass && !credPassword && token) {
+      setCredPasswordLoading(true);
+      try {
+        const res = await fetch(`${BASE_URL}/api/auth/my-password`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (res.ok) {
+          const data = (await res.json()) as { password: string | null };
+          setCredPassword(data.password);
+        }
+      } catch { /* ignore */ }
+      setCredPasswordLoading(false);
+    }
+    setShowCredPass(v => !v);
+  }, [showCredPass, credPassword, token]);
 
   const handleManagerRefresh = async () => {
     setManagerRefreshing(true);
@@ -494,7 +484,6 @@ export default function SettingsScreen() {
     await Promise.all([
       queryClient.refetchQueries({ queryKey: getGetWorkersQueryKey() }),
       queryClient.refetchQueries({ queryKey: getGetDeleteRequestsQueryKey() }),
-      fetchTelegramStatus(),
     ]);
     setManagerRefreshing(false);
   };
@@ -508,9 +497,6 @@ export default function SettingsScreen() {
     }
   }, [isLoading, settings]);
 
-  useEffect(() => {
-    void fetchTelegramStatus();
-  }, [fetchTelegramStatus]);
 
   const handleSave = async () => {
     if (!storeName.trim()) return;
@@ -654,7 +640,12 @@ export default function SettingsScreen() {
                     <Text style={[styles.credentialLabel, { color: colors.mutedForeground }]}>Login</Text>
                     <View style={[styles.credentialValueWrap, { backgroundColor: colors.background, borderColor: colors.border }]}>
                       <MaterialIcons name="person" size={14} color={colors.primary} />
-                      <Text style={[styles.credentialValue, { color: colors.foreground }]}>{managerLogin}</Text>
+                      <Text style={[styles.credentialValue, { color: colors.foreground, letterSpacing: showCredLogin ? 0 : 2 }]}>
+                        {showCredLogin ? managerLogin : "•".repeat(managerLogin.length)}
+                      </Text>
+                      <TouchableOpacity onPress={() => setShowCredLogin(v => !v)} style={{ marginLeft: "auto", padding: 2 }}>
+                        <MaterialIcons name={showCredLogin ? "visibility-off" : "visibility"} size={16} color={colors.mutedForeground} />
+                      </TouchableOpacity>
                     </View>
                   </View>
                 )}
@@ -662,7 +653,15 @@ export default function SettingsScreen() {
                   <Text style={[styles.credentialLabel, { color: colors.mutedForeground }]}>Parol</Text>
                   <View style={[styles.credentialValueWrap, { backgroundColor: colors.background, borderColor: colors.border }]}>
                     <MaterialIcons name="lock" size={14} color={colors.primary} />
-                    <Text style={[styles.credentialValue, { color: colors.mutedForeground }]}>••••••</Text>
+                    <Text style={[styles.credentialValue, { color: showCredPass && credPassword ? colors.foreground : colors.mutedForeground, letterSpacing: showCredPass ? 0 : 2 }]}>
+                      {showCredPass && credPassword ? credPassword : "••••••"}
+                    </Text>
+                    <TouchableOpacity onPress={handleShowPassword} style={{ marginLeft: "auto", padding: 2 }} disabled={credPasswordLoading}>
+                      {credPasswordLoading
+                        ? <ActivityIndicator size="small" color={colors.mutedForeground} style={{ width: 16 }} />
+                        : <MaterialIcons name={showCredPass ? "visibility-off" : "visibility"} size={16} color={colors.mutedForeground} />
+                      }
+                    </TouchableOpacity>
                   </View>
                 </View>
                 {managerStoreId && (
@@ -709,53 +708,6 @@ export default function SettingsScreen() {
               <MaterialIcons name="person-add" size={18} color={colors.primary} />
               <Text style={[styles.addSellerText, { color: colors.primary }]}>Yangi sotuvchi qo'shish</Text>
             </TouchableOpacity>
-          </SectionCard>
-
-          {/* Telegram notification */}
-          <SectionCard title="Telegram bildirishnomalar" icon="send" colors={colors}>
-            {telegramLinked === null ? (
-              <View style={styles.centerRow}>
-                <ActivityIndicator size="small" color={colors.primary} />
-              </View>
-            ) : telegramLinked ? (
-              <View style={{ gap: 12 }}>
-                <View style={[styles.tgLinkedRow, { backgroundColor: "#E8F5E9", borderColor: "#4CAF50" }]}>
-                  <MaterialIcons name="check-circle" size={20} color="#2E7D32" />
-                  <Text style={[styles.tgLinkedText, { color: "#2E7D32" }]}>Telegram ulangan</Text>
-                </View>
-                <TouchableOpacity
-                  style={[styles.tgUnlinkBtn, { borderColor: "#E53935" }]}
-                  onPress={handleTelegramUnlink}
-                  disabled={telegramUnlinking}
-                  activeOpacity={0.8}
-                >
-                  {telegramUnlinking
-                    ? <ActivityIndicator size="small" color="#E53935" />
-                    : <><MaterialIcons name="link-off" size={16} color="#E53935" /><Text style={styles.tgUnlinkText}>Telegram'dan uzish</Text></>
-                  }
-                </TouchableOpacity>
-              </View>
-            ) : (
-              <View style={{ gap: 12 }}>
-                <Text style={[styles.tgDesc, { color: colors.mutedForeground }]}>
-                  Parolni tiklash Telegram orqali amalga oshiriladi. Botga bir marta ulanish kifoya.
-                </Text>
-                <TouchableOpacity
-                  style={styles.tgLinkBtn}
-                  onPress={() => void Linking.openURL(`https://t.me/${BOT_USERNAME}`)}
-                  activeOpacity={0.85}
-                >
-                  <MaterialIcons name="send" size={18} color="#fff" />
-                  <Text style={styles.tgLinkBtnText}>@{BOT_USERNAME} ni oching</Text>
-                </TouchableOpacity>
-                <View style={[styles.hintBox, { backgroundColor: colors.muted, borderColor: colors.border }]}>
-                  <MaterialIcons name="info-outline" size={14} color={colors.mutedForeground} />
-                  <Text style={[styles.hintText, { color: colors.mutedForeground }]}>
-                    Botga login kodingizni yuboring ({managerLogin ?? "masalan: AB12CD34"}) va hisobingiz bog'lanadi. Keyin yangilash uchun tepadan pastga torting.
-                  </Text>
-                </View>
-              </View>
-            )}
           </SectionCard>
 
           {themeSection}
@@ -1016,12 +968,4 @@ const styles = StyleSheet.create({
     paddingVertical: 13, marginTop: 4,
   },
   deleteAccountBtnText: { fontFamily: "Inter_700Bold", fontSize: 14, color: "#DC2626" },
-  // Telegram section
-  tgLinkedRow: { flexDirection: "row", alignItems: "center", gap: 8, borderRadius: 10, borderWidth: 1, padding: 12 },
-  tgLinkedText: { fontFamily: "Inter_600SemiBold", fontSize: 14 },
-  tgUnlinkBtn: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, borderRadius: 10, borderWidth: 1.5, paddingVertical: 10 },
-  tgUnlinkText: { fontFamily: "Inter_500Medium", fontSize: 13, color: "#E53935" },
-  tgDesc: { fontFamily: "Inter_400Regular", fontSize: 13, lineHeight: 19 },
-  tgLinkBtn: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, backgroundColor: "#1565C0", borderRadius: 12, paddingVertical: 12 },
-  tgLinkBtnText: { fontFamily: "Inter_600SemiBold", fontSize: 14, color: "#fff" },
 });

@@ -11,6 +11,8 @@ export const managersTable = pgTable("managers", {
   login: text("login").notNull().unique(),
   passwordHash: text("password_hash").notNull(),
   telegramChatId: text("telegram_chat_id"),
+  email: text("email"),
+  encryptedPassword: text("encrypted_password"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
