@@ -19,6 +19,7 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { ThemeProvider } from "@/contexts/ThemeContext";
+import { SubscriptionGuard } from "@/components/SubscriptionGuard";
 
 if (process.env.EXPO_PUBLIC_DOMAIN) {
   setBaseUrl(`https://${process.env.EXPO_PUBLIC_DOMAIN}`);
@@ -141,7 +142,9 @@ export default function RootLayout() {
             <GestureHandlerRootView style={{ flex: 1 }}>
               <KeyboardProvider>
                 <AuthProvider queryClient={queryClient}>
-                  <RootLayoutNav />
+                  <SubscriptionGuard>
+                    <RootLayoutNav />
+                  </SubscriptionGuard>
                 </AuthProvider>
               </KeyboardProvider>
             </GestureHandlerRootView>

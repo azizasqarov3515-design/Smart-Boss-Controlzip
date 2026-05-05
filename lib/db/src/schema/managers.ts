@@ -1,4 +1,4 @@
-import { pgTable, serial, text, timestamp } from "drizzle-orm/pg-core";
+import { boolean, pgTable, serial, text, timestamp } from "drizzle-orm/pg-core";
 
 export const managersTable = pgTable("managers", {
   id: serial("id").primaryKey(),
@@ -13,6 +13,10 @@ export const managersTable = pgTable("managers", {
   telegramChatId: text("telegram_chat_id"),
   email: text("email"),
   encryptedPassword: text("encrypted_password"),
+  // Subscription fields
+  subscriptionPlan: text("subscription_plan"), // '1m' | '3m' | '6m' | '1y'
+  subscriptionEnd: timestamp("subscription_end"),
+  subscriptionActive: boolean("subscription_active").notNull().default(false),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 

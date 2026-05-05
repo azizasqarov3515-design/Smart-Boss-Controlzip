@@ -30,6 +30,11 @@ export interface ManagerLoginData {
   login?: string;
   storeId?: string;
   phone?: string;
+  subscriptionPlan?: string | null;
+  subscriptionEnd?: string | null;
+  subscriptionActive?: boolean;
+  subscriptionDaysLeft?: number | null;
+  subscriptionExpired?: boolean;
 }
 
 interface AuthContextType {
@@ -44,6 +49,11 @@ interface AuthContextType {
   managerLogin: string | null;
   managerStoreId: string | null;
   managerPhone: string | null;
+  subscriptionPlan: string | null;
+  subscriptionEnd: Date | null;
+  subscriptionActive: boolean;
+  subscriptionDaysLeft: number | null;
+  subscriptionExpired: boolean;
   isAuthenticated: boolean;
   isLoading: boolean;
   login: (loginCode: string, password: string) => Promise<void>;
@@ -52,6 +62,7 @@ interface AuthContextType {
   logout: () => Promise<void>;
   downloadBackup: () => Promise<string>;
   refreshWorkerStatus: () => Promise<string | null>;
+  refreshSubscription: () => Promise<void>;
   deleteAccount: () => Promise<void>;
 }
 
@@ -74,6 +85,11 @@ export function AuthProvider({ children, queryClient }: AuthProviderProps) {
   const [managerLogin, setManagerLogin] = useState<string | null>(null);
   const [managerStoreId, setManagerStoreId] = useState<string | null>(null);
   const [managerPhone, setManagerPhone] = useState<string | null>(null);
+  const [subscriptionPlan, setSubscriptionPlan] = useState<string | null>(null);
+  const [subscriptionEnd, setSubscriptionEnd] = useState<Date | null>(null);
+  const [subscriptionActive, setSubscriptionActive] = useState<boolean>(false);
+  const [subscriptionDaysLeft, setSubscriptionDaysLeft] = useState<number | null>(null);
+  const [subscriptionExpired, setSubscriptionExpired] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState(true);
 
   const clearAll = useCallback(async () => {
@@ -90,7 +106,26 @@ export function AuthProvider({ children, queryClient }: AuthProviderProps) {
     setManagerLogin(null);
     setManagerStoreId(null);
     setManagerPhone(null);
+    setSubscriptionPlan(null);
+    setSubscriptionEnd(null);
+    setSubscriptionActive(false);
+    setSubscriptionDaysLeft(null);
+    setSubscriptionExpired(false);
   }, [queryClient]);
+
+  function applySubscriptionData(data: {
+    subscriptionPlan?: string | null;
+    subscriptionEnd?: string | null;
+    subscriptionActive?: boolean;
+    subscriptionDaysLeft?: number | null;
+    subscriptionExpired?: boolean;
+  }) {
+    setSubscriptionPlan(data.subscriptionPlan ?? null);
+    setSubscriptionEnd(data.subscriptionEnd ? new Date(data.subscriptionEnd) : null);
+    setSubscriptionActive(data.subscriptionActive ?? false);
+    setSubscriptionDaysLeft(data.subscriptionDaysLeft ?? null);
+    setSubscriptionExpired(data.subscriptionExpired ?? false);
+  }
 
   useEffect(() => {
     setAuthTokenGetter(() => token);
@@ -123,6 +158,11 @@ export function AuthProvider({ children, queryClient }: AuthProviderProps) {
               login?: string;
               storeId?: string;
               phone?: string;
+              subscriptionPlan?: string | null;
+              subscriptionEnd?: string | null;
+              subscriptionActive?: boolean;
+              subscriptionDaysLeft?: number | null;
+              subscriptionExpired?: boolean;
             };
             setToken(stored);
             const r = (data.role as UserRole) ?? "manager";
@@ -134,10 +174,12 @@ export function AuthProvider({ children, queryClient }: AuthProviderProps) {
               setManagerLogin(data.login ?? null);
               setManagerStoreId(data.storeId ?? null);
               setManagerPhone(data.phone ?? null);
+              applySubscriptionData(data);
             } else {
               setWorkerName(data.name ?? null);
               setWorkerId(data.workerId ?? null);
               setWorkerStatus(data.status ?? null);
+              applySubscriptionData(data);
             }
           } else if (!cancelled) {
             await AsyncStorage.multiRemove([TOKEN_KEY, ROLE_KEY, USER_NAME_KEY, WORKER_ID_KEY, MANAGER_ID_KEY, STORE_NAME_KEY]);
@@ -171,6 +213,7 @@ export function AuthProvider({ children, queryClient }: AuthProviderProps) {
     setWorkerName(null);
     setWorkerId(null);
     setWorkerStatus(null);
+    applySubscriptionData(data);
     queryClient?.clear();
   }, [queryClient]);
 
@@ -219,6 +262,25 @@ export function AuthProvider({ children, queryClient }: AuthProviderProps) {
     return { status: data.status ?? "pending" };
   }, [queryClient]);
 
+  const refreshSubscription = useCallback(async () => {
+    if (!token) return;
+    try {
+      const res = await fetch(`${BASE_URL}/api/auth/me`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (res.ok) {
+        const data = (await res.json()) as {
+          subscriptionPlan?: string | null;
+          subscriptionEnd?: string | null;
+          subscriptionActive?: boolean;
+          subscriptionDaysLeft?: number | null;
+          subscriptionExpired?: boolean;
+        };
+        applySubscriptionData(data);
+      }
+    } catch { /* ignore */ }
+  }, [token]);
+
   useEffect(() => {
     if (!token || role !== "worker") return;
     const interval = setInterval(async () => {
@@ -229,8 +291,9 @@ export function AuthProvider({ children, queryClient }: AuthProviderProps) {
       if (res.status === 401 || res.status === 404) {
         await clearAll();
       } else if (res.ok) {
-        const data = (await res.json()) as { status?: string };
+        const data = (await res.json()) as { status?: string; subscriptionPlan?: string | null; subscriptionEnd?: string | null; subscriptionActive?: boolean; subscriptionDaysLeft?: number | null; subscriptionExpired?: boolean; };
         setWorkerStatus(data.status ?? null);
+        applySubscriptionData(data);
       }
     }, 10000);
     return () => clearInterval(interval);
@@ -302,6 +365,11 @@ export function AuthProvider({ children, queryClient }: AuthProviderProps) {
         managerLogin,
         managerStoreId,
         managerPhone,
+        subscriptionPlan,
+        subscriptionEnd,
+        subscriptionActive,
+        subscriptionDaysLeft,
+        subscriptionExpired,
         isAuthenticated: !!token,
         isLoading,
         login,
@@ -310,6 +378,7 @@ export function AuthProvider({ children, queryClient }: AuthProviderProps) {
         logout,
         downloadBackup,
         refreshWorkerStatus,
+        refreshSubscription,
         deleteAccount,
       }}
     >

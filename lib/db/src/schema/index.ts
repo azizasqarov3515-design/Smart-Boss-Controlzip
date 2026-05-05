@@ -5,3 +5,4 @@ export * from "./debt_payments";
 export * from "./sales";
 export * from "./workers";
 export * from "./delete_requests";
+export * from "./audit_logs";
