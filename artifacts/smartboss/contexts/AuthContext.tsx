@@ -20,6 +20,18 @@ const MANAGER_PHONE_KEY = "smartboss_auth_manager_phone";
 
 export type UserRole = "manager" | "worker";
 
+export interface ManagerLoginData {
+  token: string;
+  name?: string;
+  username?: string;
+  managerId?: number;
+  storeName?: string;
+  storeAddress?: string;
+  login?: string;
+  storeId?: string;
+  phone?: string;
+}
+
 interface AuthContextType {
   token: string | null;
   username: string | null;
@@ -35,6 +47,7 @@ interface AuthContextType {
   isAuthenticated: boolean;
   isLoading: boolean;
   login: (loginCode: string, password: string) => Promise<void>;
+  loginWithData: (data: ManagerLoginData) => Promise<void>;
   loginWorker: (phone: string, password: string) => Promise<{ status: string }>;
   logout: () => Promise<void>;
   downloadBackup: () => Promise<string>;
@@ -140,31 +153,14 @@ export function AuthProvider({ children, queryClient }: AuthProviderProps) {
     return () => { cancelled = true; };
   }, []);
 
-  const login = useCallback(async (loginCode: string, password: string) => {
-    const res = await fetch(`${BASE_URL}/api/auth/login`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ login: loginCode, password }),
-    });
-    const data = (await res.json()) as {
-      token?: string;
-      name?: string;
-      username?: string;
-      managerId?: number;
-      storeName?: string;
-      login?: string;
-      storeId?: string;
-      phone?: string;
-      error?: string;
-    };
-    if (!res.ok) throw new Error(data.error ?? "Login amalga oshmadi");
-    await AsyncStorage.setItem(TOKEN_KEY, data.token!);
+  const applyManagerData = useCallback(async (data: ManagerLoginData) => {
+    await AsyncStorage.setItem(TOKEN_KEY, data.token);
     if (data.managerId) await AsyncStorage.setItem(MANAGER_ID_KEY, String(data.managerId));
     if (data.storeName) await AsyncStorage.setItem(STORE_NAME_KEY, data.storeName);
     if (data.login) await AsyncStorage.setItem(MANAGER_LOGIN_KEY, data.login);
     if (data.storeId) await AsyncStorage.setItem(MANAGER_STORE_ID_KEY, data.storeId);
     if (data.phone) await AsyncStorage.setItem(MANAGER_PHONE_KEY, data.phone);
-    setToken(data.token!);
+    setToken(data.token);
     setUsername(data.username ?? data.name ?? "Rahbar");
     setManagerId(data.managerId ?? null);
     setStoreName(data.storeName ?? null);
@@ -177,6 +173,21 @@ export function AuthProvider({ children, queryClient }: AuthProviderProps) {
     setWorkerStatus(null);
     queryClient?.clear();
   }, [queryClient]);
+
+  const login = useCallback(async (loginCode: string, password: string) => {
+    const res = await fetch(`${BASE_URL}/api/auth/login`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ login: loginCode, password }),
+    });
+    const data = (await res.json()) as ManagerLoginData & { error?: string };
+    if (!res.ok) throw new Error(data.error ?? "Login amalga oshmadi");
+    await applyManagerData(data);
+  }, [applyManagerData]);
+
+  const loginWithData = useCallback(async (data: ManagerLoginData) => {
+    await applyManagerData(data);
+  }, [applyManagerData]);
 
   const loginWorker = useCallback(async (phone: string, password: string): Promise<{ status: string }> => {
     const res = await fetch(`${BASE_URL}/api/auth/worker-login`, {
@@ -294,6 +305,7 @@ export function AuthProvider({ children, queryClient }: AuthProviderProps) {
         isAuthenticated: !!token,
         isLoading,
         login,
+        loginWithData,
         loginWorker,
         logout,
         downloadBackup,

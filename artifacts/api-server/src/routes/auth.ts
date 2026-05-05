@@ -1,5 +1,4 @@
 import crypto from "crypto";
-import nodemailer from "nodemailer";
 import { db } from "@workspace/db";
 import {
   workersTable,
@@ -9,59 +8,12 @@ import {
   customersTable,
   deleteRequestsTable,
 } from "@workspace/db/schema";
-import { and, eq } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import { Router } from "express";
 import { z } from "zod";
 import { generateToken, revokeToken, extractBearerToken, requireAuth } from "../lib/auth";
 
 const router = Router();
-
-function getEncKey(): Buffer {
-  const secret = process.env["SESSION_SECRET"] ?? "fallback-secret-key-change-me";
-  return crypto.scryptSync(secret, "smartboss-enc-salt-v1", 32);
-}
-
-function encryptValue(text: string): string {
-  const key = getEncKey();
-  const iv = crypto.randomBytes(16);
-  const cipher = crypto.createCipheriv("aes-256-cbc", key, iv);
-  const enc = Buffer.concat([cipher.update(text, "utf8"), cipher.final()]);
-  return iv.toString("hex") + ":" + enc.toString("hex");
-}
-
-function decryptValue(encrypted: string): string {
-  const [ivHex, encHex] = encrypted.split(":");
-  if (!ivHex || !encHex) throw new Error("Invalid encrypted format");
-  const key = getEncKey();
-  const iv = Buffer.from(ivHex, "hex");
-  const enc = Buffer.from(encHex, "hex");
-  const decipher = crypto.createDecipheriv("aes-256-cbc", key, iv);
-  return Buffer.concat([decipher.update(enc), decipher.final()]).toString("utf8");
-}
-
-function maskEmail(email: string): string {
-  const [local, domain] = email.split("@");
-  if (!local || !domain) return email;
-  const visible = Math.min(3, local.length);
-  return `${local.slice(0, visible)}***@${domain}`;
-}
-
-async function sendEmail(to: string, subject: string, text: string): Promise<void> {
-  const user = process.env["EMAIL_USER"];
-  const pass = process.env["EMAIL_PASS"];
-  const host = process.env["EMAIL_HOST"] ?? "smtp.gmail.com";
-  const portStr = process.env["EMAIL_PORT"] ?? "587";
-  if (!user || !pass) {
-    throw Object.assign(new Error("EMAIL_NOT_CONFIGURED"), { code: "EMAIL_NOT_CONFIGURED" });
-  }
-  const transporter = nodemailer.createTransport({
-    host,
-    port: parseInt(portStr),
-    secure: portStr === "465",
-    auth: { user, pass },
-  });
-  await transporter.sendMail({ from: `"SMARTBOSScontrol" <${user}>`, to, subject, text });
-}
 
 function hashPassword(password: string): string {
   const salt = crypto.randomBytes(16).toString("hex");
@@ -85,7 +37,6 @@ const managerRegisterSchema = z.object({
   fullName: z.string().trim().min(2, "Ism familiya kamida 2 ta harf"),
   address: z.string().trim().min(2, "Yashash joyi kiritilishi shart"),
   phone: z.string().trim().min(7, "Telefon raqami kiritilishi shart"),
-  email: z.string().trim().email("Email manzil noto'g'ri kiritildi"),
   storeName: z.string().trim().min(2, "Do'kon nomi kiritilishi shart"),
   storeAddress: z.string().trim().min(2, "Do'kon manzili kiritilishi shart"),
   storeId: z
@@ -129,26 +80,22 @@ router.post("/auth/manager-register", async (req, res) => {
     }
 
     const passwordHash = hashPassword(body.password);
-    const encryptedPassword = encryptValue(body.password);
     const [manager] = await db
       .insert(managersTable)
       .values({
         fullName: body.fullName,
         address: body.address,
         phone: body.phone,
-        email: body.email,
         storeName: body.storeName,
         storeAddress: body.storeAddress,
         storeId: body.storeId,
         login: body.login,
         passwordHash,
-        encryptedPassword,
       })
       .returning();
 
     req.log.info({ managerId: manager?.id, storeName: body.storeName }, "Manager registered");
 
-    // Auto-login: return token immediately after registration
     const token = generateToken({
       sub: `manager-${manager!.id}`,
       role: "manager",
@@ -165,6 +112,8 @@ router.post("/auth/manager-register", async (req, res) => {
       role: "manager",
       name: manager?.fullName,
       managerId: manager?.id,
+      login: manager?.login,
+      phone: manager?.phone,
     });
   } catch (err) {
     if (err instanceof z.ZodError) {
@@ -389,83 +338,58 @@ router.get("/auth/me", requireAuth, async (req, res) => {
 });
 
 router.post("/auth/forgot-credentials", async (req, res) => {
-  const schema = z.object({ storeId: z.string().regex(/^[A-Z]{2}\d{8}$/, "Do'kon ID noto'g'ri") });
+  const schema = z.object({
+    phone: z.string().min(7, "Telefon raqamni kiriting"),
+    storeId: z.string().regex(/^[A-Z]{2}\d{8}$/, "Do'kon ID noto'g'ri (2 harf + 8 raqam)"),
+  });
   try {
     const body = schema.parse(req.body);
+    const normalizedPhone = body.phone.replace(/\D/g, "");
+
     const [manager] = await db
-      .select({
-        id: managersTable.id,
-        login: managersTable.login,
-        storeName: managersTable.storeName,
-        email: managersTable.email,
-      })
+      .select()
       .from(managersTable)
-      .where(eq(managersTable.storeId, body.storeId));
+      .where(
+        and(
+          sql`regexp_replace(${managersTable.phone}, '[^0-9]', '', 'g') = ${normalizedPhone}`,
+          eq(managersTable.storeId, body.storeId)
+        )
+      );
 
     if (!manager) {
-      res.status(404).json({ error: "Bu Do'kon ID tizimda topilmadi", code: "NOT_FOUND" });
-      return;
-    }
-
-    if (!manager.email) {
-      res.status(503).json({
-        error: "Email manzil kiritilmagan. Administrator bilan bog'laning.",
-        code: "EMAIL_NOT_SET",
+      res.status(404).json({
+        error: "Telefon raqam yoki Do'kon ID noto'g'ri. Ro'yxatdan o'tishda kiritilgan ma'lumotlarni kiriting.",
+        code: "NOT_FOUND",
       });
       return;
     }
 
-    const tempPassword = String(Math.floor(100000 + Math.random() * 900000));
-    const emailSubject = "SMARTBOSScontrol — Kirish ma'lumotlari";
-    const emailText =
-      `SMARTBOSScontrol tizimiga kirish ma'lumotlaringiz:\n\n` +
-      `Login: ${manager.login}\n` +
-      `Vaqtinchalik parol: ${tempPassword}\n\n` +
-      `Kirganingizdan keyin yangi parol o'rnating.\n\n` +
-      `Agar siz so'rov yubormagan bo'lsangiz, ushbu xabarni e'tiborsiz qoldiring.`;
+    const token = generateToken({
+      sub: `manager-${manager.id}`,
+      role: "manager",
+      name: manager.fullName,
+      managerId: manager.id,
+    });
 
-    try {
-      await sendEmail(manager.email, emailSubject, emailText);
-    } catch (emailErr: unknown) {
-      const code = (emailErr as { code?: string }).code;
-      req.log.error({ err: emailErr }, "Email send failed in forgot-credentials");
-      if (code === "EMAIL_NOT_CONFIGURED") {
-        res.status(503).json({ error: "Email xizmati ulanmagan. Administrator bilan bog'laning.", code: "EMAIL_NOT_CONFIGURED" });
-      } else {
-        res.status(502).json({ error: "Email yuborishda xato. Keyinroq urinib ko'ring.", code: "EMAIL_SEND_FAILED" });
-      }
-      return;
-    }
-
-    const passwordHash = hashPassword(tempPassword);
-    const encryptedPassword = encryptValue(tempPassword);
-    await db.update(managersTable).set({ passwordHash, encryptedPassword }).where(eq(managersTable.id, manager.id));
-    req.log.info({ managerId: manager.id }, "Temp password sent via email and DB updated");
-    res.json({ ok: true, storeName: manager.storeName, maskedEmail: maskEmail(manager.email) });
+    req.log.info({ managerId: manager.id }, "Manager recovered via phone+storeId");
+    res.json({
+      token,
+      role: "manager",
+      name: manager.fullName,
+      managerId: manager.id,
+      storeName: manager.storeName,
+      storeAddress: manager.storeAddress,
+      login: manager.login,
+      storeId: manager.storeId,
+      phone: manager.phone,
+    });
   } catch (err) {
     if (err instanceof z.ZodError) {
-      res.status(400).json({ error: err.issues[0]?.message ?? "Do'kon ID noto'g'ri" });
+      res.status(400).json({ error: err.issues[0]?.message ?? "Ma'lumotlar noto'g'ri" });
     } else {
       req.log.error({ err }, "Forgot credentials failed");
       res.status(500).json({ error: "Xato yuz berdi" });
     }
-  }
-});
-
-router.get("/auth/my-password", requireAuth, async (req, res) => {
-  const user = res.locals.user;
-  if (!user.managerId) { res.status(403).json({ error: "Faqat rahbar" }); return; }
-  try {
-    const [manager] = await db
-      .select({ encryptedPassword: managersTable.encryptedPassword })
-      .from(managersTable)
-      .where(eq(managersTable.id, user.managerId));
-    if (!manager?.encryptedPassword) { res.json({ password: null }); return; }
-    const password = decryptValue(manager.encryptedPassword);
-    res.json({ password });
-  } catch (err) {
-    req.log.error({ err }, "My password fetch failed");
-    res.json({ password: null });
   }
 });
 

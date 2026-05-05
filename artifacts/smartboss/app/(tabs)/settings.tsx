@@ -428,7 +428,7 @@ export default function SettingsScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const { mode: themeMode, setMode: setThemeMode } = useTheme();
-  const { role, managerId, managerLogin, managerStoreId, deleteAccount, token } = useAuth();
+  const { role, managerId, managerLogin, managerStoreId, deleteAccount } = useAuth();
   const { settings, saveSettings, isLoading } = useSettings(managerId);
   const queryClient = useQueryClient();
 
@@ -452,31 +452,11 @@ export default function SettingsScreen() {
   const [deleteAccountError, setDeleteAccountError] = useState<string | null>(null);
 
   const [showCredLogin, setShowCredLogin] = useState(false);
-  const [showCredPass, setShowCredPass] = useState(false);
-  const [credPassword, setCredPassword] = useState<string | null>(null);
-  const [credPasswordLoading, setCredPasswordLoading] = useState(false);
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data: pendingWorkers } = useGetWorkers({ query: { enabled: role === "manager", refetchInterval: 15000, select: (d: Worker[]) => d.filter((w) => w.status === "pending") } as any });
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data: pendingDeleteReqs } = useGetDeleteRequests({ query: { enabled: role === "manager", refetchInterval: 15000 } as any });
-
-  const handleShowPassword = useCallback(async () => {
-    if (!showCredPass && !credPassword && token) {
-      setCredPasswordLoading(true);
-      try {
-        const res = await fetch(`${BASE_URL}/api/auth/my-password`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        if (res.ok) {
-          const data = (await res.json()) as { password: string | null };
-          setCredPassword(data.password);
-        }
-      } catch { /* ignore */ }
-      setCredPasswordLoading(false);
-    }
-    setShowCredPass(v => !v);
-  }, [showCredPass, credPassword, token]);
 
   const handleManagerRefresh = async () => {
     setManagerRefreshing(true);
@@ -653,15 +633,7 @@ export default function SettingsScreen() {
                   <Text style={[styles.credentialLabel, { color: colors.mutedForeground }]}>Parol</Text>
                   <View style={[styles.credentialValueWrap, { backgroundColor: colors.background, borderColor: colors.border }]}>
                     <MaterialIcons name="lock" size={14} color={colors.primary} />
-                    <Text style={[styles.credentialValue, { color: showCredPass && credPassword ? colors.foreground : colors.mutedForeground, letterSpacing: showCredPass ? 0 : 2 }]}>
-                      {showCredPass && credPassword ? credPassword : "••••••"}
-                    </Text>
-                    <TouchableOpacity onPress={handleShowPassword} style={{ marginLeft: "auto", padding: 2 }} disabled={credPasswordLoading}>
-                      {credPasswordLoading
-                        ? <ActivityIndicator size="small" color={colors.mutedForeground} style={{ width: 16 }} />
-                        : <MaterialIcons name={showCredPass ? "visibility-off" : "visibility"} size={16} color={colors.mutedForeground} />
-                      }
-                    </TouchableOpacity>
+                    <Text style={[styles.credentialValue, { color: colors.mutedForeground, letterSpacing: 2 }]}>••••••</Text>
                   </View>
                 </View>
                 {managerStoreId && (
