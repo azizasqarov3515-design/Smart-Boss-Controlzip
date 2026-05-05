@@ -9,7 +9,7 @@ import {
   customersTable,
   deleteRequestsTable,
 } from "@workspace/db/schema";
-import { and, eq, sql } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { Router } from "express";
 import { z } from "zod";
 import { generateToken, revokeToken, extractBearerToken, requireAuth } from "../lib/auth";
@@ -389,10 +389,9 @@ router.get("/auth/me", requireAuth, async (req, res) => {
 });
 
 router.post("/auth/forgot-credentials", async (req, res) => {
-  const schema = z.object({ phone: z.string().min(7) });
+  const schema = z.object({ storeId: z.string().regex(/^[A-Z]{2}\d{8}$/, "Do'kon ID noto'g'ri") });
   try {
     const body = schema.parse(req.body);
-    const normalizedInput = body.phone.replace(/\D/g, "");
     const [manager] = await db
       .select({
         id: managersTable.id,
@@ -401,10 +400,10 @@ router.post("/auth/forgot-credentials", async (req, res) => {
         email: managersTable.email,
       })
       .from(managersTable)
-      .where(sql`regexp_replace(${managersTable.phone}, '[^0-9]', '', 'g') = ${normalizedInput}`);
+      .where(eq(managersTable.storeId, body.storeId));
 
     if (!manager) {
-      res.status(404).json({ error: "Bu telefon raqam tizimda ro'yxatdan o'tmagan", code: "NOT_FOUND" });
+      res.status(404).json({ error: "Bu Do'kon ID tizimda topilmadi", code: "NOT_FOUND" });
       return;
     }
 
@@ -445,7 +444,7 @@ router.post("/auth/forgot-credentials", async (req, res) => {
     res.json({ ok: true, storeName: manager.storeName, maskedEmail: maskEmail(manager.email) });
   } catch (err) {
     if (err instanceof z.ZodError) {
-      res.status(400).json({ error: "Telefon raqamni kiriting" });
+      res.status(400).json({ error: err.issues[0]?.message ?? "Do'kon ID noto'g'ri" });
     } else {
       req.log.error({ err }, "Forgot credentials failed");
       res.status(500).json({ error: "Xato yuz berdi" });

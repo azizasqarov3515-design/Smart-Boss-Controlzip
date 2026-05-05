@@ -20,18 +20,6 @@ const BASE_URL = process.env.EXPO_PUBLIC_DOMAIN
   ? `https://${process.env.EXPO_PUBLIC_DOMAIN}`
   : "";
 
-function formatPhone(text: string): string {
-  const digits = text.replace(/\D/g, "");
-  let local = digits.startsWith("998") ? digits.slice(3) : digits;
-  local = local.slice(0, 9);
-  let result = "+998";
-  if (local.length > 0) result += " " + local.slice(0, 2);
-  if (local.length > 2) result += " " + local.slice(2, 5);
-  if (local.length > 5) result += " " + local.slice(5, 7);
-  if (local.length > 7) result += " " + local.slice(7, 9);
-  return result;
-}
-
 export default function LoginScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
@@ -45,10 +33,10 @@ export default function LoginScreen() {
   const [error, setError] = useState<string | null>(null);
 
   const [forgotModal, setForgotModal] = useState(false);
-  const [forgotPhone, setForgotPhone] = useState("+998 ");
+  const [forgotStoreId, setForgotStoreId] = useState("");
   const [forgotLoading, setForgotLoading] = useState(false);
   const [forgotError, setForgotError] = useState<string | null>(null);
-  const [forgotStep, setForgotStep] = useState<"phone" | "sent">("phone");
+  const [forgotStep, setForgotStep] = useState<"storeId" | "sent">("storeId");
   const [sentStore, setSentStore] = useState("");
   const [sentEmail, setSentEmail] = useState("");
 
@@ -68,24 +56,26 @@ export default function LoginScreen() {
     }
   };
 
-  const phoneDigits = forgotPhone.replace(/\D/g, "");
-  const phoneValid = phoneDigits.length >= 12;
+  const storeIdValid = /^[A-Z]{2}\d{8}$/.test(forgotStoreId);
 
-  const handleForgotPhone = (text: string) => {
-    if (text.length < 5) { setForgotPhone("+998 "); return; }
-    setForgotPhone(formatPhone(text));
+  const handleStoreIdChange = (text: string) => {
+    const cleaned = text.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 10);
+    setForgotStoreId(cleaned);
     setForgotError(null);
   };
 
   const handleSend = async () => {
-    if (!phoneValid) { setForgotError("To'liq telefon raqam kiriting"); return; }
+    if (!storeIdValid) {
+      setForgotError("Do'kon ID: 2 katta harf + 8 raqam (masalan: AB12345678)");
+      return;
+    }
     setForgotLoading(true);
     setForgotError(null);
     try {
       const res = await fetch(`${BASE_URL}/api/auth/forgot-credentials`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ phone: forgotPhone }),
+        body: JSON.stringify({ storeId: forgotStoreId }),
       });
       const data = (await res.json()) as {
         ok?: boolean;
@@ -110,9 +100,9 @@ export default function LoginScreen() {
 
   const closeForgotModal = () => {
     setForgotModal(false);
-    setForgotPhone("+998 ");
+    setForgotStoreId("");
     setForgotError(null);
-    setForgotStep("phone");
+    setForgotStep("storeId");
     setSentStore("");
     setSentEmail("");
   };
@@ -184,7 +174,7 @@ export default function LoginScreen() {
               </View>
               <TouchableOpacity
                 style={styles.forgotBtn}
-                onPress={() => { setForgotModal(true); setForgotStep("phone"); }}
+                onPress={() => { setForgotModal(true); setForgotStep("storeId"); }}
                 activeOpacity={0.7}
               >
                 <MaterialIcons name="help-outline" size={14} color={colors.primary} />
@@ -227,7 +217,7 @@ export default function LoginScreen() {
                 <View style={styles.modalTitleRow}>
                   <MaterialIcons name="lock-reset" size={22} color={colors.primary} />
                   <Text style={[styles.modalTitle, { color: colors.foreground }]}>
-                    {forgotStep === "phone" ? "Parolni tiklash" : "Email yuborildi"}
+                    {forgotStep === "storeId" ? "Parolni tiklash" : "Email yuborildi"}
                   </Text>
                 </View>
                 <TouchableOpacity onPress={closeForgotModal} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
@@ -236,28 +226,41 @@ export default function LoginScreen() {
               </View>
 
               <View style={styles.modalBody}>
-                {forgotStep === "phone" ? (
+                {forgotStep === "storeId" ? (
                   <>
                     <Text style={[styles.modalDesc, { color: colors.mutedForeground }]}>
-                      Ro'yxatdan o'tishda ishlatgan telefon raqamingizni kiriting. Login va yangi vaqtinchalik parol elektron pochtangizga yuboriladi.
+                      Do'kon ID raqamingizni kiriting. Login va yangi vaqtinchalik parol ro'yxatdan o'tishdagi email manzilingizga yuboriladi.
                     </Text>
 
                     <View style={styles.fieldWrap}>
-                      <Text style={[styles.label, { color: colors.mutedForeground }]}>Telefon raqamingiz</Text>
-                      <View style={[styles.inputRow, { backgroundColor: colors.background, borderColor: forgotError ? "#E53935" : (phoneValid ? "#4CAF50" : colors.border) }]}>
-                        <MaterialIcons name="phone" size={20} color={colors.mutedForeground} style={styles.inputIcon} />
+                      <Text style={[styles.label, { color: colors.mutedForeground }]}>Do'kon ID raqami</Text>
+                      <View style={[
+                        styles.inputRow,
+                        {
+                          backgroundColor: colors.background,
+                          borderColor: forgotError ? "#E53935" : storeIdValid ? "#4CAF50" : colors.border,
+                        },
+                      ]}>
+                        <MaterialIcons name="store" size={20} color={colors.mutedForeground} style={styles.inputIcon} />
                         <TextInput
-                          style={[styles.input, { color: colors.foreground }]}
-                          placeholder="+998 XX XXX XX XX"
+                          style={[styles.input, { color: colors.foreground, letterSpacing: 1 }]}
+                          placeholder="Masalan: AB12345678"
                           placeholderTextColor={colors.mutedForeground}
-                          value={forgotPhone}
-                          onChangeText={handleForgotPhone}
-                          keyboardType="phone-pad"
+                          value={forgotStoreId}
+                          onChangeText={handleStoreIdChange}
+                          autoCapitalize="characters"
+                          autoCorrect={false}
+                          maxLength={10}
                           returnKeyType="done"
                           autoFocus
                         />
-                        {phoneValid && !forgotError && <MaterialIcons name="check-circle" size={18} color="#4CAF50" />}
+                        {storeIdValid && !forgotError && (
+                          <MaterialIcons name="check-circle" size={18} color="#4CAF50" />
+                        )}
                       </View>
+                      <Text style={[styles.inputHint, { color: colors.mutedForeground }]}>
+                        Format: 2 katta harf + 8 raqam (masalan: AB12345678)
+                      </Text>
                     </View>
 
                     {forgotError && (
@@ -268,15 +271,18 @@ export default function LoginScreen() {
                     )}
 
                     <TouchableOpacity
-                      style={[styles.sendBtn, { backgroundColor: phoneValid ? colors.primary : colors.border, opacity: forgotLoading ? 0.75 : 1 }]}
+                      style={[
+                        styles.sendBtn,
+                        { backgroundColor: storeIdValid ? colors.primary : colors.border, opacity: forgotLoading ? 0.75 : 1 },
+                      ]}
                       onPress={handleSend}
                       activeOpacity={0.85}
-                      disabled={!phoneValid || forgotLoading}
+                      disabled={!storeIdValid || forgotLoading}
                     >
                       {forgotLoading ? <ActivityIndicator size="small" color="#fff" /> : (
                         <>
-                          <MaterialIcons name="email" size={20} color={phoneValid ? "#fff" : colors.mutedForeground} />
-                          <Text style={[styles.sendBtnText, { color: phoneValid ? "#fff" : colors.mutedForeground }]}>
+                          <MaterialIcons name="email" size={20} color={storeIdValid ? "#fff" : colors.mutedForeground} />
+                          <Text style={[styles.sendBtnText, { color: storeIdValid ? "#fff" : colors.mutedForeground }]}>
                             Email orqali olish
                           </Text>
                         </>
@@ -350,6 +356,7 @@ const styles = StyleSheet.create({
   },
   inputIcon: { marginRight: 8 },
   input: { flex: 1, fontFamily: "Inter_400Regular", fontSize: 15, paddingVertical: 0 },
+  inputHint: { fontFamily: "Inter_400Regular", fontSize: 11, marginTop: 5 },
   eyeBtn: { padding: 4 },
   errorBlock: { marginBottom: 12, marginTop: -4, gap: 8 },
   errorRow: { flexDirection: "row", alignItems: "center", gap: 5 },
