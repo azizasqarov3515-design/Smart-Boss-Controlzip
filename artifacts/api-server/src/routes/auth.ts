@@ -1,7 +1,7 @@
 import crypto from "crypto";
 import { db } from "@workspace/db";
 import { workersTable, managersTable } from "@workspace/db/schema";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { Router } from "express";
 import { z } from "zod";
 import { generateToken, revokeToken, extractBearerToken, requireAuth } from "../lib/auth";
@@ -32,6 +32,9 @@ const managerRegisterSchema = z.object({
   phone: z.string().trim().min(7, "Telefon raqami kiritilishi shart"),
   storeName: z.string().trim().min(2, "Do'kon nomi kiritilishi shart"),
   storeAddress: z.string().trim().min(2, "Do'kon manzili kiritilishi shart"),
+  storeId: z
+    .string()
+    .regex(/^[A-Z]{2}\d{8}$/, "Do'kon ID: 2 katta harf + 8 raqam (masalan: AB12345678)"),
   login: z
     .string()
     .regex(/^[A-Z0-9]{8}$/, "Login 8 ta katta harf va raqamdan iborat bo'lishi kerak"),
@@ -59,6 +62,16 @@ router.post("/auth/manager-register", async (req, res) => {
       return;
     }
 
+    const [existingStoreId] = await db
+      .select({ id: managersTable.id })
+      .from(managersTable)
+      .where(eq(managersTable.storeId, body.storeId));
+
+    if (existingStoreId) {
+      res.status(409).json({ error: "Bu Do'kon ID allaqachon band. Boshqa ID tanlang." });
+      return;
+    }
+
     const passwordHash = hashPassword(body.password);
     const [manager] = await db
       .insert(managersTable)
@@ -68,13 +81,32 @@ router.post("/auth/manager-register", async (req, res) => {
         phone: body.phone,
         storeName: body.storeName,
         storeAddress: body.storeAddress,
+        storeId: body.storeId,
         login: body.login,
         passwordHash,
       })
       .returning();
 
     req.log.info({ managerId: manager?.id, storeName: body.storeName }, "Manager registered");
-    res.status(201).json({ id: manager?.id, storeName: manager?.storeName });
+
+    // Auto-login: return token immediately after registration
+    const token = generateToken({
+      sub: `manager-${manager!.id}`,
+      role: "manager",
+      name: manager!.fullName,
+      managerId: manager!.id,
+    });
+
+    res.status(201).json({
+      id: manager?.id,
+      storeName: manager?.storeName,
+      storeAddress: manager?.storeAddress,
+      storeId: manager?.storeId,
+      token,
+      role: "manager",
+      name: manager?.fullName,
+      managerId: manager?.id,
+    });
   } catch (err) {
     if (err instanceof z.ZodError) {
       res.status(400).json({ error: err.issues[0]?.message ?? "Ma'lumotlar noto'g'ri kiritildi" });
@@ -135,10 +167,10 @@ router.post("/auth/login", async (req, res) => {
 
 const workerRegisterSchema = z.object({
   name: z.string().min(2),
-  address: z.string().min(2),
   phone: z.string().regex(/^\+998 \d{2} \d{3} \d{2} \d{2}$/),
   password: z.string().min(4),
-  managerLoginCode: z.string().regex(/^[A-Z0-9]{8}$/, "Do'kon kodi noto'g'ri"),
+  storeName: z.string().trim().min(2, "Do'kon nomini kiriting"),
+  storeId: z.string().regex(/^[A-Z]{2}\d{8}$/, "Do'kon ID noto'g'ri"),
 });
 
 router.post("/auth/worker-register", async (req, res) => {
@@ -148,10 +180,15 @@ router.post("/auth/worker-register", async (req, res) => {
     const [manager] = await db
       .select({ id: managersTable.id, storeName: managersTable.storeName })
       .from(managersTable)
-      .where(eq(managersTable.login, body.managerLoginCode));
+      .where(
+        and(
+          eq(managersTable.storeName, body.storeName),
+          eq(managersTable.storeId, body.storeId)
+        )
+      );
 
     if (!manager) {
-      res.status(404).json({ error: "Do'kon kodi noto'g'ri. Rahbardan to'g'ri kodni oling.", code: "INVALID_STORE" });
+      res.status(404).json({ error: "Bunday do'kon yoki ID raqam tizimda mavjud emas", code: "INVALID_STORE" });
       return;
     }
 

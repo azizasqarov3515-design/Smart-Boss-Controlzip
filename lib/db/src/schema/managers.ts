@@ -7,6 +7,7 @@ export const managersTable = pgTable("managers", {
   phone: text("phone").notNull(),
   storeName: text("store_name").notNull(),
   storeAddress: text("store_address").notNull(),
+  storeId: text("store_id").notNull().unique(),
   login: text("login").notNull().unique(),
   passwordHash: text("password_hash").notNull(),
   createdAt: timestamp("created_at").notNull().defaultNow(),

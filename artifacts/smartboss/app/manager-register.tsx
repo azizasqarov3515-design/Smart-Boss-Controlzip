@@ -15,6 +15,7 @@ import { MaterialIcons } from "@expo/vector-icons";
 import { useColors } from "@/hooks/useColors";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
+import { useAuth } from "@/contexts/AuthContext";
 
 const BASE_URL = process.env.EXPO_PUBLIC_DOMAIN
   ? `https://${process.env.EXPO_PUBLIC_DOMAIN}`
@@ -26,6 +27,7 @@ interface FormState {
   phone: string;
   storeName: string;
   storeAddress: string;
+  storeId: string;
   login: string;
   password: string;
 }
@@ -36,6 +38,7 @@ const EMPTY: FormState = {
   phone: "",
   storeName: "",
   storeAddress: "",
+  storeId: "",
   login: "",
   password: "",
 };
@@ -48,6 +51,10 @@ function validatePassword(v: string) {
   return /^\d{6}$/.test(v);
 }
 
+function validateStoreId(v: string) {
+  return /^[A-Z]{2}\d{8}$/.test(v);
+}
+
 function isFormValid(f: FormState) {
   return (
     f.fullName.trim().length >= 2 &&
@@ -55,6 +62,7 @@ function isFormValid(f: FormState) {
     f.phone.trim().length >= 7 &&
     f.storeName.trim().length >= 2 &&
     f.storeAddress.trim().length >= 2 &&
+    validateStoreId(f.storeId) &&
     validateLogin(f.login) &&
     validatePassword(f.password)
   );
@@ -78,6 +86,15 @@ const FIELDS: Array<{
   { key: "phone", label: "Telefon raqami", placeholder: "+998 90 123 45 67", icon: "phone", keyboardType: "phone-pad" },
   { key: "storeName", label: "Do'kon nomi", placeholder: "Do'koningiz nomi", icon: "store", autoCapitalize: "words" },
   { key: "storeAddress", label: "Do'kon manzili", placeholder: "Do'kon joylashgan manzil", icon: "location-on", autoCapitalize: "words" },
+  {
+    key: "storeId",
+    label: "Do'kon uchun ID raqam",
+    placeholder: "AB12345678",
+    icon: "tag",
+    autoCapitalize: "characters",
+    maxLength: 10,
+    hint: "Format: 2 ta katta harf + 8 ta raqam   Namuna: AB12345678",
+  },
   {
     key: "login",
     label: "Login",
@@ -103,6 +120,7 @@ export default function ManagerRegisterScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const router = useRouter();
+  const { login } = useAuth();
 
   const [form, setForm] = useState<FormState>(EMPTY);
   const [showPassword, setShowPassword] = useState(false);
@@ -123,6 +141,7 @@ export default function ManagerRegisterScreen() {
     if (form.phone.trim().length < 7) newErrors.phone = "Telefon raqami kiritilishi shart";
     if (form.storeName.trim().length < 2) newErrors.storeName = "Do'kon nomi kiritilishi shart";
     if (form.storeAddress.trim().length < 2) newErrors.storeAddress = "Do'kon manzili kiritilishi shart";
+    if (!validateStoreId(form.storeId)) newErrors.storeId = "2 katta harf + 8 raqam (masalan: AB12345678)";
     if (!validateLogin(form.login)) newErrors.login = "8 ta katta harf va raqam (masalan: AB12CD34)";
     if (!validatePassword(form.password)) newErrors.password = "Faqat 6 ta raqam bo'lishi kerak";
     setErrors(newErrors);
@@ -143,22 +162,31 @@ export default function ManagerRegisterScreen() {
           phone: form.phone.trim(),
           storeName: form.storeName.trim(),
           storeAddress: form.storeAddress.trim(),
+          storeId: form.storeId,
           login: form.login,
           password: form.password,
         }),
       });
-      const data = (await res.json()) as { id?: number; storeName?: string; error?: string };
+      const data = (await res.json()) as {
+        id?: number;
+        storeName?: string;
+        token?: string;
+        name?: string;
+        managerId?: number;
+        storeAddress?: string;
+        storeId?: string;
+        error?: string;
+      };
       if (!res.ok) {
         setServerError(data.error ?? "Ro'yxatdan o'tishda xato");
         return;
       }
-      Alert.alert(
-        "Muvaffaqiyatli!",
-        `"${data.storeName ?? form.storeName}" do'koni uchun hisob yaratildi.\n\nLoginiz: ${form.login}\n\nIltimos, bu ma'lumotlarni eslab qoling.`,
-        [{ text: "Tizimga kirish", onPress: () => router.replace("/login") }]
-      );
-    } catch {
-      setServerError("Tarmoq xatosi. Internet aloqasini tekshiring.");
+      // Auto-login: API returns token directly after registration
+      await login(form.login, form.password);
+      router.replace("/(tabs)");
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : "";
+      setServerError(msg || "Tarmoq xatosi. Internet aloqasini tekshiring.");
     } finally {
       setLoading(false);
     }
@@ -190,6 +218,7 @@ export default function ManagerRegisterScreen() {
           {FIELDS.map((field) => {
             const fieldError = errors[field.key];
             const isLoginField = field.key === "login";
+            const isStoreIdField = field.key === "storeId";
             const isPasswordField = field.key === "password";
 
             return (
@@ -223,6 +252,13 @@ export default function ManagerRegisterScreen() {
                     secureTextEntry={isPasswordField && !showPassword}
                     returnKeyType="next"
                   />
+                  {isStoreIdField && (
+                    <View style={[styles.charBadge, { backgroundColor: validateStoreId(form.storeId) ? "#4CAF50" : colors.border }]}>
+                      <Text style={[styles.charBadgeText, { color: validateStoreId(form.storeId) ? "#fff" : colors.mutedForeground }]}>
+                        {form.storeId.length}/10
+                      </Text>
+                    </View>
+                  )}
                   {isLoginField && (
                     <View style={[styles.charBadge, { backgroundColor: validateLogin(form.login) ? "#4CAF50" : colors.border }]}>
                       <Text style={[styles.charBadgeText, { color: validateLogin(form.login) ? "#fff" : colors.mutedForeground }]}>

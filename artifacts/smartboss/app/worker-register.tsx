@@ -41,7 +41,8 @@ export default function WorkerRegisterScreen() {
   const [address, setAddress] = useState("");
   const [phone, setPhone] = useState("+998 ");
   const [password, setPassword] = useState("");
-  const [managerLoginCode, setManagerLoginCode] = useState("");
+  const [storeName, setStoreName] = useState("");
+  const [storeId, setStoreId] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -60,7 +61,8 @@ export default function WorkerRegisterScreen() {
     const phoneDigits = phone.replace(/\D/g, "");
     if (phoneDigits.length < 12) newErrors["phone"] = "To'liq telefon raqam kiriting (+998 XX XXX XX XX)";
     if (!password || password.length < 4) newErrors["password"] = "Parol kamida 4 ta belgi bo'lishi kerak";
-    if (!/^[A-Z0-9]{8}$/.test(managerLoginCode)) newErrors["managerLoginCode"] = "Do'kon kodi 8 ta katta harf/raqamdan iborat";
+    if (!storeName.trim() || storeName.trim().length < 2) newErrors["storeName"] = "Do'kon nomini kiriting";
+    if (!/^[A-Z]{2}\d{8}$/.test(storeId)) newErrors["storeId"] = "Do'kon ID: 2 katta harf + 8 raqam (masalan: AB12345678)";
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -73,7 +75,7 @@ export default function WorkerRegisterScreen() {
       const res = await fetch(`${BASE_URL}/api/auth/worker-register`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: name.trim(), address: address.trim(), phone, password, managerLoginCode }),
+        body: JSON.stringify({ name: name.trim(), address: address.trim(), phone, password, storeName: storeName.trim(), storeId }),
       });
       const data = (await res.json()) as { id?: number; name?: string; status?: string; error?: string; code?: string };
       if (!res.ok) {
@@ -185,7 +187,7 @@ export default function WorkerRegisterScreen() {
 
           <View style={styles.fieldWrap}>
             <Text style={[styles.label, { color: colors.mutedForeground }]}>
-              <Text style={{ color: "#DC2626" }}>* </Text>Parol
+              <Text style={{ color: "#DC2626" }}>* </Text>Shaxsiy parol
             </Text>
             <View style={[styles.inputRow, { backgroundColor: colors.background, borderColor: errors["password"] ? "#E53935" : colors.border }]}>
               <MaterialIcons name="lock" size={20} color={colors.mutedForeground} style={styles.inputIcon} />
@@ -206,33 +208,62 @@ export default function WorkerRegisterScreen() {
             {fieldError("password")}
           </View>
 
+          <View style={[styles.divider, { borderColor: colors.border }]}>
+            <Text style={[styles.dividerText, { color: colors.mutedForeground, backgroundColor: colors.card }]}>Do'kon ma'lumotlari</Text>
+          </View>
+
           <View style={styles.fieldWrap}>
             <Text style={[styles.label, { color: colors.mutedForeground }]}>
-              <Text style={{ color: "#DC2626" }}>* </Text>Do'kon kodi (Rahbar login kodi)
+              <Text style={{ color: "#DC2626" }}>* </Text>Do'kon nomi
             </Text>
-            <View style={[styles.inputRow, { backgroundColor: colors.background, borderColor: errors["managerLoginCode"] ? "#E53935" : colors.border }]}>
+            <View style={[styles.inputRow, { backgroundColor: colors.background, borderColor: errors["storeName"] ? "#E53935" : colors.border }]}>
               <MaterialIcons name="store" size={20} color={colors.mutedForeground} style={styles.inputIcon} />
               <TextInput
                 style={[styles.input, { color: colors.foreground }]}
-                placeholder="Masalan: AB12CD34"
+                placeholder="Rahbaringizning do'kon nomi"
                 placeholderTextColor={colors.mutedForeground}
-                value={managerLoginCode}
-                onChangeText={(t) => { setManagerLoginCode(t.toUpperCase()); setErrors((e) => ({ ...e, managerLoginCode: "" })); }}
+                value={storeName}
+                onChangeText={(t) => { setStoreName(t); setErrors((e) => ({ ...e, storeName: "" })); }}
+                autoCapitalize="words"
+                returnKeyType="next"
+              />
+            </View>
+            {fieldError("storeName")}
+          </View>
+
+          <View style={styles.fieldWrap}>
+            <Text style={[styles.label, { color: colors.mutedForeground }]}>
+              <Text style={{ color: "#DC2626" }}>* </Text>Do'kon ID raqami
+            </Text>
+            <View style={[styles.exampleBox, { backgroundColor: colors.muted, borderColor: colors.border }]}>
+              <MaterialIcons name="info-outline" size={14} color={colors.mutedForeground} />
+              <Text style={[styles.exampleText, { color: colors.mutedForeground }]}>
+                Namuna: <Text style={{ fontFamily: "Inter_700Bold", color: colors.foreground }}>AB12345678</Text>{"  "}(2 ta katta harf + 8 ta raqam)
+              </Text>
+            </View>
+            <View style={[styles.inputRow, { backgroundColor: colors.background, borderColor: errors["storeId"] ? "#E53935" : colors.border, marginTop: 6 }]}>
+              <MaterialIcons name="tag" size={20} color={colors.mutedForeground} style={styles.inputIcon} />
+              <TextInput
+                style={[styles.input, { color: colors.foreground }]}
+                placeholder="AB12345678"
+                placeholderTextColor={colors.mutedForeground}
+                value={storeId}
+                onChangeText={(t) => { setStoreId(t.toUpperCase()); setErrors((e) => ({ ...e, storeId: "" })); setApiError(null); }}
                 autoCapitalize="characters"
                 autoCorrect={false}
-                maxLength={8}
+                maxLength={10}
                 returnKeyType="done"
                 onSubmitEditing={handleRegister}
               />
-              <View style={[styles.charBadge, { backgroundColor: /^[A-Z0-9]{8}$/.test(managerLoginCode) ? "#4CAF50" : colors.border }]}>
-                <Text style={[styles.charBadgeText, { color: /^[A-Z0-9]{8}$/.test(managerLoginCode) ? "#fff" : colors.mutedForeground }]}>
-                  {managerLoginCode.length}/8
+              <View style={[styles.charBadge, { backgroundColor: /^[A-Z]{2}\d{8}$/.test(storeId) ? "#4CAF50" : colors.border }]}>
+                <Text style={[styles.charBadgeText, { color: /^[A-Z]{2}\d{8}$/.test(storeId) ? "#fff" : colors.mutedForeground }]}>
+                  {storeId.length}/10
                 </Text>
               </View>
             </View>
-            {fieldError("managerLoginCode")}
+            {fieldError("storeId")}
             <Text style={[styles.hintText, { color: colors.mutedForeground }]}>
-              Rahbaringizdan 8 xonali do'kon kodini oling
+              Rahbaringizdan bu ID raqamni oling
             </Text>
           </View>
 
@@ -314,4 +345,18 @@ const styles = StyleSheet.create({
   },
   charBadgeText: { fontFamily: "Inter_600SemiBold", fontSize: 11 },
   hintText: { fontFamily: "Inter_400Regular", fontSize: 11, marginTop: 4, marginLeft: 2 },
+  divider: {
+    borderTopWidth: 1, marginVertical: 12,
+    alignItems: "center",
+  },
+  dividerText: {
+    fontFamily: "Inter_600SemiBold", fontSize: 11,
+    paddingHorizontal: 10, marginTop: -9,
+    letterSpacing: 0.5,
+  },
+  exampleBox: {
+    flexDirection: "row", alignItems: "center", gap: 6,
+    borderRadius: 10, borderWidth: 1, paddingHorizontal: 10, paddingVertical: 7,
+  },
+  exampleText: { fontFamily: "Inter_400Regular", fontSize: 12, flex: 1 },
 });
