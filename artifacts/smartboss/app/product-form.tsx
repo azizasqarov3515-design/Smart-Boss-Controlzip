@@ -8,9 +8,11 @@ import {
 import { useQueryClient } from "@tanstack/react-query";
 import * as Haptics from "expo-haptics";
 import { useLocalSearchParams, useNavigation, useRouter } from "expo-router";
-import React, { useEffect, useLayoutEffect, useState } from "react";
+import React, { useEffect, useLayoutEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
+  Animated,
+  Modal,
   Platform,
   ScrollView,
   StyleSheet,
@@ -23,7 +25,199 @@ import {
 import { MaterialIcons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useColors } from "@/hooks/useColors";
+import {
+  CameraView,
+  useCameraPermissions,
+  type BarcodeScanningResult,
+} from "expo-camera";
 
+// ─── Inline barcode scanner modal ──────────────────────────────────────────
+function BarcodeScanModal({
+  visible,
+  onClose,
+  onScanned,
+}: {
+  visible: boolean;
+  onClose: () => void;
+  onScanned: (code: string) => void;
+}) {
+  const isWeb = Platform.OS === "web";
+  const [permission, requestPermission] = useCameraPermissions();
+  const [scanned, setScanned] = useState(false);
+  const lineAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    if (visible) setScanned(false);
+  }, [visible]);
+
+  useEffect(() => {
+    if (!visible) return;
+    if (permission === null || permission?.status === "undetermined") {
+      requestPermission();
+    }
+  }, [visible, permission, requestPermission]);
+
+  useEffect(() => {
+    if (!visible) return;
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(lineAnim, { toValue: 1, duration: 1800, useNativeDriver: true }),
+        Animated.timing(lineAnim, { toValue: 0, duration: 1800, useNativeDriver: true }),
+      ])
+    );
+    loop.start();
+    return () => loop.stop();
+  }, [visible, lineAnim]);
+
+  const handleBarcodeScanned = ({ data }: BarcodeScanningResult) => {
+    if (scanned) return;
+    setScanned(true);
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+    setTimeout(() => {
+      onScanned(data);
+    }, 300);
+  };
+
+  const showCamera = !isWeb && permission?.granted;
+  const showDenied = !isWeb && permission?.granted === false;
+
+  return (
+    <Modal visible={visible} animationType="slide" statusBarTranslucent onRequestClose={onClose}>
+      <View style={scanStyles.root}>
+        {/* Header */}
+        <View style={scanStyles.header}>
+          <TouchableOpacity style={scanStyles.closeBtn} onPress={onClose} activeOpacity={0.8}>
+            <MaterialIcons name="close" size={24} color="#fff" />
+          </TouchableOpacity>
+          <Text style={scanStyles.headerTitle}>Barcode o'qish</Text>
+          <View style={{ width: 44 }} />
+        </View>
+
+        <View style={{ flex: 1 }}>
+          {/* Camera */}
+          {showCamera && (
+            <View style={scanStyles.cameraWrap}>
+              <CameraView
+                style={StyleSheet.absoluteFill}
+                facing="back"
+                barcodeScannerSettings={{
+                  barcodeTypes: [
+                    "ean13", "ean8", "qr", "code128",
+                    "code39", "upc_a", "upc_e", "itf14",
+                    "codabar", "code93", "datamatrix",
+                  ],
+                }}
+                onBarcodeScanned={scanned ? undefined : handleBarcodeScanned}
+              />
+              {/* Overlay */}
+              <View style={scanStyles.overlayTop} />
+              <View style={scanStyles.overlayMiddle}>
+                <View style={scanStyles.overlaySide} />
+                <View style={scanStyles.frame}>
+                  <View style={[scanStyles.corner, scanStyles.cTL]} />
+                  <View style={[scanStyles.corner, scanStyles.cTR]} />
+                  <View style={[scanStyles.corner, scanStyles.cBL]} />
+                  <View style={[scanStyles.corner, scanStyles.cBR]} />
+                  {!scanned ? (
+                    <Animated.View
+                      style={[
+                        scanStyles.scanLine,
+                        {
+                          transform: [{
+                            translateY: lineAnim.interpolate({
+                              inputRange: [0, 1],
+                              outputRange: [0, 180],
+                            }),
+                          }],
+                        },
+                      ]}
+                    />
+                  ) : (
+                    <View style={scanStyles.scannedBox}>
+                      <ActivityIndicator size="small" color="#fff" />
+                      <Text style={scanStyles.scannedText}>Saqlandi!</Text>
+                    </View>
+                  )}
+                </View>
+                <View style={scanStyles.overlaySide} />
+              </View>
+              <View style={scanStyles.overlayBottom} />
+              <Text style={scanStyles.hint}>Barkodni ramka ichiga to'g'rilang</Text>
+            </View>
+          )}
+
+          {/* Permission denied */}
+          {showDenied && (
+            <View style={scanStyles.center}>
+              <MaterialIcons name="no-photography" size={56} color="#EF5350" />
+              <Text style={scanStyles.permTitle}>Kamera ruxsati yo'q</Text>
+              <Text style={scanStyles.permSub}>Telefon sozlamalarida kamera ruxsatini bering</Text>
+              <TouchableOpacity style={scanStyles.permBtn} onPress={() => requestPermission()} activeOpacity={0.85}>
+                <Text style={scanStyles.permBtnText}>Ruxsat so'rash</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+
+          {/* Loading permission */}
+          {!isWeb && !permission && (
+            <View style={scanStyles.center}>
+              <ActivityIndicator size="large" color="#1565C0" />
+              <Text style={[scanStyles.permSub, { marginTop: 12 }]}>Kamera ruxsati so'ralmoqda…</Text>
+            </View>
+          )}
+
+          {/* Web fallback */}
+          {isWeb && (
+            <View style={scanStyles.center}>
+              <MaterialIcons name="qr-code-scanner" size={72} color="#1565C0" />
+              <Text style={scanStyles.permTitle}>Kamera faqat telefonda ishlaydi</Text>
+              <Text style={scanStyles.permSub}>Pastdagi maydonga barcode raqamini qo'lda kiriting</Text>
+            </View>
+          )}
+        </View>
+      </View>
+    </Modal>
+  );
+}
+
+const scanStyles = StyleSheet.create({
+  root: { flex: 1, backgroundColor: "#0A0A0A" },
+  header: {
+    flexDirection: "row", alignItems: "center", justifyContent: "space-between",
+    paddingHorizontal: 12, paddingTop: 52, paddingBottom: 14,
+    backgroundColor: "rgba(0,0,0,0.7)",
+  },
+  closeBtn: {
+    width: 44, height: 44, borderRadius: 22, backgroundColor: "rgba(255,255,255,0.15)",
+    alignItems: "center", justifyContent: "center",
+  },
+  headerTitle: { color: "#fff", fontSize: 17, fontFamily: "Inter_600SemiBold" },
+  cameraWrap: { flex: 1, position: "relative" },
+  overlayTop: { position: "absolute", top: 0, left: 0, right: 0, height: "20%", backgroundColor: "rgba(0,0,0,0.6)" },
+  overlayMiddle: { position: "absolute", top: "20%", left: 0, right: 0, height: 220, flexDirection: "row" },
+  overlaySide: { flex: 1, backgroundColor: "rgba(0,0,0,0.6)" },
+  frame: { width: 240, height: 220 },
+  overlayBottom: { position: "absolute", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: "rgba(0,0,0,0.6)", zIndex: -1 },
+  corner: { position: "absolute", width: 24, height: 24, borderColor: "#1565C0", borderWidth: 3 },
+  cTL: { top: 0, left: 0, borderRightWidth: 0, borderBottomWidth: 0, borderTopLeftRadius: 4 },
+  cTR: { top: 0, right: 0, borderLeftWidth: 0, borderBottomWidth: 0, borderTopRightRadius: 4 },
+  cBL: { bottom: 0, left: 0, borderRightWidth: 0, borderTopWidth: 0, borderBottomLeftRadius: 4 },
+  cBR: { bottom: 0, right: 0, borderLeftWidth: 0, borderTopWidth: 0, borderBottomRightRadius: 4 },
+  scanLine: { position: "absolute", left: 4, right: 4, height: 2, backgroundColor: "#1565C0", borderRadius: 1 },
+  scannedBox: { flex: 1, alignItems: "center", justifyContent: "center", gap: 8 },
+  scannedText: { color: "#fff", fontFamily: "Inter_600SemiBold", fontSize: 15 },
+  hint: {
+    position: "absolute", bottom: "28%", left: 0, right: 0, textAlign: "center",
+    color: "rgba(255,255,255,0.8)", fontSize: 13, fontFamily: "Inter_400Regular",
+  },
+  center: { flex: 1, alignItems: "center", justifyContent: "center", padding: 32, gap: 12 },
+  permTitle: { color: "#fff", fontSize: 17, fontFamily: "Inter_600SemiBold", textAlign: "center" },
+  permSub: { color: "rgba(255,255,255,0.6)", fontSize: 13, fontFamily: "Inter_400Regular", textAlign: "center" },
+  permBtn: { backgroundColor: "#1565C0", paddingHorizontal: 24, paddingVertical: 12, borderRadius: 10, marginTop: 8 },
+  permBtnText: { color: "#fff", fontFamily: "Inter_600SemiBold", fontSize: 15 },
+});
+
+// ─── Product Form ───────────────────────────────────────────────────────────
 type FieldKey = "name" | "brand" | "costPrice" | "salePrice" | "quantity";
 
 type FormValues = {
@@ -32,9 +226,10 @@ type FormValues = {
   costPrice: string;
   salePrice: string;
   quantity: string;
+  barcode: string;
 };
 
-const INITIAL: FormValues = { name: "", brand: "", costPrice: "", salePrice: "", quantity: "" };
+const INITIAL: FormValues = { name: "", brand: "", costPrice: "", salePrice: "", quantity: "", barcode: "" };
 
 const FIELDS: Array<{
   key: FieldKey;
@@ -64,6 +259,7 @@ export default function ProductFormScreen() {
   const [form, setForm] = useState<FormValues>(INITIAL);
   const [errors, setErrors] = useState<Partial<FormValues>>({});
   const [submitted, setSubmitted] = useState(false);
+  const [scannerOpen, setScannerOpen] = useState(false);
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data: products } = useGetProducts({ query: { enabled: isEdit } as any });
@@ -82,6 +278,7 @@ export default function ProductFormScreen() {
           costPrice: String(product.costPrice),
           salePrice: String(product.salePrice),
           quantity: String(product.quantity),
+          barcode: product.barcode ?? "",
         });
       }
     }
@@ -143,6 +340,7 @@ export default function ProductFormScreen() {
       costPrice: parseFloat(form.costPrice),
       salePrice: parseFloat(form.salePrice),
       quantity: parseInt(form.quantity),
+      barcode: form.barcode.trim() || null,
     };
     if (isEdit && productId) {
       updateProduct({ id: productId, data: payload });
@@ -156,6 +354,12 @@ export default function ProductFormScreen() {
     if (errors[key]) setErrors((prev) => ({ ...prev, [key]: undefined }));
   };
 
+  const handleBarcodeScanned = (code: string) => {
+    setScannerOpen(false);
+    setForm((prev) => ({ ...prev, barcode: code }));
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+  };
+
   const cost = parseFloat(form.costPrice) || 0;
   const sale = parseFloat(form.salePrice) || 0;
   const qty = parseInt(form.quantity) || 0;
@@ -164,185 +368,264 @@ export default function ProductFormScreen() {
   const showProfit = form.costPrice && form.salePrice;
 
   return (
-    <KeyboardAvoidingView
-      style={{ flex: 1, backgroundColor: colors.background }}
-      behavior={Platform.OS === "ios" ? "padding" : undefined}
-    >
-      <ScrollView
-        contentContainerStyle={[
-          styles.content,
-          { paddingBottom: insets.bottom + 40, paddingTop: isWeb ? 24 : 16 },
-        ]}
-        keyboardShouldPersistTaps="handled"
-        showsVerticalScrollIndicator={false}
+    <>
+      <BarcodeScanModal
+        visible={scannerOpen}
+        onClose={() => setScannerOpen(false)}
+        onScanned={handleBarcodeScanned}
+      />
+
+      <KeyboardAvoidingView
+        style={{ flex: 1, backgroundColor: colors.background }}
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
       >
-        {isEdit && productId && (
-          <View style={[styles.idRow, { backgroundColor: colors.surfaceVariant, borderColor: colors.border }]}>
-            <MaterialIcons name="tag" size={15} color={colors.mutedForeground} />
-            <Text style={[styles.idLabel, { color: colors.mutedForeground }]}>
-              Unikal ID: <Text style={[styles.idValue, { color: colors.primary }]}>#{productId}</Text>
-            </Text>
-          </View>
-        )}
+        <ScrollView
+          contentContainerStyle={[
+            styles.content,
+            { paddingBottom: insets.bottom + 40, paddingTop: isWeb ? 24 : 16 },
+          ]}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
+          {isEdit && productId && (
+            <View style={[styles.idRow, { backgroundColor: colors.surfaceVariant, borderColor: colors.border }]}>
+              <MaterialIcons name="tag" size={15} color={colors.mutedForeground} />
+              <Text style={[styles.idLabel, { color: colors.mutedForeground }]}>
+                Unikal ID: <Text style={[styles.idValue, { color: colors.primary }]}>#{productId}</Text>
+              </Text>
+            </View>
+          )}
 
-        <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
-          {FIELDS.map((field) => (
-            <View key={field.key} style={styles.fieldWrap}>
-              <View style={styles.labelRow}>
-                <MaterialIcons name={field.icon} size={14} color={colors.primary} />
-                <Text style={[styles.label, { color: colors.foreground }]}>{field.label}</Text>
-              </View>
-              <TextInput
-                style={[
-                  styles.input,
-                  {
-                    backgroundColor: colors.surfaceVariant,
-                    borderColor: errors[field.key] ? colors.destructive : colors.border,
-                    color: colors.foreground,
-                    fontFamily: "Inter_400Regular",
-                  },
-                ]}
-                value={form[field.key]}
-                onChangeText={(v) => setField(field.key, v)}
-                placeholder={field.placeholder}
-                placeholderTextColor={colors.mutedForeground}
-                keyboardType={field.keyboardType}
-                autoCapitalize={field.keyboardType === "default" ? "words" : "none"}
-                returnKeyType="next"
-              />
-              {errors[field.key] ? (
-                <View style={styles.errorRow}>
-                  <MaterialIcons name="error-outline" size={12} color={colors.destructive} />
-                  <Text style={[styles.errorText, { color: colors.destructive }]}>{errors[field.key]}</Text>
+          <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
+            {/* Regular fields */}
+            {FIELDS.map((field) => (
+              <View key={field.key} style={styles.fieldWrap}>
+                <View style={styles.labelRow}>
+                  <MaterialIcons name={field.icon} size={14} color={colors.primary} />
+                  <Text style={[styles.label, { color: colors.foreground }]}>{field.label}</Text>
                 </View>
-              ) : null}
-            </View>
-          ))}
-        </View>
+                <TextInput
+                  style={[
+                    styles.input,
+                    {
+                      backgroundColor: colors.surfaceVariant,
+                      borderColor: errors[field.key] ? colors.destructive : colors.border,
+                      color: colors.foreground,
+                      fontFamily: "Inter_400Regular",
+                    },
+                  ]}
+                  value={form[field.key]}
+                  onChangeText={(v) => setField(field.key, v)}
+                  placeholder={field.placeholder}
+                  placeholderTextColor={colors.mutedForeground}
+                  keyboardType={field.keyboardType}
+                  autoCapitalize={field.keyboardType === "default" ? "words" : "none"}
+                  returnKeyType="next"
+                />
+                {errors[field.key] ? (
+                  <View style={styles.errorRow}>
+                    <MaterialIcons name="error-outline" size={12} color={colors.destructive} />
+                    <Text style={[styles.errorText, { color: colors.destructive }]}>{errors[field.key]}</Text>
+                  </View>
+                ) : null}
+              </View>
+            ))}
 
-        {showProfit && (
-          <View
-            style={[
-              styles.profitCard,
-              {
-                backgroundColor: profit >= 0 ? "#E8F5E9" : "#FFEBEE",
-                borderColor: profit >= 0 ? "#4CAF50" : "#F44336",
-              },
-            ]}
-          >
-            <View style={styles.profitRow}>
-              <MaterialIcons
-                name={profit >= 0 ? "trending-up" : "trending-down"}
-                size={20}
-                color={profit >= 0 ? "#2E7D32" : "#C62828"}
-              />
-              <Text style={[styles.profitLabel, { color: profit >= 0 ? "#2E7D32" : "#C62828" }]}>
-                {profit >= 0 ? "Foyda" : "Zarar"}
+            {/* Barcode field */}
+            <View style={styles.fieldWrap}>
+              <View style={styles.labelRow}>
+                <MaterialIcons name="qr-code" size={14} color={colors.primary} />
+                <Text style={[styles.label, { color: colors.foreground }]}>Barcode</Text>
+                <Text style={[styles.optionalTag, { color: colors.mutedForeground, borderColor: colors.border }]}>
+                  ixtiyoriy
+                </Text>
+              </View>
+              <View style={styles.barcodeRow}>
+                <TextInput
+                  style={[
+                    styles.input,
+                    styles.barcodeInput,
+                    {
+                      backgroundColor: colors.surfaceVariant,
+                      borderColor: form.barcode ? colors.primary : colors.border,
+                      color: colors.foreground,
+                      fontFamily: "Inter_400Regular",
+                    },
+                  ]}
+                  value={form.barcode}
+                  onChangeText={(v) => setForm((prev) => ({ ...prev, barcode: v }))}
+                  placeholder="Masalan: 4607123456789"
+                  placeholderTextColor={colors.mutedForeground}
+                  keyboardType="default"
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                />
+                {form.barcode.length > 0 && (
+                  <TouchableOpacity
+                    style={[styles.barcodeClearBtn, { borderColor: colors.border }]}
+                    onPress={() => setForm((prev) => ({ ...prev, barcode: "" }))}
+                    activeOpacity={0.7}
+                  >
+                    <MaterialIcons name="close" size={18} color={colors.mutedForeground} />
+                  </TouchableOpacity>
+                )}
+                {Platform.OS !== "web" && (
+                  <TouchableOpacity
+                    style={[styles.barcodeScanBtn, { backgroundColor: colors.primary }]}
+                    onPress={() => setScannerOpen(true)}
+                    activeOpacity={0.85}
+                  >
+                    <MaterialIcons name="qr-code-scanner" size={20} color="#fff" />
+                  </TouchableOpacity>
+                )}
+              </View>
+              {form.barcode.length > 0 && (
+                <View style={[styles.barcodePreview, { backgroundColor: colors.surfaceVariant, borderColor: colors.primary + "33" }]}>
+                  <MaterialIcons name="check-circle" size={14} color={colors.success} />
+                  <Text style={[styles.barcodePreviewText, { color: colors.success }]}>
+                    Barcode: {form.barcode}
+                  </Text>
+                </View>
+              )}
+              <Text style={[styles.barcodeHint, { color: colors.mutedForeground }]}>
+                {Platform.OS !== "web"
+                  ? "📷 Skaner tugmasini bosib kamera orqali o'qing yoki qo'lda kiriting"
+                  : "Barcode raqamini qo'lda kiriting (EAN-13, Code128 va h.k.)"}
               </Text>
             </View>
-            <View style={styles.profitVals}>
-              <Text style={[styles.profitVal, { color: profit >= 0 ? "#1B5E20" : "#B71C1C" }]}>
-                {profit >= 0 ? "+" : ""}{profit.toLocaleString()} UZS
-              </Text>
-              {profitPct && (
-                <Text style={[styles.profitPct, { color: profit >= 0 ? "#2E7D32" : "#C62828" }]}>
-                  ({profitPct}%)
+          </View>
+
+          {showProfit && (
+            <View
+              style={[
+                styles.profitCard,
+                {
+                  backgroundColor: profit >= 0 ? "#E8F5E9" : "#FFEBEE",
+                  borderColor: profit >= 0 ? "#4CAF50" : "#F44336",
+                },
+              ]}
+            >
+              <View style={styles.profitRow}>
+                <MaterialIcons
+                  name={profit >= 0 ? "trending-up" : "trending-down"}
+                  size={20}
+                  color={profit >= 0 ? "#2E7D32" : "#C62828"}
+                />
+                <Text style={[styles.profitLabel, { color: profit >= 0 ? "#2E7D32" : "#C62828" }]}>
+                  {profit >= 0 ? "Foyda" : "Zarar"}
+                </Text>
+              </View>
+              <View style={styles.profitVals}>
+                <Text style={[styles.profitVal, { color: profit >= 0 ? "#1B5E20" : "#B71C1C" }]}>
+                  {profit >= 0 ? "+" : ""}{profit.toLocaleString()} UZS
+                </Text>
+                {profitPct && (
+                  <Text style={[styles.profitPct, { color: profit >= 0 ? "#2E7D32" : "#C62828" }]}>
+                    ({profitPct}%)
+                  </Text>
+                )}
+              </View>
+              {qty > 0 && (
+                <Text style={[styles.profitTotal, { color: profit >= 0 ? "#388E3C" : "#C62828" }]}>
+                  {qty} dona × {profit >= 0 ? "+" : ""}{profit.toLocaleString()} = {(profit * qty).toLocaleString()} UZS jami
                 </Text>
               )}
+              {form.quantity && parseInt(form.quantity) < 5 && parseInt(form.quantity) >= 0 && (
+                <View style={styles.lowWarn}>
+                  <MaterialIcons name="warning" size={13} color="#E65100" />
+                  <Text style={[styles.lowWarnText, { color: "#E65100" }]}>
+                    Diqqat: {parseInt(form.quantity)} dona — stok kam!
+                  </Text>
+                </View>
+              )}
             </View>
-            {qty > 0 && (
-              <Text style={[styles.profitTotal, { color: profit >= 0 ? "#388E3C" : "#C62828" }]}>
-                {qty} dona × {profit >= 0 ? "+" : ""}{profit.toLocaleString()} = {(profit * qty).toLocaleString()} UZS jami
-              </Text>
-            )}
-            {form.quantity && parseInt(form.quantity) < 5 && parseInt(form.quantity) >= 0 && (
-              <View style={styles.lowWarn}>
-                <MaterialIcons name="warning" size={13} color="#E65100" />
-                <Text style={[styles.lowWarnText, { color: "#E65100" }]}>
-                  Diqqat: {parseInt(form.quantity)} dona — stok kam!
-                </Text>
-              </View>
-            )}
-          </View>
-        )}
-
-        <TouchableOpacity
-          style={[
-            styles.submitBtn,
-            { backgroundColor: isPending || submitted ? colors.mutedForeground : colors.primary },
-          ]}
-          onPress={handleSubmit}
-          disabled={isPending || submitted}
-          activeOpacity={0.85}
-        >
-          {isPending ? (
-            <ActivityIndicator size="small" color="#fff" />
-          ) : submitted ? (
-            <MaterialIcons name="check-circle" size={22} color="#fff" />
-          ) : (
-            <>
-              <MaterialIcons name={isEdit ? "save" : "add-circle"} size={20} color="#fff" />
-              <Text style={styles.submitText}>{isEdit ? "Saqlash" : "Qo'shish"}</Text>
-            </>
           )}
-        </TouchableOpacity>
 
-        <TouchableOpacity
-          style={[styles.cancelBtn, { borderColor: colors.border }]}
-          onPress={() => router.back()}
-          activeOpacity={0.75}
-        >
-          <Text style={[styles.cancelText, { color: colors.mutedForeground }]}>Bekor qilish</Text>
-        </TouchableOpacity>
-      </ScrollView>
-    </KeyboardAvoidingView>
+          <TouchableOpacity
+            style={[
+              styles.submitBtn,
+              { backgroundColor: isPending || submitted ? colors.mutedForeground : colors.primary },
+            ]}
+            onPress={handleSubmit}
+            disabled={isPending || submitted}
+            activeOpacity={0.85}
+          >
+            {isPending ? (
+              <ActivityIndicator size="small" color="#fff" />
+            ) : submitted ? (
+              <MaterialIcons name="check-circle" size={22} color="#fff" />
+            ) : (
+              <>
+                <MaterialIcons name={isEdit ? "save" : "add-circle"} size={20} color="#fff" />
+                <Text style={styles.submitText}>{isEdit ? "Saqlash" : "Qo'shish"}</Text>
+              </>
+            )}
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.cancelBtn, { borderColor: colors.border }]}
+            onPress={() => router.back()}
+            activeOpacity={0.75}
+          >
+            <Text style={[styles.cancelText, { color: colors.mutedForeground }]}>Bekor qilish</Text>
+          </TouchableOpacity>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </>
   );
 }
 
 const styles = StyleSheet.create({
   content: { paddingHorizontal: 16 },
   idRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    borderRadius: 10,
-    borderWidth: 1,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    marginBottom: 14,
+    flexDirection: "row", alignItems: "center", gap: 6,
+    borderRadius: 10, borderWidth: 1,
+    paddingHorizontal: 12, paddingVertical: 8, marginBottom: 14,
   },
   idLabel: { fontFamily: "Inter_400Regular", fontSize: 13 },
   idValue: { fontFamily: "Inter_700Bold", fontSize: 13 },
   card: {
-    borderRadius: 16,
-    borderWidth: 1,
-    padding: 16,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 6,
-    elevation: 1,
-    gap: 4,
+    borderRadius: 16, borderWidth: 1, padding: 16,
+    shadowColor: "#000", shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05, shadowRadius: 6, elevation: 1, gap: 4,
   },
   fieldWrap: { marginBottom: 12 },
   labelRow: { flexDirection: "row", alignItems: "center", gap: 5, marginBottom: 6 },
   label: { fontFamily: "Inter_500Medium", fontSize: 13 },
+  optionalTag: {
+    fontSize: 10, fontFamily: "Inter_400Regular",
+    borderWidth: 1, borderRadius: 4,
+    paddingHorizontal: 5, paddingVertical: 1, marginLeft: 4,
+  },
   input: {
-    borderWidth: 1,
-    borderRadius: 11,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    fontSize: 15,
+    borderWidth: 1, borderRadius: 11,
+    paddingHorizontal: 14, paddingVertical: 12, fontSize: 15,
   },
   errorRow: { flexDirection: "row", alignItems: "center", gap: 4, marginTop: 4 },
   errorText: { fontFamily: "Inter_400Regular", fontSize: 12 },
-  profitCard: {
-    borderRadius: 14,
-    borderWidth: 1.5,
-    padding: 14,
-    marginTop: 14,
-    gap: 6,
+
+  // Barcode
+  barcodeRow: { flexDirection: "row", alignItems: "center", gap: 8 },
+  barcodeInput: { flex: 1 },
+  barcodeClearBtn: {
+    width: 44, height: 44, borderRadius: 11, borderWidth: 1,
+    alignItems: "center", justifyContent: "center",
   },
+  barcodeScanBtn: {
+    width: 52, height: 44, borderRadius: 11,
+    alignItems: "center", justifyContent: "center",
+    shadowColor: "#1565C0", shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3, shadowRadius: 4, elevation: 3,
+  },
+  barcodePreview: {
+    flexDirection: "row", alignItems: "center", gap: 6,
+    borderWidth: 1, borderRadius: 8,
+    paddingHorizontal: 10, paddingVertical: 7, marginTop: 6,
+  },
+  barcodePreviewText: { fontFamily: "Inter_500Medium", fontSize: 12 },
+  barcodeHint: { fontSize: 11, fontFamily: "Inter_400Regular", marginTop: 5, lineHeight: 16 },
+
+  profitCard: { borderRadius: 14, borderWidth: 1.5, padding: 14, marginTop: 14, gap: 6 },
   profitRow: { flexDirection: "row", alignItems: "center", gap: 6 },
   profitLabel: { fontFamily: "Inter_600SemiBold", fontSize: 14 },
   profitVals: { flexDirection: "row", alignItems: "baseline", gap: 6 },
@@ -352,27 +635,16 @@ const styles = StyleSheet.create({
   lowWarn: { flexDirection: "row", alignItems: "center", gap: 5, marginTop: 4 },
   lowWarnText: { fontFamily: "Inter_500Medium", fontSize: 12 },
   submitBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 8,
-    borderRadius: 14,
-    paddingVertical: 16,
-    marginTop: 20,
-    shadowColor: "#1565C0",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.25,
-    shadowRadius: 8,
-    elevation: 4,
+    flexDirection: "row", alignItems: "center", justifyContent: "center",
+    gap: 8, borderRadius: 14, paddingVertical: 16, marginTop: 20,
+    shadowColor: "#1565C0", shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25, shadowRadius: 8, elevation: 4,
   },
   submitText: { fontFamily: "Inter_700Bold", fontSize: 16, color: "#fff" },
   cancelBtn: {
-    borderRadius: 14,
-    paddingVertical: 14,
-    alignItems: "center",
-    justifyContent: "center",
-    marginTop: 10,
-    borderWidth: 1,
+    borderRadius: 14, paddingVertical: 14,
+    alignItems: "center", justifyContent: "center",
+    marginTop: 10, borderWidth: 1,
   },
   cancelText: { fontFamily: "Inter_500Medium", fontSize: 14 },
 });
