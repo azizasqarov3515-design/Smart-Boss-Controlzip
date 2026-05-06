@@ -2,7 +2,6 @@ import React from "react";
 import { View, Text, StyleSheet, TouchableOpacity, Alert } from "react-native";
 import { MaterialIcons } from "@expo/vector-icons";
 import { useAuth } from "@/contexts/AuthContext";
-import { useRouter } from "expo-router";
 
 interface SubscriptionGuardProps {
   children: React.ReactNode;
@@ -15,7 +14,6 @@ function formatDate(d: Date | null): string {
 
 export function SubscriptionGuard({ children }: SubscriptionGuardProps) {
   const { subscriptionExpired, subscriptionDaysLeft, subscriptionEnd, subscriptionActive, isAuthenticated, role, logout } = useAuth();
-  const router = useRouter();
 
   if (!isAuthenticated) return <>{children}</>;
 
@@ -24,7 +22,15 @@ export function SubscriptionGuard({ children }: SubscriptionGuardProps) {
     const handleLogout = () => {
       Alert.alert("Chiqish", "Tizimdan chiqishni xohlaysizmi?", [
         { text: "Bekor", style: "cancel" },
-        { text: "Chiqish", style: "destructive", onPress: async () => { await logout(); router.replace("/role-select"); } },
+        {
+          text: "Chiqish",
+          style: "destructive",
+          onPress: async () => {
+            await logout();
+            // Navigation is handled automatically by RootLayoutNav
+            // when isAuthenticated becomes false
+          },
+        },
       ]);
     };
 
