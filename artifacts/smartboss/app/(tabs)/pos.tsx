@@ -58,34 +58,22 @@ function ScannerModal({
   onClose: () => void;
   onScanned: (barcode: string) => void;
 }) {
-  const isWeb = Platform.OS === "web";
   const [permission, requestPermission] = useCameraPermissions();
   const [scanned, setScanned] = useState(false);
   const [manualBarcode, setManualBarcode] = useState("");
-  const [permissionAsked, setPermissionAsked] = useState(false);
   const [camError, setCamError] = useState(false);
   const lineAnim = useRef(new Animated.Value(0)).current;
 
-  // Reset state each time modal opens
+  // Reset state each time modal opens + auto-request permission
   useEffect(() => {
-    if (visible) {
-      setScanned(false);
-      setManualBarcode("");
-      setCamError(false);
-      setPermissionAsked(false);
+    if (!visible) return;
+    setScanned(false);
+    setManualBarcode("");
+    setCamError(false);
+    if (!permission?.granted) {
+      requestPermission();
     }
   }, [visible]);
-
-  // Request permission when modal opens
-  useEffect(() => {
-    if (!visible || permissionAsked) return;
-    if (permission === null || permission?.status === "undetermined") {
-      setPermissionAsked(true);
-      requestPermission();
-    } else {
-      setPermissionAsked(true);
-    }
-  }, [visible, permission, permissionAsked, requestPermission]);
 
   // Animate scan line
   useEffect(() => {
@@ -121,8 +109,10 @@ function ScannerModal({
     setManualBarcode("");
   };
 
-  const showCamera = !isWeb && !camError && permission?.granted;
-  const showPermissionDenied = !isWeb && !camError && permission?.granted === false;
+  // Show camera whenever permission is granted (works on web + native)
+  const showCamera = !camError && permission?.granted === true;
+  const showPermissionDenied = !camError && permission?.granted === false;
+  const showPermissionLoading = !camError && permission === null;
 
   return (
     <Modal
@@ -148,7 +138,7 @@ function ScannerModal({
           <View style={{ width: 44 }} />
         </View>
 
-        {/* Camera area */}
+        {/* Camera — works on both web and native via WebRTC/native camera */}
         {showCamera && (
           <View style={styles.cameraWrap}>
             <CameraView
@@ -170,26 +160,22 @@ function ScannerModal({
             <View style={styles.overlayMiddleRow}>
               <View style={styles.overlaySide} />
               <View style={styles.scanFrame}>
-                {/* Corners */}
                 <View style={[styles.corner, styles.cTL]} />
                 <View style={[styles.corner, styles.cTR]} />
                 <View style={[styles.corner, styles.cBL]} />
                 <View style={[styles.corner, styles.cBR]} />
 
-                {/* Scan line */}
                 {!scanned && (
                   <Animated.View
                     style={[
                       styles.scanLine,
                       {
-                        transform: [
-                          {
-                            translateY: lineAnim.interpolate({
-                              inputRange: [0, 1],
-                              outputRange: [0, 180],
-                            }),
-                          },
-                        ],
+                        transform: [{
+                          translateY: lineAnim.interpolate({
+                            inputRange: [0, 1],
+                            outputRange: [0, 180],
+                          }),
+                        }],
                       },
                     ]}
                   />
@@ -213,7 +199,7 @@ function ScannerModal({
         )}
 
         {/* Permission loading */}
-        {!isWeb && !permission && (
+        {showPermissionLoading && (
           <View style={styles.permWrap}>
             <ActivityIndicator size="large" color="#1565C0" />
             <Text style={styles.permText}>Kamera ruxsati so'ralmoqda...</Text>
@@ -226,7 +212,7 @@ function ScannerModal({
             <MaterialIcons name="no-photography" size={56} color="#EF5350" />
             <Text style={styles.permTitle}>Kamera ruxsati yo'q</Text>
             <Text style={styles.permText}>
-              Telefon sozlamalarida kamera ruxsatini bering, keyin qayta urinib ko'ring.
+              Brauzer yoki telefon sozlamalarida kamera ruxsatini bering, so'ng qayta urinib ko'ring.
             </Text>
             <TouchableOpacity
               style={styles.permBtn}
@@ -238,8 +224,8 @@ function ScannerModal({
           </View>
         )}
 
-        {/* Camera error fallback */}
-        {!isWeb && camError && (
+        {/* Camera error */}
+        {camError && (
           <View style={styles.permWrap}>
             <MaterialIcons name="error-outline" size={48} color="#FF9800" />
             <Text style={styles.permTitle}>Kamera ishlamadi</Text>
@@ -247,24 +233,9 @@ function ScannerModal({
           </View>
         )}
 
-        {/* Web: no native camera API → show instructions */}
-        {isWeb && (
-          <View style={styles.webCamWrap}>
-            <MaterialIcons name="qr-code-scanner" size={72} color="#1565C0" />
-            <Text style={styles.webCamTitle}>Barcode skanerlash</Text>
-            <Text style={styles.webCamSub}>
-              Quyida barcode raqamini kiriting yoki mahsulot ID sini yozing
-            </Text>
-          </View>
-        )}
-
-        {/* Manual barcode input — always available */}
+        {/* Manual barcode input — always visible */}
         <View style={styles.manualWrap}>
-          <Text style={styles.manualLabel}>
-            {isWeb
-              ? "Barcode / mahsulot ID raqamini kiriting:"
-              : "Yoki qo'lda barcode kiriting:"}
-          </Text>
+          <Text style={styles.manualLabel}>Yoki qo'lda barcode kiriting:</Text>
           <View style={styles.manualRow}>
             <TextInput
               style={styles.manualInput}
@@ -274,7 +245,6 @@ function ScannerModal({
               placeholderTextColor="#9E9E9E"
               keyboardType="default"
               returnKeyType="search"
-              autoFocus={isWeb}
               onSubmitEditing={handleManualSubmit}
               autoCapitalize="none"
               autoCorrect={false}

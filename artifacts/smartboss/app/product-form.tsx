@@ -41,21 +41,19 @@ function BarcodeScanModal({
   onClose: () => void;
   onScanned: (code: string) => void;
 }) {
-  const isWeb = Platform.OS === "web";
   const [permission, requestPermission] = useCameraPermissions();
   const [scanned, setScanned] = useState(false);
+  const [camError, setCamError] = useState(false);
   const lineAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    if (visible) setScanned(false);
-  }, [visible]);
-
-  useEffect(() => {
     if (!visible) return;
-    if (permission === null || permission?.status === "undetermined") {
+    setScanned(false);
+    setCamError(false);
+    if (!permission?.granted) {
       requestPermission();
     }
-  }, [visible, permission, requestPermission]);
+  }, [visible]);
 
   useEffect(() => {
     if (!visible) return;
@@ -78,8 +76,10 @@ function BarcodeScanModal({
     }, 300);
   };
 
-  const showCamera = !isWeb && permission?.granted;
-  const showDenied = !isWeb && permission?.granted === false;
+  // Works on both web (WebRTC) and native
+  const showCamera = !camError && permission?.granted === true;
+  const showDenied = !camError && permission?.granted === false;
+  const showLoading = !camError && permission === null;
 
   return (
     <Modal visible={visible} animationType="slide" statusBarTranslucent onRequestClose={onClose}>
@@ -108,6 +108,7 @@ function BarcodeScanModal({
                   ],
                 }}
                 onBarcodeScanned={scanned ? undefined : handleBarcodeScanned}
+                onCameraReady={() => setCamError(false)}
               />
               {/* Overlay */}
               <View style={scanStyles.overlayTop} />
@@ -146,32 +147,34 @@ function BarcodeScanModal({
             </View>
           )}
 
-          {/* Permission denied */}
-          {showDenied && (
-            <View style={scanStyles.center}>
-              <MaterialIcons name="no-photography" size={56} color="#EF5350" />
-              <Text style={scanStyles.permTitle}>Kamera ruxsati yo'q</Text>
-              <Text style={scanStyles.permSub}>Telefon sozlamalarida kamera ruxsatini bering</Text>
-              <TouchableOpacity style={scanStyles.permBtn} onPress={() => requestPermission()} activeOpacity={0.85}>
-                <Text style={scanStyles.permBtnText}>Ruxsat so'rash</Text>
-              </TouchableOpacity>
-            </View>
-          )}
-
-          {/* Loading permission */}
-          {!isWeb && !permission && (
+          {/* Loading */}
+          {showLoading && (
             <View style={scanStyles.center}>
               <ActivityIndicator size="large" color="#1565C0" />
               <Text style={[scanStyles.permSub, { marginTop: 12 }]}>Kamera ruxsati so'ralmoqda…</Text>
             </View>
           )}
 
-          {/* Web fallback */}
-          {isWeb && (
+          {/* Permission denied */}
+          {showDenied && (
             <View style={scanStyles.center}>
-              <MaterialIcons name="qr-code-scanner" size={72} color="#1565C0" />
-              <Text style={scanStyles.permTitle}>Kamera faqat telefonda ishlaydi</Text>
-              <Text style={scanStyles.permSub}>Pastdagi maydonga barcode raqamini qo'lda kiriting</Text>
+              <MaterialIcons name="no-photography" size={56} color="#EF5350" />
+              <Text style={scanStyles.permTitle}>Kamera ruxsati yo'q</Text>
+              <Text style={scanStyles.permSub}>
+                Brauzer yoki telefon sozlamalarida kamera ruxsatini bering
+              </Text>
+              <TouchableOpacity style={scanStyles.permBtn} onPress={() => requestPermission()} activeOpacity={0.85}>
+                <Text style={scanStyles.permBtnText}>Ruxsat so'rash</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+
+          {/* Camera error */}
+          {camError && (
+            <View style={scanStyles.center}>
+              <MaterialIcons name="error-outline" size={56} color="#FF9800" />
+              <Text style={scanStyles.permTitle}>Kamera ishlamadi</Text>
+              <Text style={scanStyles.permSub}>Qo'lda barcode kiriting</Text>
             </View>
           )}
         </View>
