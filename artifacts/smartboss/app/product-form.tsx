@@ -472,15 +472,13 @@ export default function ProductFormScreen() {
                     <MaterialIcons name="close" size={18} color={colors.mutedForeground} />
                   </TouchableOpacity>
                 )}
-                {Platform.OS !== "web" && (
-                  <TouchableOpacity
-                    style={[styles.barcodeScanBtn, { backgroundColor: colors.primary }]}
-                    onPress={() => setScannerOpen(true)}
-                    activeOpacity={0.85}
-                  >
-                    <MaterialIcons name="qr-code-scanner" size={20} color="#fff" />
-                  </TouchableOpacity>
-                )}
+                <TouchableOpacity
+                  style={[styles.barcodeScanBtn, { backgroundColor: colors.primary }]}
+                  onPress={() => setScannerOpen(true)}
+                  activeOpacity={0.85}
+                >
+                  <MaterialIcons name="qr-code-scanner" size={20} color="#fff" />
+                </TouchableOpacity>
               </View>
               {form.barcode.length > 0 && (
                 <View style={[styles.barcodePreview, { backgroundColor: colors.surfaceVariant, borderColor: colors.primary + "33" }]}>
@@ -491,9 +489,7 @@ export default function ProductFormScreen() {
                 </View>
               )}
               <Text style={[styles.barcodeHint, { color: colors.mutedForeground }]}>
-                {Platform.OS !== "web"
-                  ? "📷 Skaner tugmasini bosib kamera orqali o'qing yoki qo'lda kiriting"
-                  : "Barcode raqamini qo'lda kiriting (EAN-13, Code128 va h.k.)"}
+                📷 Skaner tugmasini bosib kamera orqali o'qing yoki qo'lda kiriting
               </Text>
             </View>
           </View>
