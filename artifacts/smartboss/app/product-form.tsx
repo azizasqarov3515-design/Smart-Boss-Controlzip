@@ -25,6 +25,8 @@ import {
 import { MaterialIcons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useColors } from "@/hooks/useColors";
+import { useAuth } from "@/contexts/AuthContext";
+import { SubscriptionLockScreen } from "@/components/SubscriptionLockScreen";
 import {
   CameraView,
   useCameraPermissions,
@@ -248,7 +250,7 @@ const FIELDS: Array<{
   { key: "quantity", label: "Miqdori (dona)", placeholder: "0", keyboardType: "numeric", icon: "inventory" },
 ];
 
-export default function ProductFormScreen() {
+function ProductFormScreenInner() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const router = useRouter();
@@ -647,3 +649,9 @@ const styles = StyleSheet.create({
   },
   cancelText: { fontFamily: "Inter_500Medium", fontSize: 14 },
 });
+
+export default function ProductFormScreen() {
+  const { subscriptionActive } = useAuth();
+  if (!subscriptionActive) return <SubscriptionLockScreen screenName="Mahsulot qo'shish" />;
+  return <ProductFormScreenInner />;
+}

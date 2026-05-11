@@ -28,6 +28,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useColors } from "@/hooks/useColors";
 import { useAuth } from "@/contexts/AuthContext";
 import { WebRefreshBar } from "@/components/WebRefreshBar";
+import { SubscriptionLockScreen } from "@/components/SubscriptionLockScreen";
 
 type SortKey = "name" | "brand" | "costPrice" | "salePrice" | "quantity";
 
@@ -178,7 +179,7 @@ function ProductCard({
   );
 }
 
-export default function ProductsScreen() {
+function ProductsScreenInner() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const router = useRouter();
@@ -692,3 +693,9 @@ const styles = StyleSheet.create({
   },
   modalConfirmBtnText: { fontFamily: "Inter_600SemiBold", fontSize: 15, color: "#fff" },
 });
+
+export default function ProductsScreen() {
+  const { subscriptionActive } = useAuth();
+  if (!subscriptionActive) return <SubscriptionLockScreen screenName="Tovarlar" />;
+  return <ProductsScreenInner />;
+}

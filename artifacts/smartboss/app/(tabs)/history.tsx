@@ -38,6 +38,7 @@ import {
 } from "@/utils/pdfTemplates";
 import { generateAndSharePdf, type DocType } from "@/utils/generatePdf";
 import { WebRefreshBar } from "@/components/WebRefreshBar";
+import { SubscriptionLockScreen } from "@/components/SubscriptionLockScreen";
 
 function formatMoney(n: number) {
   return n.toLocaleString("uz-UZ") + " UZS";
@@ -239,7 +240,7 @@ function SaleCard({
 
 type ConfirmType = "selected" | "all" | null;
 
-export default function HistoryScreen() {
+function HistoryScreenInner() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const isWeb = Platform.OS === "web";
@@ -677,3 +678,9 @@ const styles = StyleSheet.create({
   reqErrorRow: { flexDirection: "row", alignItems: "center", gap: 5 },
   reqErrorText: { fontFamily: "Inter_400Regular", fontSize: 12, color: "#DC2626", flex: 1 },
 });
+
+export default function HistoryScreen() {
+  const { subscriptionActive } = useAuth();
+  if (!subscriptionActive) return <SubscriptionLockScreen screenName="Tarix" />;
+  return <HistoryScreenInner />;
+}

@@ -38,6 +38,8 @@ import { MaterialIcons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useColors } from "@/hooks/useColors";
 import { WebRefreshBar } from "@/components/WebRefreshBar";
+import { SubscriptionLockScreen } from "@/components/SubscriptionLockScreen";
+import { useAuth } from "@/contexts/AuthContext";
 
 type CartItem = {
   product: Product;
@@ -271,7 +273,7 @@ function ScannerModal({
 }
 
 // ─── Main POS Screen ─────────────────────────────────────────────────────────
-export default function POSScreen() {
+function POSScreenInner() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const queryClient = useQueryClient();
@@ -1943,3 +1945,9 @@ const styles = StyleSheet.create({
     textAlign: "right",
   },
 });
+
+export default function POSScreen() {
+  const { subscriptionActive } = useAuth();
+  if (!subscriptionActive) return <SubscriptionLockScreen screenName="Kassa" />;
+  return <POSScreenInner />;
+}

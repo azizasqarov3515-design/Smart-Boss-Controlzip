@@ -525,6 +525,50 @@ router.get("/admin/audit-logs", requireAdmin, async (req, res) => {
   }
 });
 
+// GET /api/admin/contact — public endpoint, returns admin phone (no auth required)
+router.get("/admin/contact", async (req, res) => {
+  try {
+    const rows = await db.select().from(adminConfigTable).where(eq(adminConfigTable.key, "admin_phone"));
+    res.json({ adminPhone: rows[0]?.value ?? "" });
+  } catch (err) {
+    req.log.error({ err }, "Get admin contact failed");
+    res.status(500).json({ error: "Xato" });
+  }
+});
+
+// GET /api/admin/settings — get admin settings (admin auth required)
+router.get("/admin/settings", requireAdmin, async (req, res) => {
+  try {
+    const rows = await db.select().from(adminConfigTable);
+    const map: Record<string, string> = {};
+    for (const row of rows) { map[row.key] = row.value; }
+    res.json({ adminPhone: map["admin_phone"] ?? "" });
+  } catch (err) {
+    req.log.error({ err }, "Get admin settings failed");
+    res.status(500).json({ error: "Xato" });
+  }
+});
+
+// POST /api/admin/settings — update admin settings (admin auth required)
+router.post("/admin/settings", requireAdmin, async (req, res) => {
+  try {
+    const { adminPhone } = req.body as { adminPhone?: string };
+    if (typeof adminPhone === "string") {
+      await db
+        .insert(adminConfigTable)
+        .values({ key: "admin_phone", value: adminPhone.trim() })
+        .onConflictDoUpdate({
+          target: adminConfigTable.key,
+          set: { value: adminPhone.trim(), updatedAt: new Date() },
+        });
+    }
+    res.json({ ok: true });
+  } catch (err) {
+    req.log.error({ err }, "Update admin settings failed");
+    res.status(500).json({ error: "Xato" });
+  }
+});
+
 // DELETE /api/admin/managers/:id/subscription — deactivate subscription
 router.delete("/admin/managers/:id/subscription", requireAdmin, async (req, res) => {
   const id = parseInt(req.params.id ?? "");

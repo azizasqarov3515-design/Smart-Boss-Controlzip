@@ -29,6 +29,8 @@ import { MaterialIcons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useColors } from "@/hooks/useColors";
 import { WebRefreshBar } from "@/components/WebRefreshBar";
+import { SubscriptionLockScreen } from "@/components/SubscriptionLockScreen";
+import { useAuth } from "@/contexts/AuthContext";
 
 function formatMoney(n: number) {
   return n.toLocaleString("uz-UZ") + " UZS";
@@ -123,7 +125,7 @@ function CustomerCard({
   );
 }
 
-export default function CustomersScreen() {
+function CustomersScreenInner() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const router = useRouter();
@@ -563,3 +565,9 @@ const styles = StyleSheet.create({
   },
   saveBtnText: { fontFamily: "Inter_700Bold", fontSize: 15, color: "#fff" },
 });
+
+export default function CustomersScreen() {
+  const { subscriptionActive } = useAuth();
+  if (!subscriptionActive) return <SubscriptionLockScreen screenName="Mijozlar" />;
+  return <CustomersScreenInner />;
+}

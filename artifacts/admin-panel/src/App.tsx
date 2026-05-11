@@ -875,8 +875,93 @@ function LoginPage() {
   );
 }
 
+// ─── Admin Settings Tab ───────────────────────────────────────────────────────
+function AdminSettingsTab() {
+  const { token } = useAdminAuth();
+  const { toast } = useToast();
+  const [phone, setPhone] = useState("");
+  const [saved, setSaved] = useState(false);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    authFetch(token!, "/api/admin/settings")
+      .then(r => r.json() as Promise<{ adminPhone?: string }>)
+      .then(d => { setPhone(d.adminPhone ?? ""); })
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, [token]);
+
+  const handleSave = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      const r = await authFetch(token!, "/api/admin/settings", {
+        method: "POST",
+        body: JSON.stringify({ adminPhone: phone }),
+      });
+      const d = await r.json() as { ok?: boolean; error?: string };
+      if (!r.ok) throw new Error(d.error ?? "Xato");
+      setSaved(true);
+      setTimeout(() => setSaved(false), 3000);
+      toast({ title: "✅ Sozlamalar saqlandi" });
+    } catch (e) {
+      toast({ title: "Xato", description: (e as Error).message, variant: "destructive" });
+    }
+  };
+
+  return (
+    <div className="space-y-5">
+      <div className="bg-card border border-card-border rounded-2xl p-5">
+        <div className="flex items-center gap-3 mb-5">
+          <div className="w-10 h-10 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center text-xl">📞</div>
+          <div>
+            <h3 className="font-bold text-foreground text-base">Admin telefon raqami</h3>
+            <p className="text-xs text-muted-foreground mt-0.5">Obunasi yo'q foydalanuvchilar shu raqamni ko'radi</p>
+          </div>
+        </div>
+
+        {loading ? (
+          <div className="h-12 bg-secondary/60 rounded-xl animate-pulse" />
+        ) : (
+          <form onSubmit={handleSave} className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-muted-foreground mb-2">Telefon raqam</label>
+              <input
+                type="tel"
+                value={phone}
+                onChange={e => setPhone(e.target.value)}
+                placeholder="+998 90 123 45 67"
+                className="w-full bg-input border border-border rounded-2xl px-4 py-3.5 text-foreground focus:outline-none focus:ring-2 focus:ring-ring text-base"
+                style={{ fontSize: "16px" }}
+              />
+              <p className="text-xs text-muted-foreground mt-2">
+                Foydalanuvchi "Obuna sotib olish" tugmasini bosganida ushbu raqam ko'rsatiladi
+              </p>
+            </div>
+            <button
+              type="submit"
+              className="w-full flex items-center justify-center gap-2 bg-primary hover:opacity-90 active:opacity-75 text-primary-foreground font-bold py-3.5 rounded-xl transition text-sm"
+            >
+              {saved ? "✅ Saqlandi" : "💾 Saqlash"}
+            </button>
+          </form>
+        )}
+      </div>
+
+      <div className="bg-secondary/40 border border-border rounded-2xl p-4">
+        <h4 className="text-sm font-semibold text-foreground mb-2">ℹ️ Qanday ishlaydi?</h4>
+        <ul className="space-y-2 text-xs text-muted-foreground leading-relaxed">
+          <li>• Yangi ro'yxatdan o'tgan rahbarlar obunasiz bo'ladi</li>
+          <li>• Ular "Tovarlar", "Tarix", "Mijozlar", "Kassa" bo'limlariga kira olmaydi</li>
+          <li>• "Obuna sotib olish" tugmasini bosganida yuqoridagi raqam ko'rsatiladi</li>
+          <li>• To'lovdan keyin bu yerdan obunani ulab qo'ying — foydalanuvchi darhol kirish oladi</li>
+        </ul>
+      </div>
+    </div>
+  );
+}
+
 // ─── Dashboard page ───────────────────────────────────────────────────────────
-type TabType = "managers" | "logs";
+type TabType = "managers" | "logs" | "settings";
 
 function DashboardPage() {
   const { token, logout } = useAdminAuth();
@@ -977,7 +1062,7 @@ function DashboardPage() {
 
           {/* Tabs */}
           <div className="flex bg-secondary/50 border border-border rounded-2xl p-1 gap-1">
-            {(["managers", "logs"] as TabType[]).map(t => (
+            {(["managers", "logs", "settings"] as TabType[]).map(t => (
               <button
                 key={t}
                 onClick={() => setTab(t)}
@@ -985,7 +1070,7 @@ function DashboardPage() {
                   tab === t ? "bg-card text-foreground shadow-sm border border-border" : "text-muted-foreground active:text-foreground"
                 }`}
               >
-                {t === "managers" ? `🏪 Do'konlar` : "📋 Tarix"}
+                {t === "managers" ? `🏪 Do'konlar` : t === "logs" ? "📋 Tarix" : "⚙️ Sozlama"}
               </button>
             ))}
           </div>
@@ -1085,6 +1170,8 @@ function DashboardPage() {
               )}
             </>
           )}
+
+          {tab === "settings" && <AdminSettingsTab />}
         </div>
       </div>
 
