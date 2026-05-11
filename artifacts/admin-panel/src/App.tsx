@@ -566,9 +566,15 @@ function ResetPasswordPage() {
           <p className="text-sm text-muted-foreground mt-1.5">Tiklash kodi bilan yangi parol o'rnating</p>
         </div>
 
-        <div className="bg-orange-500/10 border border-orange-500/20 rounded-2xl px-4 py-3.5 mb-6">
+        <div className="bg-orange-500/10 border border-orange-500/20 rounded-2xl px-4 py-3.5 mb-6 space-y-2">
           <p className="text-xs text-orange-400 font-medium leading-relaxed">
-            💡 <strong>Tiklash kodi</strong> — bu <code className="bg-orange-500/20 px-1 rounded">SESSION_SECRET</code> muhit o'zgaruvchisi qiymati. Uni faqat server egasi biladi.
+            💡 <strong>Tiklash kodini qayerdan topasiz?</strong>
+          </p>
+          <p className="text-xs text-orange-300/80 leading-relaxed">
+            Replit loyihasida <strong>Tools → Secrets</strong> bo'limiga o'ting va <code className="bg-orange-500/20 px-1 rounded font-mono">SESSION_SECRET</code> ning qiymatini ko'chiring.
+          </p>
+          <p className="text-xs text-orange-300/60 leading-relaxed">
+            Bu qiymat faqat server egasiga ma'lum bo'lgan maxfiy kalit.
           </p>
         </div>
 
