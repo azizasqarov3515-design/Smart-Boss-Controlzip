@@ -44,8 +44,12 @@ const checkSubscription = async (req: Request, res: Response, next: NextFunction
     if (!manager) { next(); return; }
 
     const now = new Date();
-    const isExpired = !manager.subscriptionActive ||
-      (manager.subscriptionEnd !== null && manager.subscriptionEnd < now);
+    // Only block if they had a subscription that is now expired/inactive
+    // New managers (subscriptionEnd === null) are allowed through
+    const isExpired = manager.subscriptionEnd !== null && (
+      !manager.subscriptionActive ||
+      manager.subscriptionEnd < now
+    );
 
     if (isExpired) {
       res.status(402).json({
@@ -85,8 +89,10 @@ const checkWorkerStatus = async (req: Request, res: Response, next: NextFunction
           .where(eq(managersTable.id, worker.managerId));
         if (manager) {
           const now = new Date();
-          const isExpired = !manager.subscriptionActive ||
-            (manager.subscriptionEnd !== null && manager.subscriptionEnd < now);
+          const isExpired = manager.subscriptionEnd !== null && (
+            !manager.subscriptionActive ||
+            manager.subscriptionEnd < now
+          );
           if (isExpired) {
             res.status(402).json({
               error: "Obuna faol emas",
