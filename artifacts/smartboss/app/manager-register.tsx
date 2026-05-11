@@ -21,6 +21,18 @@ const BASE_URL = process.env.EXPO_PUBLIC_DOMAIN
   ? `https://${process.env.EXPO_PUBLIC_DOMAIN}`
   : "";
 
+function formatPhone(text: string): string {
+  const digits = text.replace(/\D/g, "");
+  let local = digits.startsWith("998") ? digits.slice(3) : digits;
+  local = local.slice(0, 9);
+  let result = "+998";
+  if (local.length > 0) result += " " + local.slice(0, 2);
+  if (local.length > 2) result += " " + local.slice(2, 5);
+  if (local.length > 5) result += " " + local.slice(5, 7);
+  if (local.length > 7) result += " " + local.slice(7, 9);
+  return result;
+}
+
 interface FormState {
   fullName: string;
   address: string;
@@ -35,7 +47,7 @@ interface FormState {
 const EMPTY: FormState = {
   fullName: "",
   address: "",
-  phone: "",
+  phone: "+998 ",
   storeName: "",
   storeAddress: "",
   storeId: "",
@@ -59,7 +71,7 @@ function isFormValid(f: FormState) {
   return (
     f.fullName.trim().length >= 2 &&
     f.address.trim().length >= 2 &&
-    f.phone.trim().length >= 7 &&
+    f.phone.replace(/\D/g, "").length >= 12 &&
     f.storeName.trim().length >= 2 &&
     f.storeAddress.trim().length >= 2 &&
     validateStoreId(f.storeId) &&
@@ -83,7 +95,7 @@ const FIELDS: Array<{
 }> = [
   { key: "fullName", label: "Ism Familiya", placeholder: "To'liq ism familiyangiz", icon: "person", autoCapitalize: "words" },
   { key: "address", label: "Yashash joyi", placeholder: "Shahar, ko'cha, uy raqami", icon: "home", autoCapitalize: "words" },
-  { key: "phone", label: "Telefon raqami", placeholder: "+998 90 123 45 67", icon: "phone", keyboardType: "phone-pad" },
+  { key: "phone", label: "Telefon raqami", placeholder: "+998 90 123 45 67", icon: "phone", keyboardType: "phone-pad", maxLength: 17 },
   { key: "storeName", label: "Do'kon nomi", placeholder: "Do'koningiz nomi", icon: "store", autoCapitalize: "words" },
   { key: "storeAddress", label: "Do'kon manzili", placeholder: "Do'kon joylashgan manzil", icon: "location-on", autoCapitalize: "words" },
   {
@@ -129,7 +141,14 @@ export default function ManagerRegisterScreen() {
   const [serverError, setServerError] = useState<string | null>(null);
 
   const set = useCallback((key: FieldKey, value: string) => {
-    setForm((f) => ({ ...f, [key]: key === "login" ? value.toUpperCase() : value }));
+    let processed = value;
+    if (key === "login") {
+      processed = value.toUpperCase();
+    } else if (key === "phone") {
+      if (value.length < 5) { processed = "+998 "; }
+      else { processed = formatPhone(value); }
+    }
+    setForm((f) => ({ ...f, [key]: processed }));
     setErrors((e) => ({ ...e, [key]: undefined }));
     setServerError(null);
   }, []);
@@ -138,7 +157,7 @@ export default function ManagerRegisterScreen() {
     const newErrors: Partial<Record<FieldKey, string>> = {};
     if (form.fullName.trim().length < 2) newErrors.fullName = "Kamida 2 ta harf";
     if (form.address.trim().length < 2) newErrors.address = "Yashash joyi kiritilishi shart";
-    if (form.phone.trim().length < 7) newErrors.phone = "Telefon raqami kiritilishi shart";
+    if (form.phone.replace(/\D/g, "").length < 12) newErrors.phone = "To'liq telefon raqam kiriting (+998 XX XXX XX XX)";
     if (form.storeName.trim().length < 2) newErrors.storeName = "Do'kon nomi kiritilishi shart";
     if (form.storeAddress.trim().length < 2) newErrors.storeAddress = "Do'kon manzili kiritilishi shart";
     if (!validateStoreId(form.storeId)) newErrors.storeId = "2 katta harf + 8 raqam (masalan: AB12345678)";
