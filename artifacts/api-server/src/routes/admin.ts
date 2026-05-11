@@ -207,6 +207,85 @@ router.post("/admin/reset-password", async (req, res) => {
   }
 });
 
+// POST /api/admin/managers/:id/block — block a manager (freezes all access)
+router.post("/admin/managers/:id/block", requireAdmin, async (req, res) => {
+  const id = parseInt(req.params.id ?? "");
+  if (isNaN(id)) { res.status(400).json({ error: "Noto'g'ri ID" }); return; }
+  try {
+    const [updated] = await db
+      .update(managersTable)
+      .set({ blocked: true, subscriptionActive: false })
+      .where(eq(managersTable.id, id))
+      .returning({ id: managersTable.id, storeName: managersTable.storeName });
+
+    if (!updated) { res.status(404).json({ error: "Rahbar topilmadi" }); return; }
+
+    await db.insert(auditLogsTable).values({
+      managerId: id,
+      action: "blocked",
+      details: "Admin tomonidan to'liq bloklandi",
+    });
+
+    req.log.info({ managerId: id }, "Manager blocked by admin");
+    res.json({ ok: true });
+  } catch (err) {
+    req.log.error({ err }, "Admin block manager failed");
+    res.status(500).json({ error: "Xato" });
+  }
+});
+
+// POST /api/admin/managers/:id/unblock — unblock a manager
+router.post("/admin/managers/:id/unblock", requireAdmin, async (req, res) => {
+  const id = parseInt(req.params.id ?? "");
+  if (isNaN(id)) { res.status(400).json({ error: "Noto'g'ri ID" }); return; }
+  try {
+    const [updated] = await db
+      .update(managersTable)
+      .set({ blocked: false })
+      .where(eq(managersTable.id, id))
+      .returning({ id: managersTable.id, storeName: managersTable.storeName });
+
+    if (!updated) { res.status(404).json({ error: "Rahbar topilmadi" }); return; }
+
+    await db.insert(auditLogsTable).values({
+      managerId: id,
+      action: "unblocked",
+      details: "Admin tomonidan blok olib tashlandi",
+    });
+
+    req.log.info({ managerId: id }, "Manager unblocked by admin");
+    res.json({ ok: true });
+  } catch (err) {
+    req.log.error({ err }, "Admin unblock manager failed");
+    res.status(500).json({ error: "Xato" });
+  }
+});
+
+// DELETE /api/admin/managers/:id — fully delete manager and all their data
+router.delete("/admin/managers/:id", requireAdmin, async (req, res) => {
+  const id = parseInt(req.params.id ?? "");
+  if (isNaN(id)) { res.status(400).json({ error: "Noto'g'ri ID" }); return; }
+  try {
+    const { deleteRequestsTable: drTable, salesTable: sTable, customersTable: cTable, productsTable: pTable, workersTable: wTable } = await import("@workspace/db/schema");
+
+    await db.delete(drTable).where(eq(drTable.managerId, id));
+    await db.delete(sTable).where(eq(sTable.managerId, id));
+    await db.delete(cTable).where(eq(cTable.managerId, id));
+    await db.delete(pTable).where(eq(pTable.managerId, id));
+    await db.delete(wTable).where(eq(wTable.managerId, id));
+    await db.delete(auditLogsTable).where(eq(auditLogsTable.managerId, id));
+    const [deleted] = await db.delete(managersTable).where(eq(managersTable.id, id)).returning({ storeName: managersTable.storeName });
+
+    if (!deleted) { res.status(404).json({ error: "Rahbar topilmadi" }); return; }
+
+    req.log.info({ managerId: id, storeName: deleted.storeName }, "Manager fully deleted by admin");
+    res.json({ ok: true });
+  } catch (err) {
+    req.log.error({ err }, "Admin delete manager failed");
+    res.status(500).json({ error: "Xato" });
+  }
+});
+
 // GET /api/admin/managers
 router.get("/admin/managers", requireAdmin, async (req, res) => {
   try {
@@ -220,6 +299,7 @@ router.get("/admin/managers", requireAdmin, async (req, res) => {
         storeId: managersTable.storeId,
         login: managersTable.login,
         encryptedPassword: managersTable.encryptedPassword,
+        blocked: managersTable.blocked,
         subscriptionPlan: managersTable.subscriptionPlan,
         subscriptionEnd: managersTable.subscriptionEnd,
         subscriptionActive: managersTable.subscriptionActive,
@@ -255,6 +335,7 @@ router.get("/admin/managers", requireAdmin, async (req, res) => {
           storeId: m.storeId,
           login: m.login,
           password,
+          blocked: m.blocked ?? false,
           subscriptionPlan: m.subscriptionPlan,
           subscriptionPlanLabel: planLabel(m.subscriptionPlan),
           subscriptionEnd: m.subscriptionEnd,

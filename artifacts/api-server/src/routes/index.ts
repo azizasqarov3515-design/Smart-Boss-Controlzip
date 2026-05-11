@@ -23,14 +23,39 @@ router.use(adminRouter);
 
 router.use(requireAuth);
 
+// Paths that bypass subscription/block checks
+const SKIP_PATHS = ["/auth/logout", "/auth/me", "/auth/manager-account"];
+
+// Block check for managers
+const checkBlocked = async (req: Request, res: Response, next: NextFunction) => {
+  const user = res.locals.user;
+  if (user?.role !== "manager" || !user.managerId) { next(); return; }
+  if (SKIP_PATHS.some((p) => req.path.startsWith(p))) { next(); return; }
+
+  try {
+    const [manager] = await db
+      .select({ blocked: managersTable.blocked })
+      .from(managersTable)
+      .where(eq(managersTable.id, user.managerId));
+
+    if (manager?.blocked) {
+      res.status(403).json({
+        error: "Siz tizim tomonidan to'liq bloklandingiz",
+        code: "BLOCKED",
+      });
+      return;
+    }
+  } catch { /* DB error — allow through */ }
+  next();
+};
+
 // Subscription check for managers
 const checkSubscription = async (req: Request, res: Response, next: NextFunction) => {
   const user = res.locals.user;
   if (user?.role !== "manager" || !user.managerId) { next(); return; }
 
-  // Skip subscription check for backup and account deletion
-  const skipPaths = ["/api/auth/logout", "/api/auth/me", "/api/auth/manager-account"];
-  if (skipPaths.some((p) => req.path.startsWith(p.replace("/api", "")))) { next(); return; }
+  // Skip subscription check for account management
+  if (SKIP_PATHS.some((p) => req.path.startsWith(p))) { next(); return; }
 
   try {
     const [manager] = await db
@@ -81,13 +106,20 @@ const checkWorkerStatus = async (req: Request, res: Response, next: NextFunction
         res.status(403).json({ error: "Ruxsat bekor qilindi. Rahbar tasdig'ini kuting." });
         return;
       }
-      // Check manager subscription for worker
+      // Check manager blocked/subscription for worker
       if (worker.managerId) {
         const [manager] = await db
-          .select({ subscriptionActive: managersTable.subscriptionActive, subscriptionEnd: managersTable.subscriptionEnd })
+          .select({ subscriptionActive: managersTable.subscriptionActive, subscriptionEnd: managersTable.subscriptionEnd, blocked: managersTable.blocked })
           .from(managersTable)
           .where(eq(managersTable.id, worker.managerId));
         if (manager) {
+          if (manager.blocked) {
+            res.status(403).json({
+              error: "Siz tizim tomonidan to'liq bloklandingiz",
+              code: "BLOCKED",
+            });
+            return;
+          }
           const now = new Date();
           const isExpired = manager.subscriptionEnd !== null && (
             !manager.subscriptionActive ||
@@ -110,6 +142,7 @@ const checkWorkerStatus = async (req: Request, res: Response, next: NextFunction
   next();
 };
 
+router.use(checkBlocked);
 router.use(checkSubscription);
 router.use(checkWorkerStatus);
 

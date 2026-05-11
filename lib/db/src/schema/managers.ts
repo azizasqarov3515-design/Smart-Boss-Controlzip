@@ -17,6 +17,8 @@ export const managersTable = pgTable("managers", {
   subscriptionPlan: text("subscription_plan"), // '1m' | '3m' | '6m' | '1y'
   subscriptionEnd: timestamp("subscription_end"),
   subscriptionActive: boolean("subscription_active").notNull().default(false),
+  // Block field
+  blocked: boolean("blocked").notNull().default(false),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 

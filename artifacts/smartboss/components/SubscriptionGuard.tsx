@@ -1,5 +1,5 @@
-import React from "react";
-import { View, Text, StyleSheet, TouchableOpacity, Alert } from "react-native";
+import React, { useState } from "react";
+import { View, Text, StyleSheet, TouchableOpacity, Alert, ActivityIndicator } from "react-native";
 import { MaterialIcons } from "@expo/vector-icons";
 import { useAuth } from "@/contexts/AuthContext";
 
@@ -13,12 +13,73 @@ function formatDate(d: Date | null): string {
 }
 
 export function SubscriptionGuard({ children }: SubscriptionGuardProps) {
-  const { subscriptionExpired, subscriptionDaysLeft, subscriptionEnd, subscriptionActive, isAuthenticated, role, logout } = useAuth();
+  const { subscriptionExpired, subscriptionDaysLeft, subscriptionEnd, subscriptionActive, isAuthenticated, role, logout, blocked, deleteAccount } = useAuth();
+  const [deleting, setDeleting] = useState(false);
 
   if (!isAuthenticated) return <>{children}</>;
 
-  // Show full block only if they had a subscription that is now expired/inactive
-  // New managers with no subscription history (subscriptionEnd === null) are allowed through
+  // Show BLOCKED screen
+  if (blocked) {
+    const handleDeleteProfile = () => {
+      Alert.alert(
+        "Profilni yo'q qilish",
+        "Barcha ma'lumotlaringiz — login, parol, do'kon ID, sotuvchilar — butunlay o'chiriladi. Bu amal qaytarib bo'lmaydi!",
+        [
+          { text: "Bekor qilish", style: "cancel" },
+          {
+            text: "O'chirish",
+            style: "destructive",
+            onPress: async () => {
+              setDeleting(true);
+              try {
+                await deleteAccount();
+              } catch {
+                Alert.alert("Xato", "Profilni o'chirishda xato yuz berdi. Qayta urinib ko'ring.");
+              } finally {
+                setDeleting(false);
+              }
+            },
+          },
+        ]
+      );
+    };
+
+    return (
+      <View style={styles.blockContainer}>
+        <View style={styles.blockCard}>
+          <View style={[styles.iconContainer, styles.blockedIconBg]}>
+            <MaterialIcons name="gpp-bad" size={64} color="#EF4444" />
+          </View>
+          <Text style={styles.blockTitle}>Siz tizim tomonidan{"\n"}to'liq bloklandingiz</Text>
+          <Text style={styles.blockSubtitle}>
+            Barcha imkoniyatlar cheklangan.{"\n"}
+            Faqat profilingizni butunlay o'chirishingiz mumkin.
+          </Text>
+          <View style={styles.blockedBadge}>
+            <MaterialIcons name="block" size={16} color="#EF4444" />
+            <Text style={styles.blockedBadgeText}>Administrator tomonidan bloklangan</Text>
+          </View>
+          <TouchableOpacity
+            style={[styles.deleteBtn, deleting && { opacity: 0.6 }]}
+            onPress={handleDeleteProfile}
+            activeOpacity={0.8}
+            disabled={deleting}
+          >
+            {deleting ? (
+              <ActivityIndicator size="small" color="#fff" />
+            ) : (
+              <MaterialIcons name="delete-forever" size={20} color="#fff" />
+            )}
+            <Text style={styles.deleteBtnText}>
+              {deleting ? "O'chirilmoqda…" : "Profilni yo'q qilish"}
+            </Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    );
+  }
+
+  // Show subscription expired screen
   if (subscriptionEnd !== null && (subscriptionExpired || !subscriptionActive)) {
     const handleLogout = () => {
       Alert.alert("Chiqish", "Tizimdan chiqishni xohlaysizmi?", [
@@ -28,8 +89,6 @@ export function SubscriptionGuard({ children }: SubscriptionGuardProps) {
           style: "destructive",
           onPress: async () => {
             await logout();
-            // Navigation is handled automatically by RootLayoutNav
-            // when isAuthenticated becomes false
           },
         },
       ]);
@@ -113,12 +172,18 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: "#EF444433",
   },
+  blockedIconBg: {
+    backgroundColor: "#2A0A0A",
+    borderColor: "#EF4444",
+    borderWidth: 2,
+  },
   blockTitle: {
-    fontSize: 22,
+    fontSize: 20,
     fontFamily: "Inter_700Bold",
     color: "#EF4444",
     textAlign: "center",
     marginBottom: 12,
+    lineHeight: 28,
   },
   blockSubtitle: {
     fontSize: 14,
@@ -145,6 +210,23 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontFamily: "Inter_500Medium",
   },
+  blockedBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#2A0A0A",
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 8,
+    gap: 6,
+    marginBottom: 28,
+    borderWidth: 1,
+    borderColor: "#EF4444",
+  },
+  blockedBadgeText: {
+    color: "#EF4444",
+    fontSize: 12,
+    fontFamily: "Inter_500Medium",
+  },
   logoutBtn: {
     flexDirection: "row",
     alignItems: "center",
@@ -158,6 +240,24 @@ const styles = StyleSheet.create({
     color: "#fff",
     fontSize: 15,
     fontFamily: "Inter_600SemiBold",
+  },
+  deleteBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#7F1D1D",
+    paddingHorizontal: 28,
+    paddingVertical: 14,
+    borderRadius: 12,
+    gap: 10,
+    borderWidth: 1,
+    borderColor: "#EF4444",
+    width: "100%",
+    justifyContent: "center",
+  },
+  deleteBtnText: {
+    color: "#fff",
+    fontSize: 15,
+    fontFamily: "Inter_700Bold",
   },
   warningBanner: {
     flexDirection: "row",

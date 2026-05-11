@@ -54,6 +54,7 @@ interface AuthContextType {
   subscriptionActive: boolean;
   subscriptionDaysLeft: number | null;
   subscriptionExpired: boolean;
+  blocked: boolean;
   isAuthenticated: boolean;
   isLoading: boolean;
   login: (loginCode: string, password: string) => Promise<void>;
@@ -90,6 +91,7 @@ export function AuthProvider({ children, queryClient }: AuthProviderProps) {
   const [subscriptionActive, setSubscriptionActive] = useState<boolean>(false);
   const [subscriptionDaysLeft, setSubscriptionDaysLeft] = useState<number | null>(null);
   const [subscriptionExpired, setSubscriptionExpired] = useState<boolean>(false);
+  const [blocked, setBlocked] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState(true);
 
   const clearAll = useCallback(async () => {
@@ -111,6 +113,7 @@ export function AuthProvider({ children, queryClient }: AuthProviderProps) {
     setSubscriptionActive(false);
     setSubscriptionDaysLeft(null);
     setSubscriptionExpired(false);
+    setBlocked(false);
   }, [queryClient]);
 
   function applySubscriptionData(data: {
@@ -163,10 +166,12 @@ export function AuthProvider({ children, queryClient }: AuthProviderProps) {
               subscriptionActive?: boolean;
               subscriptionDaysLeft?: number | null;
               subscriptionExpired?: boolean;
+              blocked?: boolean;
             };
             setToken(stored);
             const r = (data.role as UserRole) ?? "manager";
             setRole(r);
+            setBlocked(data.blocked ?? false);
             if (r === "manager") {
               setUsername(data.username ?? data.name ?? "Rahbar");
               setManagerId(data.managerId ?? null);
@@ -275,8 +280,10 @@ export function AuthProvider({ children, queryClient }: AuthProviderProps) {
           subscriptionActive?: boolean;
           subscriptionDaysLeft?: number | null;
           subscriptionExpired?: boolean;
+          blocked?: boolean;
         };
         applySubscriptionData(data);
+        setBlocked(data.blocked ?? false);
       }
     } catch { /* ignore */ }
   }, [token]);
@@ -370,6 +377,7 @@ export function AuthProvider({ children, queryClient }: AuthProviderProps) {
         subscriptionActive,
         subscriptionDaysLeft,
         subscriptionExpired,
+        blocked,
         isAuthenticated: !!token,
         isLoading,
         login,

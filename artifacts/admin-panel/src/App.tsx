@@ -55,6 +55,7 @@ interface Manager {
   storeId: string;
   login: string;
   password: string | null;
+  blocked: boolean;
   subscriptionPlan: string | null;
   subscriptionPlanLabel: string;
   subscriptionEnd: string | null;
@@ -102,6 +103,8 @@ function actionLabel(a: string): string {
     temp_credentials_set: "Vaqt. kirish belgilandi",
     login_changed: "Login o'zgartirildi",
     password_changed: "Parol o'zgartirildi",
+    blocked: "To'liq bloklandi",
+    unblocked: "Blok olib tashlandi",
   };
   return map[a] ?? a;
 }
@@ -111,6 +114,8 @@ function actionIcon(a: string): string {
     temp_credentials_set: "🔑",
     login_changed: "👤",
     password_changed: "🔒",
+    blocked: "🚫",
+    unblocked: "✅",
   };
   return map[a] ?? "📝";
 }
@@ -372,12 +377,115 @@ function CredentialsModal({ manager, onClose }: { manager: Manager; onClose: () 
   );
 }
 
+// ─── Block modal ──────────────────────────────────────────────────────────────
+function BlockManagerModal({ manager, onClose }: { manager: Manager; onClose: () => void }) {
+  const { token } = useAdminAuth();
+  const qc = useQueryClient();
+  const { toast } = useToast();
+  const isBlocked = manager.blocked;
+
+  const blockMut = useMutation({
+    mutationFn: async () => {
+      const r = await authFetch(token!, `/api/admin/managers/${manager.id}/block`, { method: "POST" });
+      const d = await r.json() as { error?: string };
+      if (!r.ok) throw new Error(d.error ?? "Xato");
+    },
+    onSuccess: () => {
+      toast({ title: "🚫 Obunachi bloklandi" });
+      qc.invalidateQueries({ queryKey: ["managers"] });
+      onClose();
+    },
+    onError: (e) => toast({ title: "Xato", description: (e as Error).message, variant: "destructive" }),
+  });
+
+  const unblockMut = useMutation({
+    mutationFn: async () => {
+      const r = await authFetch(token!, `/api/admin/managers/${manager.id}/unblock`, { method: "POST" });
+      const d = await r.json() as { error?: string };
+      if (!r.ok) throw new Error(d.error ?? "Xato");
+    },
+    onSuccess: () => {
+      toast({ title: "✅ Blok olib tashlandi" });
+      qc.invalidateQueries({ queryKey: ["managers"] });
+      onClose();
+    },
+    onError: (e) => toast({ title: "Xato", description: (e as Error).message, variant: "destructive" }),
+  });
+
+  const deleteMut = useMutation({
+    mutationFn: async () => {
+      const r = await authFetch(token!, `/api/admin/managers/${manager.id}`, { method: "DELETE" });
+      const d = await r.json() as { error?: string };
+      if (!r.ok) throw new Error(d.error ?? "Xato");
+    },
+    onSuccess: () => {
+      toast({ title: "🗑️ Obunachi butunlay o'chirildi" });
+      qc.invalidateQueries({ queryKey: ["managers"] });
+      onClose();
+    },
+    onError: (e) => toast({ title: "Xato", description: (e as Error).message, variant: "destructive" }),
+  });
+
+  const isPending = blockMut.isPending || unblockMut.isPending || deleteMut.isPending;
+
+  return (
+    <BottomSheet open title="Obunachini boshqarish" subtitle={manager.storeName} onClose={onClose}>
+      {isBlocked ? (
+        <div className="bg-red-950/40 border border-red-900/50 rounded-2xl px-4 py-3.5 mb-5">
+          <p className="text-sm text-red-400 font-semibold">🚫 Bu obunachi hozir to'liq bloklangan</p>
+          <p className="text-xs text-red-400/70 mt-1">Rahbar va barcha sotuvchilar tizimga kira olmaydi.</p>
+        </div>
+      ) : (
+        <div className="bg-secondary/50 border border-border rounded-2xl px-4 py-3.5 mb-5">
+          <p className="text-sm text-foreground font-semibold">Do'kon: {manager.storeName}</p>
+          <p className="text-xs text-muted-foreground mt-1">{manager.fullName} · {manager.storeId}</p>
+        </div>
+      )}
+
+      <div className="space-y-3">
+        {isBlocked ? (
+          <button
+            onClick={() => unblockMut.mutate()}
+            disabled={isPending}
+            className="w-full flex items-center justify-center gap-2 bg-green-600/20 border border-green-600/40 text-green-400 hover:bg-green-600/30 font-semibold py-3.5 rounded-xl text-sm transition disabled:opacity-50"
+          >
+            {unblockMut.isPending ? "Ochilmoqda…" : "✅ Blokni olib tashlash"}
+          </button>
+        ) : (
+          <button
+            onClick={() => { if (confirm(`"${manager.storeName}" ni bloklashni tasdiqlaysizmi?\n\nRahbar va ishchilar tizimdan chiqariladi.`)) blockMut.mutate(); }}
+            disabled={isPending}
+            className="w-full flex items-center justify-center gap-2 bg-orange-600/20 border border-orange-600/40 text-orange-400 hover:bg-orange-600/30 font-semibold py-3.5 rounded-xl text-sm transition disabled:opacity-50"
+          >
+            {blockMut.isPending ? "Bloklanmoqda…" : "🚫 Obunachini bloklash"}
+          </button>
+        )}
+
+        <div className="border-t border-border pt-3">
+          <p className="text-xs text-muted-foreground mb-3 text-center">⚠️ Quyidagi amal qaytarib bo'lmaydi</p>
+          <button
+            onClick={() => {
+              if (confirm(`"${manager.storeName}" ni BUTUNLAY o'chirishni tasdiqlaysizmi?\n\nBarcha ma'lumotlar, login, parol, do'kon ID, ishchilar — hammasi o'chiriladi. Bu amal qaytarib bo'lmaydi!`)) {
+                deleteMut.mutate();
+              }
+            }}
+            disabled={isPending}
+            className="w-full flex items-center justify-center gap-2 bg-destructive/15 border border-destructive/40 text-destructive hover:bg-destructive/25 font-semibold py-3.5 rounded-xl text-sm transition disabled:opacity-50"
+          >
+            {deleteMut.isPending ? "O'chirilmoqda…" : "🗑️ Butunlay yo'q qilish"}
+          </button>
+        </div>
+      </div>
+    </BottomSheet>
+  );
+}
+
 // ─── Manager card ─────────────────────────────────────────────────────────────
-function ManagerCard({ m, onSub, onCred }: { m: Manager; onSub: () => void; onCred: () => void }) {
+function ManagerCard({ m, onSub, onCred, onBlock }: { m: Manager; onSub: () => void; onCred: () => void; onBlock: () => void }) {
   const [expanded, setExpanded] = useState(false);
 
   return (
-    <div className="bg-card border border-card-border rounded-2xl overflow-hidden active:scale-[0.99] transition-transform">
+    <div className={`border rounded-2xl overflow-hidden active:scale-[0.99] transition-transform ${m.blocked ? "bg-red-950/20 border-red-900/50" : "bg-card border-card-border"}`}>
       <div
         className="p-4 cursor-pointer"
         onClick={() => setExpanded(v => !v)}
@@ -386,14 +494,19 @@ function ManagerCard({ m, onSub, onCred }: { m: Manager; onSub: () => void; onCr
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
               <span className="font-bold text-foreground text-base leading-tight">{m.storeName}</span>
+              {m.blocked && (
+                <span className="text-xs font-bold bg-red-950/60 text-red-400 border border-red-900 px-2 py-0.5 rounded-full">🚫 Bloklangan</span>
+              )}
             </div>
             <p className="text-sm text-muted-foreground mt-0.5 truncate">{m.fullName}</p>
             <p className="text-xs text-muted-foreground mt-0.5 font-mono">{m.storeId}</p>
           </div>
           <div className="flex flex-col items-end gap-1.5 flex-shrink-0">
-            <span className={`text-xs font-semibold border px-2.5 py-1 rounded-full ${daysClass(m.subscriptionDaysLeft, m.subscriptionActive)}`}>
-              {statusLabel(m)}
-            </span>
+            {!m.blocked && (
+              <span className={`text-xs font-semibold border px-2.5 py-1 rounded-full ${daysClass(m.subscriptionDaysLeft, m.subscriptionActive)}`}>
+                {statusLabel(m)}
+              </span>
+            )}
             <span className="text-xs text-muted-foreground">{expanded ? "▲" : "▼"}</span>
           </div>
         </div>
@@ -432,17 +545,30 @@ function ManagerCard({ m, onSub, onCred }: { m: Manager; onSub: () => void; onCr
           <div className="grid grid-cols-2 gap-2 pt-1">
             <button
               onClick={e => { e.stopPropagation(); onSub(); }}
-              className="flex items-center justify-center gap-1.5 text-sm bg-primary/10 border border-primary/30 text-primary hover:bg-primary/20 active:bg-primary/30 rounded-xl py-3 transition font-semibold"
+              disabled={m.blocked}
+              className="flex items-center justify-center gap-1.5 text-sm bg-primary/10 border border-primary/30 text-primary hover:bg-primary/20 active:bg-primary/30 rounded-xl py-3 transition font-semibold disabled:opacity-40 disabled:cursor-not-allowed"
             >
               📅 Obuna
             </button>
             <button
               onClick={e => { e.stopPropagation(); onCred(); }}
-              className="flex items-center justify-center gap-1.5 text-sm bg-secondary border border-border text-muted-foreground hover:text-foreground active:bg-secondary/80 rounded-xl py-3 transition font-semibold"
+              disabled={m.blocked}
+              className="flex items-center justify-center gap-1.5 text-sm bg-secondary border border-border text-muted-foreground hover:text-foreground active:bg-secondary/80 rounded-xl py-3 transition font-semibold disabled:opacity-40 disabled:cursor-not-allowed"
             >
               🔑 Kirish
             </button>
           </div>
+
+          <button
+            onClick={e => { e.stopPropagation(); onBlock(); }}
+            className={`w-full flex items-center justify-center gap-1.5 text-sm border rounded-xl py-3 transition font-semibold ${
+              m.blocked
+                ? "bg-green-600/10 border-green-600/30 text-green-400 hover:bg-green-600/20"
+                : "bg-red-950/20 border-red-900/40 text-red-400 hover:bg-red-950/40"
+            }`}
+          >
+            {m.blocked ? "✅ Blokni olib tashlash / O'chirish" : "🚫 Obunachini yo'q qilish"}
+          </button>
         </div>
       )}
     </div>
@@ -758,6 +884,7 @@ function DashboardPage() {
   const [search, setSearch] = useState("");
   const [subModal, setSubModal] = useState<Manager | null>(null);
   const [credModal, setCredModal] = useState<Manager | null>(null);
+  const [blockModal, setBlockModal] = useState<Manager | null>(null);
   const [tab, setTab] = useState<TabType>("managers");
   const [filter, setFilter] = useState<"all" | "active" | "expiring" | "expired">("all");
 
@@ -925,6 +1052,7 @@ function DashboardPage() {
                       m={m}
                       onSub={() => setSubModal(m)}
                       onCred={() => setCredModal(m)}
+                      onBlock={() => setBlockModal(m)}
                     />
                   ))}
                   <p className="text-center text-xs text-muted-foreground/60 py-2">{filtered.length} ta do'kon</p>
@@ -962,6 +1090,7 @@ function DashboardPage() {
 
       {subModal && <SubscriptionModal manager={subModal} onClose={() => setSubModal(null)} />}
       {credModal && <CredentialsModal manager={credModal} onClose={() => setCredModal(null)} />}
+      {blockModal && <BlockManagerModal manager={blockModal} onClose={() => setBlockModal(null)} />}
     </div>
   );
 }

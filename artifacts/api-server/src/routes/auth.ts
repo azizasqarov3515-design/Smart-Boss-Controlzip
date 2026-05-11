@@ -368,6 +368,7 @@ router.get("/auth/me", requireAuth, async (req, res) => {
         login: manager.login,
         storeId: manager.storeId,
         phone: manager.phone,
+        blocked: manager.blocked ?? false,
         ...buildSubscriptionInfo(manager),
       });
     } catch {
