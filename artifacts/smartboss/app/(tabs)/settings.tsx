@@ -219,28 +219,53 @@ function WorkersSection({ colors }: { colors: ReturnType<typeof useColors> }) {
       {others.length > 0 && (
         <View>
           <Text style={[styles.subSectionLabel, { color: colors.mutedForeground }]}>Barcha ishchilar</Text>
-          {others.map((w) => (
-            <View key={w.id} style={[styles.workerRow, { backgroundColor: colors.muted, borderColor: colors.border }]}>
-              <View style={[styles.workerAvatar, { backgroundColor: colors.primary + "22" }]}>
-                <Text style={[styles.workerAvatarText, { color: colors.primary }]}>{w.name.charAt(0).toUpperCase()}</Text>
-              </View>
-              <View style={styles.workerInfo}>
-                <View style={styles.workerNameRow}>
-                  <Text style={[styles.workerName, { color: colors.foreground }]}>{w.name}</Text>
-                  <WorkerStatusBadge status={w.status} colors={colors} />
+          {others.map((w) => {
+            const isOnline = (w as any).isOnline === true;
+            const lastSeen = (w as any).lastSeen as string | null;
+            const lastSeenLabel = lastSeen
+              ? new Date(lastSeen).toLocaleTimeString("uz-UZ", { hour: "2-digit", minute: "2-digit" })
+              : null;
+            return (
+              <View key={w.id} style={[styles.workerRow, { backgroundColor: colors.muted, borderColor: colors.border }]}>
+                <View style={{ position: "relative" }}>
+                  <View style={[styles.workerAvatar, { backgroundColor: colors.primary + "22" }]}>
+                    <Text style={[styles.workerAvatarText, { color: colors.primary }]}>{w.name.charAt(0).toUpperCase()}</Text>
+                  </View>
+                  <View style={{
+                    position: "absolute", bottom: 0, right: 0,
+                    width: 11, height: 11, borderRadius: 6,
+                    backgroundColor: isOnline ? "#22C55E" : "#EF4444",
+                    borderWidth: 2, borderColor: colors.muted,
+                  }} />
                 </View>
-                <Text style={[styles.workerPhone, { color: colors.mutedForeground }]}>{w.phone}</Text>
+                <View style={styles.workerInfo}>
+                  <View style={styles.workerNameRow}>
+                    <Text style={[styles.workerName, { color: colors.foreground }]}>{w.name}</Text>
+                    <WorkerStatusBadge status={w.status} colors={colors} />
+                  </View>
+                  <Text style={[styles.workerPhone, { color: colors.mutedForeground }]}>{w.phone}</Text>
+                  {!isOnline && lastSeenLabel && (
+                    <Text style={{ fontSize: 10, color: colors.mutedForeground, fontFamily: "Inter_400Regular" }}>
+                      So'nggi: {lastSeenLabel}
+                    </Text>
+                  )}
+                  {isOnline && (
+                    <Text style={{ fontSize: 10, color: "#16A34A", fontFamily: "Inter_500Medium" }}>
+                      Online
+                    </Text>
+                  )}
+                </View>
+                <TouchableOpacity
+                  style={[styles.actionBtn, { backgroundColor: "#FEE2E2" }]}
+                  onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy); setRemoveConfirm(w); }}
+                  activeOpacity={0.8}
+                  disabled={removing}
+                >
+                  <MaterialIcons name="delete-outline" size={18} color="#DC2626" />
+                </TouchableOpacity>
               </View>
-              <TouchableOpacity
-                style={[styles.actionBtn, { backgroundColor: "#FEE2E2" }]}
-                onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy); setRemoveConfirm(w); }}
-                activeOpacity={0.8}
-                disabled={removing}
-              >
-                <MaterialIcons name="delete-outline" size={18} color="#DC2626" />
-              </TouchableOpacity>
-            </View>
-          ))}
+            );
+          })}
         </View>
       )}
 

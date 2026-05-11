@@ -2,7 +2,8 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { clearManagerSettings } from "@/hooks/useSettings";
 import { setAuthTokenGetter, setOnUnauthorized } from "@workspace/api-client-react";
 import type { QueryClient } from "@tanstack/react-query";
-import React, { createContext, useCallback, useContext, useEffect, useState } from "react";
+import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
+import { AppState, type AppStateStatus } from "react-native";
 
 const BASE_URL = process.env.EXPO_PUBLIC_DOMAIN
   ? `https://${process.env.EXPO_PUBLIC_DOMAIN}`
@@ -288,11 +289,28 @@ export function AuthProvider({ children, queryClient }: AuthProviderProps) {
     } catch { /* ignore */ }
   }, [token]);
 
+  const tokenRef = useRef(token);
+  useEffect(() => { tokenRef.current = token; }, [token]);
+
   useEffect(() => {
     if (!token || role !== "worker") return;
+
+    const sendHeartbeat = async (currentToken: string) => {
+      try {
+        await fetch(`${BASE_URL}/api/auth/heartbeat`, {
+          method: "POST",
+          headers: { Authorization: `Bearer ${currentToken}` },
+        });
+      } catch { /* ignore */ }
+    };
+
+    sendHeartbeat(token);
+
     const interval = setInterval(async () => {
+      const t = tokenRef.current;
+      if (!t) return;
       const res = await fetch(`${BASE_URL}/api/auth/me`, {
-        headers: { Authorization: `Bearer ${token}` },
+        headers: { Authorization: `Bearer ${t}` },
       }).catch(() => null);
       if (!res) return;
       if (res.status === 401 || res.status === 404) {
@@ -301,9 +319,25 @@ export function AuthProvider({ children, queryClient }: AuthProviderProps) {
         const data = (await res.json()) as { status?: string; subscriptionPlan?: string | null; subscriptionEnd?: string | null; subscriptionActive?: boolean; subscriptionDaysLeft?: number | null; subscriptionExpired?: boolean; };
         setWorkerStatus(data.status ?? null);
         applySubscriptionData(data);
+        await sendHeartbeat(t);
       }
-    }, 10000);
-    return () => clearInterval(interval);
+    }, 30000);
+
+    const handleAppState = (nextState: AppStateStatus) => {
+      const t = tokenRef.current;
+      if (!t) return;
+      if (nextState === "active") {
+        sendHeartbeat(t);
+      } else if (nextState === "background" || nextState === "inactive") {
+        fetch(`${BASE_URL}/api/auth/heartbeat`, {
+          method: "POST",
+          headers: { Authorization: `Bearer ${t}`, "X-Offline": "true" },
+        }).catch(() => {});
+      }
+    };
+
+    const sub = AppState.addEventListener("change", handleAppState);
+    return () => { clearInterval(interval); sub.remove(); };
   }, [token, role, clearAll]);
 
   const refreshWorkerStatus = useCallback(async (): Promise<string | null> => {

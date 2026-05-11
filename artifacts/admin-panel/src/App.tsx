@@ -1030,17 +1030,31 @@ function ApprovalInboxTab({ token }: { token: string }) {
     return <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-red-100 text-red-800 border border-red-200">Rad etildi</span>;
   }
 
+  function requestSentence(r: AdminDeleteRequest): string {
+    const target = r.type === "product"
+      ? (r.productNames?.join(", ") ?? "mahsulot")
+      : r.type === "customer"
+        ? (r.customerNames?.join(", ") ?? "mijoz")
+        : `${r.saleIds.length} ta savdo`;
+    return `${r.workerName} wants to delete ${target}`;
+  }
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <div>
-          <h3 className="font-bold text-foreground text-base">O'chirish so'rovlari</h3>
-          {pendingCount > 0 && <p className="text-xs text-yellow-700 mt-0.5">{pendingCount} ta so'rov javob kutmoqda</p>}
+          <h3 className="text-base font-bold" style={{ color: "#000000" }}>O'chirish so'rovlari</h3>
+          {pendingCount > 0 && (
+            <p className="text-xs font-medium mt-0.5" style={{ color: "#854D0E" }}>
+              {pendingCount} ta so'rov javob kutmoqda
+            </p>
+          )}
         </div>
         <button
           onClick={() => refetch()}
           disabled={isFetching}
-          className={`w-8 h-8 rounded-xl bg-secondary border border-border flex items-center justify-center text-sm transition ${isFetching ? "animate-spin opacity-50" : "active:scale-95"}`}
+          className={`w-8 h-8 rounded-xl flex items-center justify-center text-sm transition border ${isFetching ? "animate-spin opacity-50" : "active:scale-95"}`}
+          style={{ backgroundColor: "#F5F5F5", borderColor: "#E5E5E5" }}
         >🔄</button>
       </div>
 
@@ -1049,9 +1063,17 @@ function ApprovalInboxTab({ token }: { token: string }) {
           <button
             key={f}
             onClick={() => setFilter(f)}
-            className={`text-xs font-semibold px-3 py-1.5 rounded-full border transition ${filter === f ? "bg-primary text-primary-foreground border-primary" : "bg-secondary border-border text-muted-foreground"}`}
+            className="text-xs font-semibold px-3 py-1.5 rounded-full border transition"
+            style={filter === f
+              ? { backgroundColor: "#000000", color: "#FFFFFF", borderColor: "#000000" }
+              : { backgroundColor: "#F5F5F5", color: "#555555", borderColor: "#E5E5E5" }
+            }
           >
-            {f === "pending" ? `⏳ Kutmoqda${pendingCount > 0 ? ` (${pendingCount})` : ""}` : f === "all" ? "Barchasi" : f === "approved" ? "✅ Tasdiqlangan" : "❌ Rad etilgan"}
+            {f === "pending"
+              ? `⏳ Kutmoqda${pendingCount > 0 ? ` (${pendingCount})` : ""}`
+              : f === "all" ? "Barchasi"
+              : f === "approved" ? "✅ Tasdiqlangan"
+              : "❌ Rad etilgan"}
           </button>
         ))}
       </div>
@@ -1059,47 +1081,59 @@ function ApprovalInboxTab({ token }: { token: string }) {
       {isLoading ? (
         <div className="flex flex-col gap-3">
           {[1, 2, 3].map(i => (
-            <div key={i} className="bg-card border border-card-border rounded-2xl p-4 animate-pulse">
-              <div className="h-4 bg-secondary rounded w-2/3 mb-2" />
-              <div className="h-3 bg-secondary rounded w-1/2" />
+            <div key={i} className="rounded-xl p-4 animate-pulse border" style={{ backgroundColor: "#F5F5F5", borderColor: "#E5E5E5" }}>
+              <div className="h-4 rounded w-2/3 mb-2" style={{ backgroundColor: "#E5E5E5" }} />
+              <div className="h-3 rounded w-1/2" style={{ backgroundColor: "#E5E5E5" }} />
             </div>
           ))}
         </div>
       ) : filtered.length === 0 ? (
         <div className="text-center py-12">
           <div className="text-4xl mb-3">📭</div>
-          <p className="text-muted-foreground font-medium">
+          <p className="font-medium" style={{ color: "#555555" }}>
             {filter === "pending" ? "Kutayotgan so'rovlar yo'q" : "Hech narsa topilmadi"}
           </p>
         </div>
       ) : (
         <div className="flex flex-col gap-3">
           {filtered.map(r => (
-            <div key={r.id} className="bg-card border border-card-border rounded-2xl p-4 space-y-3">
-              <div className="flex items-start justify-between gap-2">
+            <div
+              key={r.id}
+              className="rounded-xl p-4 space-y-3 border"
+              style={{ backgroundColor: "#FFFFFF", borderColor: "#E5E5E5" }}
+            >
+              <div className="flex items-start justify-between gap-3">
                 <div className="flex items-start gap-2.5 flex-1 min-w-0">
-                  <span className="text-xl leading-none mt-0.5">{typeIcon(r.type)}</span>
+                  <span className="text-xl leading-none mt-0.5 flex-shrink-0">{typeIcon(r.type)}</span>
                   <div className="flex-1 min-w-0">
-                    <p className="font-semibold text-foreground text-sm leading-tight">{r.workerName}</p>
-                    <p className="text-xs text-muted-foreground mt-0.5 break-words">{typeLabel(r)}</p>
-                    <p className="text-xs text-muted-foreground/70 mt-1">{new Date(r.createdAt).toLocaleDateString("uz-UZ", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" })}</p>
+                    <p className="font-bold text-sm leading-snug break-words" style={{ color: "#000000" }}>
+                      {requestSentence(r)}
+                    </p>
+                    <p className="text-xs mt-1" style={{ color: "#777777" }}>
+                      {new Date(r.createdAt).toLocaleDateString("uz-UZ", {
+                        day: "2-digit", month: "short", year: "numeric",
+                        hour: "2-digit", minute: "2-digit",
+                      })}
+                    </p>
                   </div>
                 </div>
                 {statusBadge(r.status)}
               </div>
               {r.status === "pending" && (
-                <div className="flex gap-2">
+                <div className="flex gap-2 pt-1">
                   <button
                     onClick={() => approveMut.mutate(r.id)}
                     disabled={approveMut.isPending || rejectMut.isPending}
-                    className="flex-1 flex items-center justify-center gap-1.5 bg-green-100 hover:bg-green-200 active:bg-green-200 text-green-800 font-semibold text-sm py-2.5 rounded-xl border border-green-200 transition disabled:opacity-50"
+                    className="flex-1 flex items-center justify-center gap-1.5 font-semibold text-sm py-2.5 rounded-lg border transition disabled:opacity-50"
+                    style={{ backgroundColor: "#F0FFF4", color: "#166534", borderColor: "#BBF7D0" }}
                   >
                     {approveMut.isPending ? "⏳" : "✅"} Tasdiqlash
                   </button>
                   <button
                     onClick={() => rejectMut.mutate(r.id)}
                     disabled={approveMut.isPending || rejectMut.isPending}
-                    className="flex-1 flex items-center justify-center gap-1.5 bg-red-100 hover:bg-red-200 active:bg-red-200 text-red-800 font-semibold text-sm py-2.5 rounded-xl border border-red-200 transition disabled:opacity-50"
+                    className="flex-1 flex items-center justify-center gap-1.5 font-semibold text-sm py-2.5 rounded-lg border transition disabled:opacity-50"
+                    style={{ backgroundColor: "#FFF5F5", color: "#991B1B", borderColor: "#FECACA" }}
                   >
                     {rejectMut.isPending ? "⏳" : "❌"} Rad etish
                   </button>
@@ -1107,7 +1141,7 @@ function ApprovalInboxTab({ token }: { token: string }) {
               )}
             </div>
           ))}
-          <p className="text-center text-xs text-muted-foreground/60 py-1">{filtered.length} ta so'rov</p>
+          <p className="text-center text-xs py-1" style={{ color: "#999999" }}>{filtered.length} ta so'rov</p>
         </div>
       )}
     </div>

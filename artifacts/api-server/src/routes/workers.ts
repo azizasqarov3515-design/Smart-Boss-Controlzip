@@ -18,13 +18,20 @@ router.get("/workers", requireManager, async (req, res) => {
         address: workersTable.address,
         phone: workersTable.phone,
         status: workersTable.status,
+        isOnline: workersTable.isOnline,
+        lastSeen: workersTable.lastSeen,
         createdAt: workersTable.createdAt,
       })
       .from(workersTable)
       .where(condition)
       .orderBy(workersTable.createdAt);
 
-    res.json(workers.map((w) => ({ ...w, createdAt: w.createdAt.toISOString() })));
+    res.json(workers.map((w) => ({
+      ...w,
+      isOnline: w.isOnline,
+      lastSeen: w.lastSeen?.toISOString() ?? null,
+      createdAt: w.createdAt.toISOString(),
+    })));
   } catch (err) {
     req.log.error({ err }, "Failed to get workers");
     res.status(500).json({ error: "Ishchilarni olishda xato" });

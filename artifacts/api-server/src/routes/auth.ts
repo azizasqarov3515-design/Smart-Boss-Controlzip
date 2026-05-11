@@ -298,6 +298,8 @@ router.post("/auth/worker-login", async (req, res) => {
       return;
     }
 
+    await db.update(workersTable).set({ isOnline: true, lastSeen: new Date() }).where(eq(workersTable.id, worker.id));
+
     const token = generateToken({
       sub: `worker-${worker.id}`,
       role: "worker",
@@ -317,10 +319,26 @@ router.post("/auth/worker-login", async (req, res) => {
   }
 });
 
-router.post("/auth/logout", requireAuth, (req, res) => {
+router.post("/auth/logout", requireAuth, async (req, res) => {
+  const user = res.locals.user;
   const token = extractBearerToken(req.headers["authorization"]);
   if (token) revokeToken(token);
-  req.log.info({ user: res.locals.user?.name }, "User logged out");
+  if (user?.role === "worker" && user.workerId) {
+    try {
+      await db.update(workersTable).set({ isOnline: false, lastSeen: new Date() }).where(eq(workersTable.id, user.workerId));
+    } catch { /* ignore */ }
+  }
+  req.log.info({ user: user?.name }, "User logged out");
+  res.json({ ok: true });
+});
+
+router.post("/auth/heartbeat", requireAuth, async (req, res) => {
+  const user = res.locals.user;
+  if (user?.role === "worker" && user.workerId) {
+    try {
+      await db.update(workersTable).set({ isOnline: true, lastSeen: new Date() }).where(eq(workersTable.id, user.workerId));
+    } catch { /* ignore */ }
+  }
   res.json({ ok: true });
 });
 

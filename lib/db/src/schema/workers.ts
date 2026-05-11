@@ -1,4 +1,4 @@
-import { integer, pgTable, serial, text, timestamp } from "drizzle-orm/pg-core";
+import { boolean, integer, pgTable, serial, text, timestamp } from "drizzle-orm/pg-core";
 
 export const workersTable = pgTable("workers", {
   id: serial("id").primaryKey(),
@@ -8,6 +8,8 @@ export const workersTable = pgTable("workers", {
   phone: text("phone").notNull(),
   passwordHash: text("password_hash").notNull(),
   status: text("status").notNull().default("pending"),
+  isOnline: boolean("is_online").notNull().default(false),
+  lastSeen: timestamp("last_seen"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
