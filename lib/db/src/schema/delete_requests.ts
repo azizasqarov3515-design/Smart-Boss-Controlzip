@@ -7,6 +7,8 @@ export const deleteRequestsTable = pgTable("delete_requests", {
   saleIds: text("sale_ids").notNull().default("[]"),
   productIds: text("product_ids"),
   productNames: text("product_names"),
+  customerIds: text("customer_ids"),
+  customerNames: text("customer_names"),
   workerId: integer("worker_id"),
   workerName: text("worker_name").notNull(),
   status: text("status").notNull().default("pending"),

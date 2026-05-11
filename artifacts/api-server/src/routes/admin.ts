@@ -590,4 +590,94 @@ router.delete("/admin/managers/:id/subscription", requireAdmin, async (req, res)
   }
 });
 
+// ─── Admin: Delete Request Management ─────────────────────────────────────────
+import { deleteRequestsTable, productsTable, customersTable, salesTable, saleItemsTable } from "@workspace/db/schema";
+import { inArray } from "drizzle-orm";
+
+router.get("/admin/delete-requests", requireAdmin, async (req, res) => {
+  try {
+    const requests = await db
+      .select()
+      .from(deleteRequestsTable)
+      .orderBy(deleteRequestsTable.createdAt);
+
+    res.json(
+      requests.map((r) => ({
+        ...r,
+        type: r.type ?? "sale",
+        saleIds: JSON.parse(r.saleIds) as number[],
+        productIds: r.productIds ? (JSON.parse(r.productIds) as number[]) : null,
+        productNames: r.productNames ? (JSON.parse(r.productNames) as string[]) : null,
+        customerIds: r.customerIds ? (JSON.parse(r.customerIds) as number[]) : null,
+        customerNames: r.customerNames ? (JSON.parse(r.customerNames) as string[]) : null,
+        createdAt: r.createdAt.toISOString(),
+      }))
+    );
+  } catch (err) {
+    req.log.error({ err }, "Admin get delete requests failed");
+    res.status(500).json({ error: "Xato" });
+  }
+});
+
+router.post("/admin/delete-requests/:id/approve", requireAdmin, async (req, res) => {
+  const id = parseInt(req.params.id ?? "");
+  if (isNaN(id)) { res.status(400).json({ error: "Noto'g'ri ID" }); return; }
+  try {
+    const [request] = await db
+      .select()
+      .from(deleteRequestsTable)
+      .where(eq(deleteRequestsTable.id, id));
+
+    if (!request || request.status !== "pending") {
+      res.status(404).json({ error: "So'rov topilmadi" });
+      return;
+    }
+
+    if (request.type === "product" && request.productIds) {
+      const productIds = JSON.parse(request.productIds) as number[];
+      if (productIds.length > 0) {
+        await db.delete(productsTable).where(inArray(productsTable.id, productIds));
+      }
+    } else if (request.type === "customer" && request.customerIds) {
+      const customerIds = JSON.parse(request.customerIds) as number[];
+      if (customerIds.length > 0) {
+        await db.delete(customersTable).where(inArray(customersTable.id, customerIds));
+      }
+    } else if (request.type === "sale") {
+      const saleIds = JSON.parse(request.saleIds) as number[];
+      if (saleIds.length > 0) {
+        await db.delete(salesTable).where(inArray(salesTable.id, saleIds));
+      }
+    }
+
+    await db
+      .update(deleteRequestsTable)
+      .set({ status: "approved" })
+      .where(eq(deleteRequestsTable.id, id));
+
+    res.json({ ok: true });
+  } catch (err) {
+    req.log.error({ err }, "Admin approve delete request failed");
+    res.status(500).json({ error: "Xato" });
+  }
+});
+
+router.post("/admin/delete-requests/:id/reject", requireAdmin, async (req, res) => {
+  const id = parseInt(req.params.id ?? "");
+  if (isNaN(id)) { res.status(400).json({ error: "Noto'g'ri ID" }); return; }
+  try {
+    const [request] = await db
+      .update(deleteRequestsTable)
+      .set({ status: "rejected" })
+      .where(eq(deleteRequestsTable.id, id))
+      .returning();
+
+    if (!request) { res.status(404).json({ error: "So'rov topilmadi" }); return; }
+    res.json({ ok: true });
+  } catch (err) {
+    req.log.error({ err }, "Admin reject delete request failed");
+    res.status(500).json({ error: "Xato" });
+  }
+});
+
 export default router;

@@ -345,19 +345,25 @@ function DeleteRequestsSection({ colors }: { colors: ReturnType<typeof useColors
     <View style={{ gap: 10 }}>
       {(requests ?? []).map((r: DeleteRequest) => {
         const isProduct = r.type === "product";
+        const isCustomer = r.type === "customer";
         const productNames = (r as any).productNames as string[] | null;
+        const customerNames = (r as any).customerNames as string[] | null;
         const saleIds = r.saleIds as number[];
+
+        let bgColor = "#FFF7ED";
+        let borderColor = "#FDBA74";
+        let iconName: React.ComponentProps<typeof MaterialIcons>["name"] = "delete-sweep";
+        let iconColor = "#EA580C";
+        if (isProduct) { bgColor = "#F0FDF4"; borderColor = "#86EFAC"; iconName = "inventory-2"; iconColor = "#16A34A"; }
+        if (isCustomer) { bgColor = "#EFF6FF"; borderColor = "#93C5FD"; iconName = "person-remove"; iconColor = "#1D4ED8"; }
+
         return (
           <View key={r.id} style={[
             styles.requestRow,
-            { backgroundColor: isProduct ? "#F0FDF4" : "#FFF7ED", borderColor: isProduct ? "#86EFAC" : "#FDBA74" }
+            { backgroundColor: bgColor, borderColor }
           ]}>
             <View style={styles.requestTop}>
-              <MaterialIcons
-                name={isProduct ? "inventory-2" : "delete-sweep"}
-                size={18}
-                color={isProduct ? "#16A34A" : "#EA580C"}
-              />
+              <MaterialIcons name={iconName} size={18} color={iconColor} />
               <View style={{ flex: 1 }}>
                 <Text style={[styles.requestWorker, { color: colors.foreground }]}>{r.workerName}</Text>
                 {isProduct ? (
@@ -365,6 +371,13 @@ function DeleteRequestsSection({ colors }: { colors: ReturnType<typeof useColors
                     Mahsulot o'chirish:{" "}
                     <Text style={{ fontFamily: "Inter_600SemiBold", color: colors.foreground }}>
                       {productNames?.join(", ") ?? "Mahsulot"}
+                    </Text>
+                  </Text>
+                ) : isCustomer ? (
+                  <Text style={[styles.requestSub, { color: colors.mutedForeground }]}>
+                    Mijoz o'chirish:{" "}
+                    <Text style={{ fontFamily: "Inter_600SemiBold", color: colors.foreground }}>
+                      {customerNames?.join(", ") ?? "Mijoz"}
                     </Text>
                   </Text>
                 ) : (

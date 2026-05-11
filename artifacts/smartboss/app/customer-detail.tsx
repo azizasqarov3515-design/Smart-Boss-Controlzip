@@ -5,6 +5,8 @@ import {
   useCreateCustomerPayment,
   useUpdateCustomer,
   useDeleteCustomer,
+  useCreateCustomerDeleteRequest,
+  useGetWorkerDeleteRequests,
   getGetCustomersQueryKey,
   getGetCustomerQueryKey,
   getGetCustomerPaymentsQueryKey,
@@ -130,7 +132,8 @@ export default function CustomerDetailScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const queryClient = useQueryClient();
-  const { managerId } = useAuth();
+  const { managerId, role } = useAuth();
+  const isWorker = role === "worker";
   const { settings } = useSettings(managerId);
   const params = useLocalSearchParams<{ id: string }>();
   const customerId = parseInt(params.id ?? "0", 10);
@@ -139,6 +142,7 @@ export default function CustomerDetailScreen() {
   const [paymentOpen, setPaymentOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [deleteRequestSent, setDeleteRequestSent] = useState(false);
   const [payAmount, setPayAmount] = useState("");
   const [payNote, setPayNote] = useState("");
   const [payError, setPayError] = useState<string | null>(null);
@@ -155,6 +159,29 @@ export default function CustomerDetailScreen() {
   const { data: statement, refetch: refetchStatement } = useGetCustomerStatement(customerId);
 
   const { data: payments, refetch: refetchPayments } = useGetCustomerPayments(customerId);
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: myRequests } = useGetWorkerDeleteRequests({ query: { enabled: isWorker, refetchInterval: 15000 } as any });
+
+  const rejectedRequest = isWorker
+    ? (myRequests ?? []).find(
+        (r) =>
+          r.type === "customer" &&
+          r.status === "rejected" &&
+          Array.isArray((r as any).customerIds) &&
+          ((r as any).customerIds as number[]).includes(customerId)
+      )
+    : undefined;
+
+  const pendingRequest = isWorker
+    ? (myRequests ?? []).find(
+        (r) =>
+          r.type === "customer" &&
+          r.status === "pending" &&
+          Array.isArray((r as any).customerIds) &&
+          ((r as any).customerIds as number[]).includes(customerId)
+      )
+    : undefined;
 
   const { mutate: createPayment, isPending: payingDebt } = useCreateCustomerPayment({
     mutation: {
@@ -201,6 +228,15 @@ export default function CustomerDetailScreen() {
     },
   });
 
+  const { mutate: sendDeleteRequest, isPending: sendingRequest } = useCreateCustomerDeleteRequest({
+    mutation: {
+      onSuccess: () => {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        setDeleteRequestSent(true);
+      },
+    },
+  });
+
   const handlePayment = () => {
     setPayError(null);
     const amount = parseFloat(payAmount.replace(/\s/g, ""));
@@ -215,7 +251,18 @@ export default function CustomerDetailScreen() {
   };
 
   const handleDelete = () => {
+    setDeleteRequestSent(false);
     setDeleteConfirmOpen(true);
+  };
+
+  const handleConfirmDelete = () => {
+    if (!customer) return;
+    if (isWorker) {
+      sendDeleteRequest({ data: { customerIds: [customerId], customerNames: [customer.name] } });
+    } else {
+      setDeleteConfirmOpen(false);
+      deleteCustomer({ id: customerId });
+    }
   };
 
   const handleEdit = () => {
@@ -314,6 +361,24 @@ export default function CustomerDetailScreen() {
           </TouchableOpacity>
         </View>
       </View>
+
+      {/* Rejection notice for workers */}
+      {rejectedRequest && (
+        <View style={{ marginHorizontal: 16, marginTop: 10, backgroundColor: "#FEF2F2", borderColor: "#FECACA", borderWidth: 1, borderRadius: 12, padding: 12, flexDirection: "row", alignItems: "center", gap: 8 }}>
+          <MaterialIcons name="cancel" size={18} color="#DC2626" />
+          <Text style={{ fontFamily: "Inter_500Medium", fontSize: 13, color: "#DC2626", flex: 1 }}>
+            Rahbar o'chirish so'rovingizni tasdiqlamadi
+          </Text>
+        </View>
+      )}
+      {pendingRequest && !rejectedRequest && (
+        <View style={{ marginHorizontal: 16, marginTop: 10, backgroundColor: "#FFFBEB", borderColor: "#FDE68A", borderWidth: 1, borderRadius: 12, padding: 12, flexDirection: "row", alignItems: "center", gap: 8 }}>
+          <MaterialIcons name="hourglass-empty" size={18} color="#D97706" />
+          <Text style={{ fontFamily: "Inter_500Medium", fontSize: 13, color: "#92400E", flex: 1 }}>
+            O'chirish so'rovi rahbar javobini kutmoqda
+          </Text>
+        </View>
+      )}
 
       {/* Debt summary card */}
       <View style={[styles.debtCard, {
@@ -650,47 +715,106 @@ export default function CustomerDetailScreen() {
         transparent
         animationType="fade"
         statusBarTranslucent
-        onRequestClose={() => !deleting && setDeleteConfirmOpen(false)}
+        onRequestClose={() => !(deleting || sendingRequest) && setDeleteConfirmOpen(false)}
       >
         <View style={styles.deleteBackdrop}>
           <View style={[styles.deleteSheet, { backgroundColor: colors.card }]}>
-            <View style={[styles.deleteIconWrap, { backgroundColor: "#FEE2E2" }]}>
-              <MaterialIcons name="delete-forever" size={32} color="#DC2626" />
-            </View>
-            <Text style={[styles.deleteTitle, { color: colors.foreground }]}>
-              Mijozni o'chirish
-            </Text>
-            <Text style={[styles.deleteMsg, { color: colors.mutedForeground }]}>
-              <Text style={{ fontFamily: "Inter_700Bold", color: colors.foreground }}>
-                {customer?.name}
-              </Text>
-              {" "}ni o'chirishni tasdiqlaysizmi?{"\n"}Bu amalni qaytarib bo'lmaydi.
-            </Text>
-            <View style={styles.deleteBtns}>
-              <TouchableOpacity
-                style={[styles.deleteCancelBtn, { backgroundColor: colors.muted, borderColor: colors.border }]}
-                onPress={() => setDeleteConfirmOpen(false)}
-                disabled={deleting}
-                activeOpacity={0.8}
-              >
-                <Text style={[styles.deleteCancelText, { color: colors.mutedForeground }]}>Bekor</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.deleteConfirmBtn, { backgroundColor: deleting ? colors.mutedForeground : "#DC2626" }]}
-                onPress={() => { setDeleteConfirmOpen(false); deleteCustomer({ id: customerId }); }}
-                disabled={deleting}
-                activeOpacity={0.85}
-              >
-                {deleting ? (
-                  <ActivityIndicator size="small" color="#fff" />
-                ) : (
-                  <>
-                    <MaterialIcons name="delete" size={18} color="#fff" />
-                    <Text style={styles.deleteConfirmText}>O'chirish</Text>
-                  </>
-                )}
-              </TouchableOpacity>
-            </View>
+            {deleteRequestSent ? (
+              <>
+                <View style={[styles.deleteIconWrap, { backgroundColor: "#E8F5E9" }]}>
+                  <MaterialIcons name="check-circle" size={32} color="#2E7D32" />
+                </View>
+                <Text style={[styles.deleteTitle, { color: colors.foreground }]}>So'rov yuborildi!</Text>
+                <Text style={[styles.deleteMsg, { color: colors.mutedForeground }]}>
+                  Rahbar tasdiqlasa, mijoz o'chiriladi.
+                </Text>
+                <TouchableOpacity
+                  style={[styles.deleteConfirmBtn, { backgroundColor: colors.primary }]}
+                  onPress={() => { setDeleteConfirmOpen(false); setDeleteRequestSent(false); }}
+                  activeOpacity={0.85}
+                >
+                  <Text style={styles.deleteConfirmText}>Yaxshi</Text>
+                </TouchableOpacity>
+              </>
+            ) : isWorker ? (
+              <>
+                <View style={[styles.deleteIconWrap, { backgroundColor: "#FFF3E0" }]}>
+                  <MaterialIcons name="send" size={32} color="#E65100" />
+                </View>
+                <Text style={[styles.deleteTitle, { color: colors.foreground }]}>O'chirish so'rovi</Text>
+                <Text style={[styles.deleteMsg, { color: colors.mutedForeground }]}>
+                  <Text style={{ fontFamily: "Inter_700Bold", color: colors.foreground }}>
+                    {customer?.name}
+                  </Text>
+                  {" "}ni o'chirish uchun rahbarga so'rov yuborilsinmi?
+                </Text>
+                <View style={styles.deleteBtns}>
+                  <TouchableOpacity
+                    style={[styles.deleteCancelBtn, { backgroundColor: colors.muted, borderColor: colors.border }]}
+                    onPress={() => setDeleteConfirmOpen(false)}
+                    disabled={sendingRequest}
+                    activeOpacity={0.8}
+                  >
+                    <Text style={[styles.deleteCancelText, { color: colors.mutedForeground }]}>Yo'q</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.deleteConfirmBtn, { backgroundColor: sendingRequest ? colors.mutedForeground : "#E65100" }]}
+                    onPress={handleConfirmDelete}
+                    disabled={sendingRequest}
+                    activeOpacity={0.85}
+                  >
+                    {sendingRequest ? (
+                      <ActivityIndicator size="small" color="#fff" />
+                    ) : (
+                      <>
+                        <MaterialIcons name="send" size={18} color="#fff" />
+                        <Text style={styles.deleteConfirmText}>Ha, yuborish</Text>
+                      </>
+                    )}
+                  </TouchableOpacity>
+                </View>
+              </>
+            ) : (
+              <>
+                <View style={[styles.deleteIconWrap, { backgroundColor: "#FEE2E2" }]}>
+                  <MaterialIcons name="delete-forever" size={32} color="#DC2626" />
+                </View>
+                <Text style={[styles.deleteTitle, { color: colors.foreground }]}>
+                  Mijozni o'chirish
+                </Text>
+                <Text style={[styles.deleteMsg, { color: colors.mutedForeground }]}>
+                  <Text style={{ fontFamily: "Inter_700Bold", color: colors.foreground }}>
+                    {customer?.name}
+                  </Text>
+                  {" "}ni o'chirishni tasdiqlaysizmi?{"\n"}Bu amalni qaytarib bo'lmaydi.
+                </Text>
+                <View style={styles.deleteBtns}>
+                  <TouchableOpacity
+                    style={[styles.deleteCancelBtn, { backgroundColor: colors.muted, borderColor: colors.border }]}
+                    onPress={() => setDeleteConfirmOpen(false)}
+                    disabled={deleting}
+                    activeOpacity={0.8}
+                  >
+                    <Text style={[styles.deleteCancelText, { color: colors.mutedForeground }]}>Bekor</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.deleteConfirmBtn, { backgroundColor: deleting ? colors.mutedForeground : "#DC2626" }]}
+                    onPress={handleConfirmDelete}
+                    disabled={deleting}
+                    activeOpacity={0.85}
+                  >
+                    {deleting ? (
+                      <ActivityIndicator size="small" color="#fff" />
+                    ) : (
+                      <>
+                        <MaterialIcons name="delete" size={18} color="#fff" />
+                        <Text style={styles.deleteConfirmText}>O'chirish</Text>
+                      </>
+                    )}
+                  </TouchableOpacity>
+                </View>
+              </>
+            )}
           </View>
         </View>
       </Modal>

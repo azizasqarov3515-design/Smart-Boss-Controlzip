@@ -960,8 +960,162 @@ function AdminSettingsTab() {
   );
 }
 
+// ─── Admin Delete Request types ────────────────────────────────────────────────
+interface AdminDeleteRequest {
+  id: number;
+  type: string;
+  workerName: string;
+  status: string;
+  saleIds: number[];
+  productIds: number[] | null;
+  productNames: string[] | null;
+  customerIds: number[] | null;
+  customerNames: string[] | null;
+  managerId: number | null;
+  createdAt: string;
+}
+
+// ─── Approval Inbox Tab ────────────────────────────────────────────────────────
+function ApprovalInboxTab({ token }: { token: string }) {
+  const qc = useQueryClient();
+  const { toast } = useToast();
+  const [filter, setFilter] = useState<"pending" | "approved" | "rejected" | "all">("pending");
+
+  const { data: allRequests = [], isLoading, refetch, isFetching } = useQuery<AdminDeleteRequest[]>({
+    queryKey: ["admin-delete-requests"],
+    queryFn: async () => {
+      const r = await authFetch(token, "/api/admin/delete-requests");
+      if (!r.ok) throw new Error("So'rovlarni yuklashda xato");
+      return r.json() as Promise<AdminDeleteRequest[]>;
+    },
+    refetchInterval: 30_000,
+  });
+
+  const approveMut = useMutation({
+    mutationFn: async (id: number) => {
+      const r = await authFetch(token, `/api/admin/delete-requests/${id}/approve`, { method: "POST" });
+      const d = await r.json() as { error?: string };
+      if (!r.ok) throw new Error(d.error ?? "Xato");
+    },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["admin-delete-requests"] }); toast({ title: "Tasdiqlandi", description: "So'rov tasdiqlandi va o'chirildi." }); },
+    onError: (e: Error) => toast({ title: "Xato", description: e.message, variant: "destructive" }),
+  });
+
+  const rejectMut = useMutation({
+    mutationFn: async (id: number) => {
+      const r = await authFetch(token, `/api/admin/delete-requests/${id}/reject`, { method: "POST" });
+      const d = await r.json() as { error?: string };
+      if (!r.ok) throw new Error(d.error ?? "Xato");
+    },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["admin-delete-requests"] }); toast({ title: "Rad etildi", description: "So'rov rad etildi." }); },
+    onError: (e: Error) => toast({ title: "Xato", description: e.message, variant: "destructive" }),
+  });
+
+  const filtered = allRequests.filter(r => filter === "all" ? true : r.status === filter);
+  const pendingCount = allRequests.filter(r => r.status === "pending").length;
+
+  function typeIcon(type: string) {
+    if (type === "product") return "📦";
+    if (type === "customer") return "👤";
+    return "🧾";
+  }
+  function typeLabel(r: AdminDeleteRequest) {
+    if (r.type === "product") return `Mahsulot: ${r.productNames?.join(", ") ?? "—"}`;
+    if (r.type === "customer") return `Mijoz: ${r.customerNames?.join(", ") ?? "—"}`;
+    return `${r.saleIds.length} ta savdo`;
+  }
+  function statusBadge(status: string) {
+    if (status === "pending") return <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-yellow-100 text-yellow-800 border border-yellow-200">Kutmoqda</span>;
+    if (status === "approved") return <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-green-100 text-green-800 border border-green-200">Tasdiqlandi</span>;
+    return <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-red-100 text-red-800 border border-red-200">Rad etildi</span>;
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <div>
+          <h3 className="font-bold text-foreground text-base">O'chirish so'rovlari</h3>
+          {pendingCount > 0 && <p className="text-xs text-yellow-700 mt-0.5">{pendingCount} ta so'rov javob kutmoqda</p>}
+        </div>
+        <button
+          onClick={() => refetch()}
+          disabled={isFetching}
+          className={`w-8 h-8 rounded-xl bg-secondary border border-border flex items-center justify-center text-sm transition ${isFetching ? "animate-spin opacity-50" : "active:scale-95"}`}
+        >🔄</button>
+      </div>
+
+      <div className="flex gap-1.5 flex-wrap">
+        {(["pending", "all", "approved", "rejected"] as const).map(f => (
+          <button
+            key={f}
+            onClick={() => setFilter(f)}
+            className={`text-xs font-semibold px-3 py-1.5 rounded-full border transition ${filter === f ? "bg-primary text-primary-foreground border-primary" : "bg-secondary border-border text-muted-foreground"}`}
+          >
+            {f === "pending" ? `⏳ Kutmoqda${pendingCount > 0 ? ` (${pendingCount})` : ""}` : f === "all" ? "Barchasi" : f === "approved" ? "✅ Tasdiqlangan" : "❌ Rad etilgan"}
+          </button>
+        ))}
+      </div>
+
+      {isLoading ? (
+        <div className="flex flex-col gap-3">
+          {[1, 2, 3].map(i => (
+            <div key={i} className="bg-card border border-card-border rounded-2xl p-4 animate-pulse">
+              <div className="h-4 bg-secondary rounded w-2/3 mb-2" />
+              <div className="h-3 bg-secondary rounded w-1/2" />
+            </div>
+          ))}
+        </div>
+      ) : filtered.length === 0 ? (
+        <div className="text-center py-12">
+          <div className="text-4xl mb-3">📭</div>
+          <p className="text-muted-foreground font-medium">
+            {filter === "pending" ? "Kutayotgan so'rovlar yo'q" : "Hech narsa topilmadi"}
+          </p>
+        </div>
+      ) : (
+        <div className="flex flex-col gap-3">
+          {filtered.map(r => (
+            <div key={r.id} className="bg-card border border-card-border rounded-2xl p-4 space-y-3">
+              <div className="flex items-start justify-between gap-2">
+                <div className="flex items-start gap-2.5 flex-1 min-w-0">
+                  <span className="text-xl leading-none mt-0.5">{typeIcon(r.type)}</span>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-semibold text-foreground text-sm leading-tight">{r.workerName}</p>
+                    <p className="text-xs text-muted-foreground mt-0.5 break-words">{typeLabel(r)}</p>
+                    <p className="text-xs text-muted-foreground/70 mt-1">{new Date(r.createdAt).toLocaleDateString("uz-UZ", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" })}</p>
+                  </div>
+                </div>
+                {statusBadge(r.status)}
+              </div>
+              {r.status === "pending" && (
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => approveMut.mutate(r.id)}
+                    disabled={approveMut.isPending || rejectMut.isPending}
+                    className="flex-1 flex items-center justify-center gap-1.5 bg-green-100 hover:bg-green-200 active:bg-green-200 text-green-800 font-semibold text-sm py-2.5 rounded-xl border border-green-200 transition disabled:opacity-50"
+                  >
+                    {approveMut.isPending ? "⏳" : "✅"} Tasdiqlash
+                  </button>
+                  <button
+                    onClick={() => rejectMut.mutate(r.id)}
+                    disabled={approveMut.isPending || rejectMut.isPending}
+                    className="flex-1 flex items-center justify-center gap-1.5 bg-red-100 hover:bg-red-200 active:bg-red-200 text-red-800 font-semibold text-sm py-2.5 rounded-xl border border-red-200 transition disabled:opacity-50"
+                  >
+                    {rejectMut.isPending ? "⏳" : "❌"} Rad etish
+                  </button>
+                </div>
+              )}
+            </div>
+          ))}
+          <p className="text-center text-xs text-muted-foreground/60 py-1">{filtered.length} ta so'rov</p>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── Dashboard page ───────────────────────────────────────────────────────────
-type TabType = "managers" | "logs" | "settings";
+type TabType = "managers" | "logs" | "settings" | "inbox";
 
 function DashboardPage() {
   const { token, logout } = useAdminAuth();
@@ -1061,16 +1215,16 @@ function DashboardPage() {
           <StatsRow managers={managers} />
 
           {/* Tabs */}
-          <div className="flex bg-secondary/50 border border-border rounded-2xl p-1 gap-1">
-            {(["managers", "logs", "settings"] as TabType[]).map(t => (
+          <div className="flex bg-secondary/50 border border-border rounded-2xl p-1 gap-1 flex-wrap">
+            {(["managers", "inbox", "logs", "settings"] as TabType[]).map(t => (
               <button
                 key={t}
                 onClick={() => setTab(t)}
-                className={`flex-1 py-2.5 rounded-xl text-sm font-semibold transition ${
+                className={`flex-1 py-2 rounded-xl text-xs font-semibold transition min-w-[60px] ${
                   tab === t ? "bg-card text-foreground shadow-sm border border-border" : "text-muted-foreground active:text-foreground"
                 }`}
               >
-                {t === "managers" ? `🏪 Do'konlar` : t === "logs" ? "📋 Tarix" : "⚙️ Sozlama"}
+                {t === "managers" ? `🏪 Do'konlar` : t === "inbox" ? "📥 Arizalar" : t === "logs" ? "📋 Tarix" : "⚙️ Sozlama"}
               </button>
             ))}
           </div>
@@ -1170,6 +1324,8 @@ function DashboardPage() {
               )}
             </>
           )}
+
+          {tab === "inbox" && <ApprovalInboxTab token={token!} />}
 
           {tab === "settings" && <AdminSettingsTab />}
         </div>

@@ -1,5 +1,5 @@
 import { db } from "@workspace/db";
-import { deleteRequestsTable, salesTable, saleItemsTable, productsTable } from "@workspace/db/schema";
+import { deleteRequestsTable, salesTable, saleItemsTable, productsTable, customersTable } from "@workspace/db/schema";
 import { and, eq, inArray, sql } from "drizzle-orm";
 import { Router } from "express";
 import { requireManager } from "../lib/auth";
@@ -14,6 +14,56 @@ const createDeleteRequestSchema = z.object({
 const createProductDeleteRequestSchema = z.object({
   productIds: z.array(z.number().int().positive()).min(1),
   productNames: z.array(z.string()).min(1),
+});
+
+const createCustomerDeleteRequestSchema = z.object({
+  customerIds: z.array(z.number().int().positive()).min(1),
+  customerNames: z.array(z.string()).min(1),
+});
+
+function parseRequest(r: typeof deleteRequestsTable.$inferSelect) {
+  return {
+    ...r,
+    type: r.type ?? "sale",
+    saleIds: JSON.parse(r.saleIds) as number[],
+    productIds: r.productIds ? (JSON.parse(r.productIds) as number[]) : null,
+    productNames: r.productNames ? (JSON.parse(r.productNames) as string[]) : null,
+    customerIds: r.customerIds ? (JSON.parse(r.customerIds) as number[]) : null,
+    customerNames: r.customerNames ? (JSON.parse(r.customerNames) as string[]) : null,
+    createdAt: r.createdAt.toISOString(),
+  };
+}
+
+router.post("/delete-requests/customer", async (req, res) => {
+  try {
+    const user = res.locals.user;
+    const body = createCustomerDeleteRequestSchema.parse(req.body);
+    const managerId = user.managerId ?? null;
+
+    const [request] = await db
+      .insert(deleteRequestsTable)
+      .values({
+        managerId,
+        type: "customer",
+        saleIds: "[]",
+        customerIds: JSON.stringify(body.customerIds),
+        customerNames: JSON.stringify(body.customerNames),
+        workerId: user.workerId ?? null,
+        workerName: user.name ?? "Noma'lum",
+        status: "pending",
+      })
+      .returning();
+
+    req.log.info({ requestId: request?.id, workerName: user.name }, "Customer delete request created");
+    res.status(201).json({ id: request?.id, status: "pending" });
+  } catch (err) {
+    if (err instanceof z.ZodError) {
+      res.status(400).json({ error: "Noto'g'ri ma'lumot" });
+    } else {
+      req.log.error({ err }, "Failed to create customer delete request");
+      res.status(500).json({ error: "So'rov yuborishda xato" });
+    }
+  }
 });
 
 router.post("/delete-requests/product", async (req, res) => {
@@ -91,18 +141,28 @@ router.get("/delete-requests", requireManager, async (req, res) => {
       .where(condition)
       .orderBy(deleteRequestsTable.createdAt);
 
-    res.json(
-      requests.map((r) => ({
-        ...r,
-        type: r.type ?? "sale",
-        saleIds: JSON.parse(r.saleIds) as number[],
-        productIds: r.productIds ? (JSON.parse(r.productIds) as number[]) : null,
-        productNames: r.productNames ? (JSON.parse(r.productNames) as string[]) : null,
-        createdAt: r.createdAt.toISOString(),
-      }))
-    );
+    res.json(requests.map(parseRequest));
   } catch (err) {
     req.log.error({ err }, "Failed to get delete requests");
+    res.status(500).json({ error: "So'rovlarni olishda xato" });
+  }
+});
+
+router.get("/delete-requests/worker", async (req, res) => {
+  try {
+    const user = res.locals.user;
+    const workerId = user?.workerId;
+    if (!workerId) { res.status(403).json({ error: "Ruxsat yo'q" }); return; }
+
+    const requests = await db
+      .select()
+      .from(deleteRequestsTable)
+      .where(eq(deleteRequestsTable.workerId, workerId))
+      .orderBy(deleteRequestsTable.createdAt);
+
+    res.json(requests.map(parseRequest));
+  } catch (err) {
+    req.log.error({ err }, "Failed to get worker delete requests");
     res.status(500).json({ error: "So'rovlarni olishda xato" });
   }
 });
@@ -132,6 +192,13 @@ router.post("/delete-requests/:id/approve", requireManager, async (req, res) => 
         const productIds = JSON.parse(request.productIds) as number[];
         if (productIds.length > 0) {
           await db.delete(productsTable).where(inArray(productsTable.id, productIds));
+        }
+      }
+    } else if (request.type === "customer") {
+      if (request.customerIds) {
+        const customerIds = JSON.parse(request.customerIds) as number[];
+        if (customerIds.length > 0) {
+          await db.delete(customersTable).where(inArray(customersTable.id, customerIds));
         }
       }
     } else {
