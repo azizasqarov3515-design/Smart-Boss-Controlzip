@@ -500,12 +500,172 @@ function LogItem({ log }: { log: AuditLog }) {
   );
 }
 
+// ─── Reset password page ──────────────────────────────────────────────────────
+function ResetPasswordPage() {
+  const [, nav] = useLocation();
+  const [recoveryKey, setRecoveryKey] = useState("");
+  const [newPwd, setNewPwd] = useState("");
+  const [confirmPwd, setConfirmPwd] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [err, setErr] = useState("");
+  const [success, setSuccess] = useState(false);
+  const [showKey, setShowKey] = useState(false);
+  const [showPwd, setShowPwd] = useState(false);
+
+  const submit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setErr("");
+    if (newPwd !== confirmPwd) { setErr("Parollar mos emas"); return; }
+    if (newPwd.length < 6) { setErr("Parol kamida 6 ta belgi bo'lishi kerak"); return; }
+    setLoading(true);
+    try {
+      const r = await fetch(`${BASE}/api/admin/reset-password`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ recoveryKey, newPassword: newPwd }),
+      });
+      const d = await r.json() as { ok?: boolean; error?: string };
+      if (!r.ok) throw new Error(d.error ?? "Xato yuz berdi");
+      setSuccess(true);
+    } catch (er) {
+      setErr((er as Error).message);
+    } finally { setLoading(false); }
+  };
+
+  if (success) {
+    return (
+      <div className="min-h-dvh flex flex-col items-center justify-center bg-background p-5">
+        <div className="w-full max-w-sm text-center">
+          <div className="w-20 h-20 rounded-3xl bg-green-500/10 border border-green-500/20 flex items-center justify-center text-4xl mx-auto mb-6">
+            ✅
+          </div>
+          <h2 className="text-xl font-bold text-foreground mb-2">Parol muvaffaqiyatli o'zgartirildi!</h2>
+          <p className="text-sm text-muted-foreground mb-8">Endi yangi parolingiz bilan kirishingiz mumkin.</p>
+          <button
+            onClick={() => nav("/login")}
+            className="w-full bg-primary hover:opacity-90 text-primary-foreground font-bold py-4 rounded-2xl transition text-base"
+          >
+            Kirish sahifasiga →
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div
+      className="min-h-dvh flex flex-col items-center justify-center bg-background p-5"
+      style={{ paddingBottom: "max(1.25rem, env(safe-area-inset-bottom))" }}
+    >
+      <div className="w-full max-w-sm">
+        <div className="text-center mb-8">
+          <div className="w-20 h-20 rounded-3xl bg-orange-500/10 border border-orange-500/20 flex items-center justify-center text-4xl mx-auto mb-4">
+            🔓
+          </div>
+          <h1 className="text-2xl font-bold text-foreground">Parolni tiklash</h1>
+          <p className="text-sm text-muted-foreground mt-1.5">Tiklash kodi bilan yangi parol o'rnating</p>
+        </div>
+
+        <div className="bg-orange-500/10 border border-orange-500/20 rounded-2xl px-4 py-3.5 mb-6">
+          <p className="text-xs text-orange-400 font-medium leading-relaxed">
+            💡 <strong>Tiklash kodi</strong> — bu <code className="bg-orange-500/20 px-1 rounded">SESSION_SECRET</code> muhit o'zgaruvchisi qiymati. Uni faqat server egasi biladi.
+          </p>
+        </div>
+
+        <form onSubmit={submit} className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-muted-foreground mb-2">Tiklash kodi (SESSION_SECRET)</label>
+            <div className="relative">
+              <input
+                type={showKey ? "text" : "password"}
+                value={recoveryKey}
+                onChange={e => setRecoveryKey(e.target.value)}
+                placeholder="Tiklash kodini kiriting"
+                className="w-full bg-input border border-border rounded-2xl px-4 py-4 pr-12 text-foreground focus:outline-none focus:ring-2 focus:ring-ring text-base"
+                style={{ fontSize: "16px" }}
+                autoComplete="off"
+                required
+              />
+              <button
+                type="button"
+                onClick={() => setShowKey(v => !v)}
+                className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition"
+              >
+                {showKey ? "🙈" : "👁️"}
+              </button>
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-muted-foreground mb-2">Yangi parol</label>
+            <div className="relative">
+              <input
+                type={showPwd ? "text" : "password"}
+                value={newPwd}
+                onChange={e => setNewPwd(e.target.value)}
+                placeholder="Kamida 6 ta belgi"
+                className="w-full bg-input border border-border rounded-2xl px-4 py-4 pr-12 text-foreground focus:outline-none focus:ring-2 focus:ring-ring text-base"
+                style={{ fontSize: "16px" }}
+                autoComplete="new-password"
+                required
+              />
+              <button
+                type="button"
+                onClick={() => setShowPwd(v => !v)}
+                className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition"
+              >
+                {showPwd ? "🙈" : "👁️"}
+              </button>
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-muted-foreground mb-2">Yangi parolni tasdiqlang</label>
+            <input
+              type="password"
+              value={confirmPwd}
+              onChange={e => setConfirmPwd(e.target.value)}
+              placeholder="Parolni qayta kiriting"
+              className="w-full bg-input border border-border rounded-2xl px-4 py-4 text-foreground focus:outline-none focus:ring-2 focus:ring-ring text-base"
+              style={{ fontSize: "16px" }}
+              autoComplete="new-password"
+              required
+            />
+          </div>
+
+          {err && (
+            <div className="text-sm text-destructive bg-destructive/10 border border-destructive/30 rounded-xl px-4 py-3">
+              ⚠️ {err}
+            </div>
+          )}
+
+          <button
+            type="submit"
+            disabled={loading || !recoveryKey || !newPwd || !confirmPwd}
+            className="w-full bg-primary hover:opacity-90 active:opacity-75 text-primary-foreground font-bold py-4 rounded-2xl transition disabled:opacity-50 text-base"
+          >
+            {loading ? "Tiklanmoqda…" : "Parolni o'zgartirish →"}
+          </button>
+        </form>
+
+        <button
+          onClick={() => nav("/login")}
+          className="w-full mt-4 text-sm text-muted-foreground hover:text-foreground transition py-2"
+        >
+          ← Orqaga qaytish
+        </button>
+      </div>
+    </div>
+  );
+}
+
 // ─── Login page ───────────────────────────────────────────────────────────────
 function LoginPage() {
   const { login } = useAdminAuth();
   const [pwd, setPwd] = useState("");
   const [err, setErr] = useState("");
   const [loading, setLoading] = useState(false);
+  const [showPwd, setShowPwd] = useState(false);
   const [, nav] = useLocation();
 
   const submit = async (e: React.FormEvent) => {
@@ -537,17 +697,26 @@ function LoginPage() {
         <form onSubmit={submit} className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-muted-foreground mb-2">Admin parol</label>
-            <input
-              type="password"
-              value={pwd}
-              onChange={e => setPwd(e.target.value)}
-              placeholder="Parolni kiriting"
-              className="w-full bg-input border border-border rounded-2xl px-4 py-4 text-foreground focus:outline-none focus:ring-2 focus:ring-ring text-base"
-              style={{ fontSize: "16px" }}
-              autoFocus
-              autoComplete="current-password"
-              required
-            />
+            <div className="relative">
+              <input
+                type={showPwd ? "text" : "password"}
+                value={pwd}
+                onChange={e => setPwd(e.target.value)}
+                placeholder="Parolni kiriting"
+                className="w-full bg-input border border-border rounded-2xl px-4 py-4 pr-12 text-foreground focus:outline-none focus:ring-2 focus:ring-ring text-base"
+                style={{ fontSize: "16px" }}
+                autoFocus
+                autoComplete="current-password"
+                required
+              />
+              <button
+                type="button"
+                onClick={() => setShowPwd(v => !v)}
+                className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition"
+              >
+                {showPwd ? "🙈" : "👁️"}
+              </button>
+            </div>
           </div>
           {err && (
             <div className="text-sm text-destructive bg-destructive/10 border border-destructive/30 rounded-xl px-4 py-3">
@@ -562,6 +731,13 @@ function LoginPage() {
             {loading ? "Kirilmoqda…" : "Kirish →"}
           </button>
         </form>
+
+        <button
+          onClick={() => nav("/reset-password")}
+          className="w-full mt-5 text-sm text-muted-foreground hover:text-primary transition py-2 text-center"
+        >
+          🔓 Parolni unutdingizmi?
+        </button>
       </div>
     </div>
   );
@@ -792,6 +968,8 @@ function AppRouter() {
   useEffect(() => {
     const path = window.location.pathname;
     const isLogin = path.includes("/login");
+    const isReset = path.includes("/reset-password");
+    if (isReset) return; // Allow reset-password page without auth
     if (token && isLogin) nav("/dashboard");
     if (!token && !isLogin) nav("/login");
   }, [token, nav]);
@@ -799,6 +977,7 @@ function AppRouter() {
   return (
     <Switch>
       <Route path="/login" component={LoginPage} />
+      <Route path="/reset-password" component={ResetPasswordPage} />
       <Route path="/dashboard" component={DashboardPage} />
       <Route path="/" component={() => { nav(token ? "/dashboard" : "/login"); return null; }} />
     </Switch>

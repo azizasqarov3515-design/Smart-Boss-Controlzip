@@ -6,3 +6,4 @@ export * from "./sales";
 export * from "./workers";
 export * from "./delete_requests";
 export * from "./audit_logs";
+export * from "./admin_config";

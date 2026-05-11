@@ -5,6 +5,7 @@ import {
   auditLogsTable,
   workersTable,
   salesTable,
+  adminConfigTable,
 } from "@workspace/db/schema";
 import { desc, eq, sql } from "drizzle-orm";
 import { Router } from "express";
@@ -112,19 +113,98 @@ function planLabel(plan: string | null): string {
   }
 }
 
+// Helper: get effective admin password hash from DB (overridden) or derive from env var
+async function getEffectiveAdminPasswordHash(): Promise<{ hash: string; fromDb: boolean } | null> {
+  try {
+    const [row] = await db
+      .select({ value: adminConfigTable.value })
+      .from(adminConfigTable)
+      .where(eq(adminConfigTable.key, "admin_password_hash"));
+    if (row?.value) return { hash: row.value, fromDb: true };
+  } catch { /* ignore */ }
+  // Fall back to env var (plain comparison)
+  if (ADMIN_PASSWORD) return { hash: ADMIN_PASSWORD, fromDb: false };
+  return null;
+}
+
+function verifyAdminPassword(input: string, stored: string, fromDb: boolean): boolean {
+  if (fromDb) {
+    // stored is "salt:hash" from scrypt
+    const [salt, hash] = stored.split(":");
+    if (!salt || !hash) return false;
+    try {
+      const derived = crypto.scryptSync(input, salt, 64).toString("hex");
+      return crypto.timingSafeEqual(Buffer.from(derived, "hex"), Buffer.from(hash, "hex"));
+    } catch { return false; }
+  }
+  // Plain env var comparison
+  return crypto.timingSafeEqual(
+    Buffer.from(input.padEnd(128), "utf8"),
+    Buffer.from(stored.padEnd(128), "utf8")
+  ) && input === stored;
+}
+
 // POST /api/admin/login
-router.post("/admin/login", (req, res) => {
+router.post("/admin/login", async (req, res) => {
   const { password } = req.body as { password?: string };
-  if (!ADMIN_PASSWORD) {
+  if (!password) {
+    res.status(400).json({ error: "Parol kiritilmagan" });
+    return;
+  }
+  const effective = await getEffectiveAdminPasswordHash();
+  if (!effective) {
     res.status(503).json({ error: "ADMIN_PASSWORD konfiguratsiya qilinmagan" });
     return;
   }
-  if (!password || password !== ADMIN_PASSWORD) {
+  if (!verifyAdminPassword(password, effective.hash, effective.fromDb)) {
     res.status(401).json({ error: "Parol noto'g'ri" });
     return;
   }
   const token = generateAdminToken();
   res.json({ token });
+});
+
+// POST /api/admin/reset-password
+// Uses SESSION_SECRET as proof of server ownership to reset admin password
+const resetPasswordSchema = z.object({
+  recoveryKey: z.string().min(1, "Tiklash kodi kiritilmagan"),
+  newPassword: z.string().min(6, "Yangi parol kamida 6 ta belgi bo'lishi kerak"),
+});
+
+router.post("/admin/reset-password", async (req, res) => {
+  try {
+    const body = resetPasswordSchema.parse(req.body);
+
+    // Verify recovery key matches SESSION_SECRET
+    if (!crypto.timingSafeEqual(
+      Buffer.from(body.recoveryKey.padEnd(256), "utf8"),
+      Buffer.from(SESSION_SECRET.padEnd(256), "utf8")
+    ) || body.recoveryKey !== SESSION_SECRET) {
+      res.status(401).json({ error: "Tiklash kodi noto'g'ri" });
+      return;
+    }
+
+    const passwordHash = hashPassword(body.newPassword);
+
+    // Upsert admin_config row
+    await db
+      .insert(adminConfigTable)
+      .values({ key: "admin_password_hash", value: passwordHash })
+      .onConflictDoUpdate({
+        target: adminConfigTable.key,
+        set: { value: passwordHash, updatedAt: new Date() },
+      });
+
+    req.log.info("Admin password reset via recovery key");
+    res.json({ ok: true });
+  } catch (err) {
+    if (err instanceof z.ZodError) {
+      res.status(400).json({ error: err.issues[0]?.message ?? "Noto'g'ri ma'lumot" });
+    } else {
+      req.log.error({ err }, "Admin reset-password failed");
+      res.status(500).json({ error: "Server xatosi" });
+    }
+  }
 });
 
 // GET /api/admin/managers
