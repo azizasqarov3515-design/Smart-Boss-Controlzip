@@ -17,8 +17,9 @@ export function SubscriptionGuard({ children }: SubscriptionGuardProps) {
 
   if (!isAuthenticated) return <>{children}</>;
 
-  // Show full block if subscription is expired / not active
-  if (subscriptionExpired || (!subscriptionActive && subscriptionEnd !== null)) {
+  // Show full block only if they had a subscription that is now expired/inactive
+  // New managers with no subscription history (subscriptionEnd === null) are allowed through
+  if (subscriptionEnd !== null && (subscriptionExpired || !subscriptionActive)) {
     const handleLogout = () => {
       Alert.alert("Chiqish", "Tizimdan chiqishni xohlaysizmi?", [
         { text: "Bekor", style: "cancel" },
