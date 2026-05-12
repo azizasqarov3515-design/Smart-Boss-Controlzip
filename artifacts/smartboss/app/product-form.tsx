@@ -247,28 +247,50 @@ async function uploadProductImage(
   localUri: string,
   token: string | null,
 ): Promise<string> {
-  const fileName = localUri.split("/").pop() ?? "image.jpg";
-  const match = /\.(\w+)$/.exec(fileName);
-  const mimeType = match ? `image/${match[1]}` : "image/jpeg";
+  // iOS returns file:// URIs — strip the prefix so React Native's fetch handles it correctly
+  const fixedUri = Platform.OS === "ios" ? localUri.replace("file://", "") : localUri;
+
+  // Always use a stable name + jpeg type for maximum server compatibility
+  const fileName = `product_${Date.now()}.jpg`;
+  const mimeType = "image/jpeg";
+
+  console.log("[ImageUpload] Starting upload:", { fixedUri, fileName, mimeType, apiBase: API_BASE });
 
   const formData = new FormData();
-  formData.append("image", { uri: localUri, name: fileName, type: mimeType } as unknown as Blob);
+  // React Native requires the object shape { uri, name, type } cast as unknown
+  formData.append("image", {
+    uri: fixedUri,
+    name: fileName,
+    type: mimeType,
+  } as unknown as Blob);
 
   const headers: Record<string, string> = {};
-  if (token) headers["Authorization"] = `Bearer ${token}`;
+  if (token) {
+    headers["Authorization"] = `Bearer ${token}`;
+    console.log("[ImageUpload] Auth token present:", token.slice(0, 20) + "…");
+  } else {
+    console.warn("[ImageUpload] No auth token — request may fail with 401");
+  }
 
-  const response = await fetch(`${API_BASE}/upload/product-image`, {
+  const uploadUrl = `${API_BASE}/upload/product-image`;
+  console.log("[ImageUpload] POST →", uploadUrl);
+
+  const response = await fetch(uploadUrl, {
     method: "POST",
     headers,
     body: formData,
   });
 
+  const responseText = await response.text();
+  console.log("[ImageUpload] Response status:", response.status);
+  console.log("[ImageUpload] Response body:", responseText);
+
   if (!response.ok) {
-    const err = await response.text();
-    throw new Error(`Upload failed: ${err}`);
+    throw new Error(`Upload failed (${response.status}): ${responseText}`);
   }
 
-  const data = await response.json();
+  const data = JSON.parse(responseText);
+  console.log("[ImageUpload] Success — url:", data.url);
   return data.url as string;
 }
 
@@ -334,8 +356,10 @@ function ProductFormScreenInner() {
       let result: ImagePicker.ImagePickerResult;
 
       if (source === "camera") {
-        // Request both expo-image-picker camera permission and expo-camera permission
+        console.log("[ImagePicker] Requesting camera permission…");
         const pickerPerm = await ImagePicker.requestCameraPermissionsAsync();
+        console.log("[ImagePicker] Camera permission status:", pickerPerm.status);
+
         if (pickerPerm.status !== "granted") {
           Alert.alert(
             "Kamera ruxsati yo'q",
@@ -344,6 +368,8 @@ function ProductFormScreenInner() {
           );
           return;
         }
+
+        console.log("[ImagePicker] Launching camera…");
         try {
           result = await ImagePicker.launchCameraAsync({
             mediaTypes: "images",
@@ -352,8 +378,9 @@ function ProductFormScreenInner() {
             aspect: [1, 1],
             exif: false,
           });
-        } catch {
-          // Camera not available (e.g. web/emulator) — fall back to gallery
+          console.log("[ImagePicker] Camera result — canceled:", result.canceled, "assets:", result.assets?.length);
+        } catch (camErr) {
+          console.error("[ImagePicker] launchCameraAsync error:", camErr);
           Alert.alert(
             "Kamera mavjud emas",
             "Qurilmangizda kamera ishlamadi. Galereya orqali rasm tanlaysizmi?",
@@ -365,7 +392,10 @@ function ProductFormScreenInner() {
           return;
         }
       } else {
+        console.log("[ImagePicker] Requesting media library permission…");
         const libraryPerm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+        console.log("[ImagePicker] Media library permission status:", libraryPerm.status);
+
         if (libraryPerm.status !== "granted") {
           Alert.alert(
             "Galereya ruxsati yo'q",
@@ -374,6 +404,8 @@ function ProductFormScreenInner() {
           );
           return;
         }
+
+        console.log("[ImagePicker] Launching image library…");
         result = await ImagePicker.launchImageLibraryAsync({
           mediaTypes: "images",
           quality: 0.7,
@@ -381,23 +413,32 @@ function ProductFormScreenInner() {
           aspect: [1, 1],
           exif: false,
         });
+        console.log("[ImagePicker] Library result — canceled:", result.canceled, "assets:", result.assets?.length);
       }
 
-      if (result.canceled || !result.assets?.[0]?.uri) return;
+      if (result.canceled || !result.assets?.[0]?.uri) {
+        console.log("[ImagePicker] Picker was canceled or no asset returned.");
+        return;
+      }
+
       const uri = result.assets[0].uri;
+      console.log("[ImagePicker] Selected uri:", uri);
 
       setImageUploading(true);
       try {
         const url = await uploadProductImage(uri, token);
         setImageUrl(url);
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      } catch {
-        Alert.alert("Yuklash xatosi", "Rasm serverga yuklanmadi. Internet aloqasini tekshirib qayta urinib ko'ring.");
+      } catch (uploadErr) {
+        const msg = uploadErr instanceof Error ? uploadErr.message : String(uploadErr);
+        console.error("[ImagePicker] Upload error:", msg);
+        Alert.alert("Yuklash xatosi", msg || "Rasm serverga yuklanmadi. Qayta urinib ko'ring.");
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       } finally {
         setImageUploading(false);
       }
-    } catch {
+    } catch (err) {
+      console.error("[ImagePicker] Unexpected error:", err);
       Alert.alert("Xato", "Rasm tanlashda muammo yuz berdi. Qayta urinib ko'ring.");
     }
   };
