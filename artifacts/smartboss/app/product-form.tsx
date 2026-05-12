@@ -332,22 +332,46 @@ function ProductFormScreenInner() {
   const pickImage = async (source: "camera" | "gallery") => {
     try {
       let result: ImagePicker.ImagePickerResult;
+
       if (source === "camera") {
-        const { status } = await ImagePicker.requestCameraPermissionsAsync();
-        if (status !== "granted") {
-          Alert.alert("Kamera ruxsati yo'q", "Sozlamalarda kamera ruxsatini bering.");
+        // Request both expo-image-picker camera permission and expo-camera permission
+        const pickerPerm = await ImagePicker.requestCameraPermissionsAsync();
+        if (pickerPerm.status !== "granted") {
+          Alert.alert(
+            "Kamera ruxsati yo'q",
+            "Sozlamalar → Ilovalar → SMARTBOSScontrol → Ruxsatlar bo'limida kamera ruxsatini yoqing.",
+            [{ text: "OK" }]
+          );
           return;
         }
-        result = await ImagePicker.launchCameraAsync({
-          mediaTypes: "images",
-          quality: 0.7,
-          allowsEditing: true,
-          aspect: [1, 1],
-        });
+        try {
+          result = await ImagePicker.launchCameraAsync({
+            mediaTypes: "images",
+            quality: 0.7,
+            allowsEditing: true,
+            aspect: [1, 1],
+            exif: false,
+          });
+        } catch {
+          // Camera not available (e.g. web/emulator) — fall back to gallery
+          Alert.alert(
+            "Kamera mavjud emas",
+            "Qurilmangizda kamera ishlamadi. Galereya orqali rasm tanlaysizmi?",
+            [
+              { text: "Galereya", onPress: () => pickImage("gallery") },
+              { text: "Bekor qilish", style: "cancel" },
+            ]
+          );
+          return;
+        }
       } else {
-        const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-        if (status !== "granted") {
-          Alert.alert("Galereya ruxsati yo'q", "Sozlamalarda galereya ruxsatini bering.");
+        const libraryPerm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+        if (libraryPerm.status !== "granted") {
+          Alert.alert(
+            "Galereya ruxsati yo'q",
+            "Sozlamalar → Ilovalar → SMARTBOSScontrol → Ruxsatlar bo'limida galereya ruxsatini yoqing.",
+            [{ text: "OK" }]
+          );
           return;
         }
         result = await ImagePicker.launchImageLibraryAsync({
@@ -355,36 +379,45 @@ function ProductFormScreenInner() {
           quality: 0.7,
           allowsEditing: true,
           aspect: [1, 1],
+          exif: false,
         });
       }
+
       if (result.canceled || !result.assets?.[0]?.uri) return;
       const uri = result.assets[0].uri;
+
       setImageUploading(true);
       try {
         const url = await uploadProductImage(uri, token);
         setImageUrl(url);
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       } catch {
-        Alert.alert("Xato", "Rasm yuklashda xato yuz berdi. Qayta urinib ko'ring.");
+        Alert.alert("Yuklash xatosi", "Rasm serverga yuklanmadi. Internet aloqasini tekshirib qayta urinib ko'ring.");
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       } finally {
         setImageUploading(false);
       }
     } catch {
-      Alert.alert("Xato", "Rasm tanlashda muammo yuz berdi.");
+      Alert.alert("Xato", "Rasm tanlashda muammo yuz berdi. Qayta urinib ko'ring.");
     }
   };
 
   const showImagePicker = () => {
     if (Platform.OS === "web") {
+      // On web, only gallery works reliably
       pickImage("gallery");
       return;
     }
-    Alert.alert("Rasm qo'shish", "Qayerdan olasiz?", [
-      { text: "Kamera", onPress: () => pickImage("camera") },
-      { text: "Galereya", onPress: () => pickImage("gallery") },
-      { text: "Bekor qilish", style: "cancel" },
-    ]);
+    Alert.alert(
+      "Rasm qo'shish",
+      "Qayerdan olasiz?",
+      [
+        { text: "📷  Kamera", onPress: () => pickImage("camera") },
+        { text: "🖼️  Galereya", onPress: () => pickImage("gallery") },
+        { text: "Bekor qilish", style: "cancel" },
+      ],
+      { cancelable: true }
+    );
   };
 
   const { mutate: createProduct, isPending: creating } = useCreateProduct({

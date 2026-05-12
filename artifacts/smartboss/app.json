@@ -14,14 +14,25 @@
       "backgroundColor": "#F4F6FB"
     },
     "ios": {
-      "supportsTablet": false
+      "supportsTablet": false,
+      "infoPlist": {
+        "NSCameraUsageDescription": "Mahsulot rasmi olish uchun kamera kerak",
+        "NSPhotoLibraryUsageDescription": "Mahsulot rasmi tanlash uchun galereya kerak",
+        "NSPhotoLibraryAddUsageDescription": "Rasm saqlash uchun galereya kerak"
+      }
     },
     "android": {
       "package": "com.smartboss.control",
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/icon.png",
         "backgroundColor": "#1565C0"
-      }
+      },
+      "permissions": [
+        "android.permission.CAMERA",
+        "android.permission.READ_EXTERNAL_STORAGE",
+        "android.permission.WRITE_EXTERNAL_STORAGE",
+        "android.permission.READ_MEDIA_IMAGES"
+      ]
     },
     "web": {
       "favicon": "./assets/images/icon.png",
@@ -45,6 +56,14 @@
         "expo-camera",
         {
           "cameraPermission": "Kassa uchun kamera ruxsati kerak"
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "cameraPermission": "Mahsulot rasmi olish uchun kamera ruxsati kerak",
+          "microphonePermission": false,
+          "photosPermission": "Mahsulot rasmi tanlash uchun galereya ruxsati kerak"
         }
       ]
     ],
