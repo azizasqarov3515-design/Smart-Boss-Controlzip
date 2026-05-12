@@ -11,8 +11,10 @@ import * as Haptics from "expo-haptics";
 import { Image } from "expo-image";
 import { useRouter } from "expo-router";
 import React, { useCallback, useRef, useState } from "react";
+import * as ImagePicker from "expo-image-picker";
 import {
   ActivityIndicator,
+  Alert,
   Animated,
   FlatList,
   Modal,
@@ -215,6 +217,8 @@ function ProductsScreenInner() {
   const [sortAsc, setSortAsc] = useState(true);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [imagePreviewUrl, setImagePreviewUrl] = useState<string | null>(null);
+  const [imageSearching, setImageSearching] = useState(false);
+  const [imageMatchedIds, setImageMatchedIds] = useState<number[] | null>(null);
 
   // Confirm modal for manager (direct delete) and worker (send request)
   const [confirmProduct, setConfirmProduct] = useState<Product | null>(null);
@@ -274,6 +278,64 @@ function ProductsScreenInner() {
     router.push({ pathname: "/product-form", params: { id: String(product.id) } });
   }, [router]);
 
+  const clearImageSearch = useCallback(() => {
+    setImageMatchedIds(null);
+    setSearch("");
+    setDebouncedSearch("");
+  }, []);
+
+  const handleCameraSearch = useCallback(async () => {
+    if (Platform.OS === "web") return;
+
+    const { status } = await ImagePicker.requestCameraPermissionsAsync();
+    if (status !== "granted") {
+      Alert.alert("Kamera ruxsati", "Kamera ruxsatini ilovaga bering va qayta urinib ko'ring.");
+      return;
+    }
+
+    const result = await ImagePicker.launchCameraAsync({
+      mediaTypes: ["images"],
+      quality: 0.65,
+      base64: true,
+      allowsEditing: false,
+    });
+
+    if (result.canceled || !result.assets?.[0]?.base64) return;
+
+    setImageSearching(true);
+    setImageMatchedIds(null);
+
+    try {
+      const base64 = result.assets[0].base64;
+      const apiUrl = `https://${process.env.EXPO_PUBLIC_DOMAIN}/api/products/image-search`;
+      const response = await fetch(apiUrl, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ image: base64, mimeType: "image/jpeg" }),
+      });
+
+      if (!response.ok) {
+        const err = await response.json().catch(() => ({})) as { error?: string };
+        throw new Error(err.error ?? `Server xatosi: ${response.status}`);
+      }
+
+      const data = await response.json() as { matchedIds: number[]; searchQuery: string };
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      setImageMatchedIds(data.matchedIds ?? []);
+      if (data.searchQuery) {
+        setSearch(data.searchQuery);
+        setDebouncedSearch(data.searchQuery);
+      }
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Noma'lum xato";
+      Alert.alert("Qidirishda xato", msg);
+      setImageMatchedIds(null);
+    } finally {
+      setImageSearching(false);
+    }
+  }, []);
+
   const handleSort = (key: SortKey) => {
     Haptics.selectionAsync();
     if (sortKey === key) setSortAsc((a) => !a);
@@ -282,6 +344,7 @@ function ProductsScreenInner() {
 
   const filtered = (products ?? [])
     .filter((p) => {
+      if (imageMatchedIds !== null) return imageMatchedIds.includes(p.id);
       if (!debouncedSearch.trim()) return true;
       const q = debouncedSearch.toLowerCase();
       return p.name.toLowerCase().includes(q) || p.brand.toLowerCase().includes(q);
@@ -318,28 +381,48 @@ function ProductsScreenInner() {
         <View
           style={[
             styles.searchWrap,
-            { backgroundColor: colors.card, borderColor: search ? colors.primary : colors.border },
+            {
+              backgroundColor: colors.card,
+              borderColor: imageMatchedIds !== null ? colors.primary : search ? colors.primary : colors.border,
+            },
           ]}
         >
           <MaterialIcons
             name="search"
             size={20}
-            color={search ? colors.primary : colors.mutedForeground}
+            color={imageMatchedIds !== null || search ? colors.primary : colors.mutedForeground}
           />
           <TextInput
             style={[styles.searchInput, { color: colors.foreground, fontFamily: "Inter_400Regular" }]}
             placeholder="Tovar nomi yoki brend..."
             placeholderTextColor={colors.mutedForeground}
             value={search}
-            onChangeText={handleSearchChange}
+            onChangeText={(t) => { setImageMatchedIds(null); handleSearchChange(t); }}
             autoCapitalize="none"
             autoCorrect={false}
             clearButtonMode="while-editing"
             returnKeyType="search"
           />
-          {search.length > 0 && Platform.OS !== "ios" && (
-            <TouchableOpacity onPress={() => { setSearch(""); setDebouncedSearch(""); }}>
+          {(search.length > 0 || imageMatchedIds !== null) && Platform.OS !== "ios" && (
+            <TouchableOpacity onPress={() => { setSearch(""); setDebouncedSearch(""); setImageMatchedIds(null); }}>
               <MaterialIcons name="close" size={18} color={colors.mutedForeground} />
+            </TouchableOpacity>
+          )}
+          {Platform.OS !== "web" && (
+            <TouchableOpacity
+              onPress={handleCameraSearch}
+              disabled={imageSearching}
+              style={styles.cameraBtn}
+              activeOpacity={0.7}
+            >
+              {imageSearching
+                ? <ActivityIndicator size="small" color={colors.primary} />
+                : <MaterialIcons
+                    name="camera-alt"
+                    size={20}
+                    color={imageMatchedIds !== null ? colors.primary : colors.mutedForeground}
+                  />
+              }
             </TouchableOpacity>
           )}
         </View>
@@ -369,10 +452,24 @@ function ProductsScreenInner() {
         </View>
       )}
 
+      {imageMatchedIds !== null && (
+        <View style={[styles.alertStrip, { backgroundColor: "#E3F2FD", borderColor: colors.primary, marginHorizontal: 16, marginTop: 10 }]}>
+          <MaterialIcons name="image-search" size={16} color={colors.primary} />
+          <Text style={[styles.alertStripText, { color: colors.primary }]}>
+            {imageMatchedIds.length > 0
+              ? `AI: ${imageMatchedIds.length} ta mahsulot topildi`
+              : "AI: Mos mahsulot topilmadi"}
+          </Text>
+          <TouchableOpacity onPress={clearImageSearch}>
+            <MaterialIcons name="close" size={16} color={colors.primary} />
+          </TouchableOpacity>
+        </View>
+      )}
+
       <View style={[styles.meta, { paddingHorizontal: 16, marginTop: 10 }]}>
         <Text style={[styles.countText, { color: colors.mutedForeground }]}>
           {filtered.length}/{products?.length ?? 0} mahsulot
-          {debouncedSearch ? ` — "${debouncedSearch}"` : ""}
+          {imageMatchedIds !== null ? " — AI qidiruv" : debouncedSearch ? ` — "${debouncedSearch}"` : ""}
         </Text>
         <View style={styles.sortRow}>
           <Text style={[styles.sortByLabel, { color: colors.mutedForeground }]}>Tartiblash: </Text>
@@ -389,16 +486,27 @@ function ProductsScreenInner() {
         </View>
       ) : filtered.length === 0 ? (
         <View style={styles.emptyWrap}>
-          <MaterialIcons name={debouncedSearch ? "search-off" : "inventory-2"} size={52} color={colors.border} />
+          <MaterialIcons name={debouncedSearch || imageMatchedIds !== null ? "search-off" : "inventory-2"} size={52} color={colors.border} />
           <Text style={[styles.emptyTitle, { color: colors.foreground }]}>
-            {debouncedSearch ? "Hech narsa topilmadi" : "Mahsulotlar yo'q"}
+            {debouncedSearch || imageMatchedIds !== null ? "Hech narsa topilmadi" : "Mahsulotlar yo'q"}
           </Text>
           <Text style={[styles.emptySub, { color: colors.mutedForeground }]}>
-            {debouncedSearch
+            {imageMatchedIds !== null
+              ? "Rasmga mos mahsulot topilmadi"
+              : debouncedSearch
               ? `"${debouncedSearch}" bo'yicha natija yo'q`
               : "Birinchi mahsulotingizni qo'shing"}
           </Text>
-          {!debouncedSearch && !isWorker && (
+          {imageMatchedIds !== null && (
+            <TouchableOpacity
+              style={[styles.emptyBtn, { backgroundColor: colors.primary }]}
+              onPress={clearImageSearch}
+              activeOpacity={0.85}
+            >
+              <Text style={styles.emptyBtnText}>Qidiruvni tozalash</Text>
+            </TouchableOpacity>
+          )}
+          {!debouncedSearch && imageMatchedIds === null && !isWorker && (
             <TouchableOpacity
               style={[styles.emptyBtn, { backgroundColor: colors.primary }]}
               onPress={() => router.push("/product-form")}
@@ -604,6 +712,13 @@ const styles = StyleSheet.create({
     elevation: 1,
   },
   searchInput: { flex: 1, fontSize: 14, padding: 0 },
+  cameraBtn: {
+    width: 32,
+    height: 32,
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: 8,
+  },
   addFab: {
     width: 44,
     height: 44,
