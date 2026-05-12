@@ -290,6 +290,7 @@ function POSScreenInner() {
   const [partialPayment, setPartialPayment] = useState("");
   const [customerPickerOpen, setCustomerPickerOpen] = useState(false);
   const [customerSearch, setCustomerSearch] = useState("");
+  const [customerConfirmVisible, setCustomerConfirmVisible] = useState(false);
   const successAnim = useRef(new Animated.Value(0)).current;
 
   const { data: products, isLoading: productsLoading, refetch: refetchProducts, isRefetching: productsRefetching } = useGetProducts();
@@ -449,20 +450,10 @@ function POSScreenInner() {
     setTimeout(() => setConfirmOpen(true), 300);
   }, []);
 
-  // For the optional "Mijoz biriktirish" button — show confirmation first
+  // For the optional "Mijoz biriktirish" button — show inline confirmation
   const handleOptionalCustomerPress = useCallback(() => {
-    Alert.alert(
-      "Mijoz biriktirish",
-      "Mijoz mijozlar ro'yxatiga qo'shilsinmi?",
-      [
-        { text: "YO'Q", style: "cancel" },
-        {
-          text: "HA",
-          onPress: openCustomerPicker,
-        },
-      ]
-    );
-  }, [openCustomerPicker]);
+    setCustomerConfirmVisible(true);
+  }, []);
 
   const handleConfirmSale = () => {
     if (paymentType === "debt" && !selectedCustomer) {
@@ -510,12 +501,12 @@ function POSScreenInner() {
         transparent
         animationType="slide"
         statusBarTranslucent
-        onRequestClose={() => !checkingOut && setConfirmOpen(false)}
+        onRequestClose={() => { if (!checkingOut) { setConfirmOpen(false); setCustomerConfirmVisible(false); } }}
       >
         <TouchableOpacity
           style={styles.confirmBackdrop}
           activeOpacity={1}
-          onPress={() => !checkingOut && setConfirmOpen(false)}
+          onPress={() => { if (!checkingOut) { setConfirmOpen(false); setCustomerConfirmVisible(false); } }}
         />
         <View style={[styles.confirmSheet, { backgroundColor: colors.card }]}>
           <View style={[styles.confirmHandle, { backgroundColor: colors.border }]} />
@@ -592,8 +583,8 @@ function POSScreenInner() {
             </TouchableOpacity>
           )}
 
-          {/* Change customer button for cash/card (optional, shown when no customer) */}
-          {paymentType !== "debt" && !selectedCustomer && (
+          {/* Change customer button for cash/card (optional) */}
+          {paymentType !== "debt" && !selectedCustomer && !customerConfirmVisible && (
             <TouchableOpacity
               style={[styles.customerPickBtnOptional, { borderColor: colors.border }]}
               onPress={handleOptionalCustomerPress}
@@ -605,6 +596,37 @@ function POSScreenInner() {
                 Mijoz biriktirish (ixtiyoriy)
               </Text>
             </TouchableOpacity>
+          )}
+
+          {/* Inline confirmation for optional customer attachment */}
+          {paymentType !== "debt" && !selectedCustomer && customerConfirmVisible && (
+            <View style={[styles.customerConfirmBox, { backgroundColor: colors.secondary, borderColor: colors.primary + "55" }]}>
+              <View style={styles.customerConfirmTop}>
+                <MaterialIcons name="person-add" size={18} color={colors.primary} />
+                <Text style={[styles.customerConfirmText, { color: colors.foreground }]}>
+                  Mijoz mijozlar ro'yxatiga qo'shilsinmi?
+                </Text>
+              </View>
+              <View style={styles.customerConfirmBtns}>
+                <TouchableOpacity
+                  style={[styles.customerConfirmNo, { borderColor: colors.border, backgroundColor: colors.muted }]}
+                  onPress={() => setCustomerConfirmVisible(false)}
+                  activeOpacity={0.8}
+                >
+                  <Text style={[styles.customerConfirmNoText, { color: colors.mutedForeground }]}>YO'Q</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.customerConfirmYes, { backgroundColor: colors.primary }]}
+                  onPress={() => {
+                    setCustomerConfirmVisible(false);
+                    openCustomerPicker();
+                  }}
+                  activeOpacity={0.85}
+                >
+                  <Text style={styles.customerConfirmYesText}>HA</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
           )}
 
           {/* Debt partial payment section */}
@@ -674,7 +696,7 @@ function POSScreenInner() {
           <View style={styles.confirmBtns}>
             <TouchableOpacity
               style={[styles.confirmCancelBtn, { backgroundColor: colors.muted, borderColor: colors.border }]}
-              onPress={() => { setConfirmOpen(false); setSaleError(null); }}
+              onPress={() => { setConfirmOpen(false); setSaleError(null); setCustomerConfirmVisible(false); }}
               disabled={checkingOut}
               activeOpacity={0.8}
             >
@@ -1882,6 +1904,53 @@ const styles = StyleSheet.create({
   customerPickOptionalText: {
     fontFamily: "Inter_400Regular",
     fontSize: 13,
+  },
+  customerConfirmBox: {
+    borderRadius: 14,
+    borderWidth: 1,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    marginBottom: 10,
+    gap: 10,
+  },
+  customerConfirmTop: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  customerConfirmText: {
+    flex: 1,
+    fontFamily: "Inter_500Medium",
+    fontSize: 13,
+    lineHeight: 18,
+  },
+  customerConfirmBtns: {
+    flexDirection: "row",
+    gap: 8,
+  },
+  customerConfirmNo: {
+    flex: 1,
+    borderRadius: 10,
+    borderWidth: 1,
+    paddingVertical: 10,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  customerConfirmNoText: {
+    fontFamily: "Inter_600SemiBold",
+    fontSize: 14,
+  },
+  customerConfirmYes: {
+    flex: 1,
+    borderRadius: 10,
+    paddingVertical: 10,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  customerConfirmYesText: {
+    fontFamily: "Inter_700Bold",
+    fontSize: 14,
+    color: "#fff",
   },
   partialPayRow: {
     flexDirection: "row",
