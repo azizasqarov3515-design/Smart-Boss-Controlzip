@@ -282,7 +282,7 @@ async function uploadProductImage(
     console.warn("[ImageUpload] WARNING: No auth token — server will return 401");
   }
 
-  const uploadUrl = `${API_BASE}/upload/product-image`;
+  const uploadUrl = `${API_BASE}/api/upload/product-image`;
   console.log("[ImageUpload] POST →", uploadUrl);
 
   let response: Response;
