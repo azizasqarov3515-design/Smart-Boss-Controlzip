@@ -434,6 +434,36 @@ function POSScreenInner() {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
   };
 
+  // Opens the customer picker: closes checkout modal first to avoid double-transparent overlay
+  const openCustomerPicker = useCallback(() => {
+    setConfirmOpen(false);
+    setTimeout(() => {
+      setCustomerSearch("");
+      setCustomerPickerOpen(true);
+    }, 350);
+  }, []);
+
+  // Closes the customer picker and re-opens the checkout modal
+  const closeCustomerPicker = useCallback(() => {
+    setCustomerPickerOpen(false);
+    setTimeout(() => setConfirmOpen(true), 300);
+  }, []);
+
+  // For the optional "Mijoz biriktirish" button — show confirmation first
+  const handleOptionalCustomerPress = useCallback(() => {
+    Alert.alert(
+      "Mijoz biriktirish",
+      "Mijoz mijozlar ro'yxatiga qo'shilsinmi?",
+      [
+        { text: "YO'Q", style: "cancel" },
+        {
+          text: "HA",
+          onPress: openCustomerPicker,
+        },
+      ]
+    );
+  }, [openCustomerPicker]);
+
   const handleConfirmSale = () => {
     if (paymentType === "debt" && !selectedCustomer) {
       setSaleError("Qarz uchun mijoz tanlanishi shart");
@@ -551,7 +581,7 @@ function POSScreenInner() {
           {paymentType === "debt" && !selectedCustomer && (
             <TouchableOpacity
               style={[styles.customerPickBtn, { backgroundColor: colors.card, borderColor: colors.border }]}
-              onPress={() => { setCustomerSearch(""); setCustomerPickerOpen(true); }}
+              onPress={openCustomerPicker}
               activeOpacity={0.8}
               disabled={checkingOut}
             >
@@ -566,7 +596,7 @@ function POSScreenInner() {
           {paymentType !== "debt" && !selectedCustomer && (
             <TouchableOpacity
               style={[styles.customerPickBtnOptional, { borderColor: colors.border }]}
-              onPress={() => { setCustomerSearch(""); setCustomerPickerOpen(true); }}
+              onPress={handleOptionalCustomerPress}
               activeOpacity={0.8}
               disabled={checkingOut}
             >
@@ -698,12 +728,12 @@ function POSScreenInner() {
         transparent
         animationType="slide"
         statusBarTranslucent
-        onRequestClose={() => setCustomerPickerOpen(false)}
+        onRequestClose={closeCustomerPicker}
       >
         <TouchableOpacity
           style={styles.confirmBackdrop}
           activeOpacity={1}
-          onPress={() => setCustomerPickerOpen(false)}
+          onPress={closeCustomerPicker}
         />
         <KeyboardAvoidingView
           behavior={Platform.OS === "ios" ? "padding" : "height"}
@@ -759,8 +789,8 @@ function POSScreenInner() {
                       ]}
                       onPress={() => {
                         setSelectedCustomer(c);
-                        setCustomerPickerOpen(false);
                         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                        closeCustomerPicker();
                       }}
                       activeOpacity={0.8}
                     >
