@@ -12,6 +12,7 @@ import workersRouter from "./workers";
 import deleteRequestsRouter from "./delete_requests";
 import adminRouter from "./admin";
 import uploadRouter from "./upload";
+import productImageRouter from "./product-image";
 import { requireAuth } from "../lib/auth";
 
 const router: IRouter = Router();
@@ -21,6 +22,9 @@ router.use(authRouter);
 
 // Admin routes (have their own auth middleware inside)
 router.use(adminRouter);
+
+// Public routes — before requireAuth
+router.use(productImageRouter);
 
 router.use(requireAuth);
 

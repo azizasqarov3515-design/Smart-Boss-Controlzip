@@ -1,41 +1,11 @@
 import { Router } from "express";
 import multer from "multer";
 import { randomUUID } from "crypto";
+import { objectStorageClient } from "../lib/objectStorage";
 import { requireAuth } from "../lib/auth";
 
 const router = Router();
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
-
-const SIDECAR = "http://127.0.0.1:1106";
-
-async function getSignedUrl(
-  bucketId: string,
-  objectName: string,
-  method: "PUT" | "GET",
-  ttlSec: number,
-): Promise<string> {
-  const body = {
-    bucket_name: bucketId,
-    object_name: objectName,
-    method,
-    expires_at: new Date(Date.now() + ttlSec * 1000).toISOString(),
-  };
-
-  const res = await fetch(`${SIDECAR}/object-storage/signed-object-url`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
-    signal: AbortSignal.timeout(15_000),
-  });
-
-  if (!res.ok) {
-    const text = await res.text();
-    throw new Error(`Sidecar signed URL xatosi (${res.status}): ${text}`);
-  }
-
-  const { signed_url } = await res.json() as { signed_url: string };
-  return signed_url;
-}
 
 router.post("/upload/product-image", requireAuth, upload.single("image"), async (req, res) => {
   try {
@@ -51,40 +21,32 @@ router.post("/upload/product-image", requireAuth, upload.single("image"), async 
       return;
     }
 
-    const objectName = `product-images/${randomUUID()}.jpg`;
+    const uuid = randomUUID();
+    const objectName = `product-images/${uuid}.jpg`;
+
     req.log.info({ bucketId, objectName, size: req.file.size }, "Rasm yuklash boshlandi");
 
-    // 1. Signed PUT URL olish (15 daqiqa — upload uchun yetarli)
-    const putUrl = await getSignedUrl(bucketId, objectName, "PUT", 900);
-    req.log.info("Signed PUT URL olindi");
+    const bucket = objectStorageClient.bucket(bucketId);
+    const file = bucket.file(objectName);
 
-    // 2. Rasmni GCS ga yuklash
-    const gcsRes = await fetch(putUrl, {
-      method: "PUT",
-      headers: {
-        "Content-Type": "image/jpeg",
-      },
-      body: req.file.buffer,
-      signal: AbortSignal.timeout(30_000),
+    // Save file to GCS (no makePublic — UBA blocks ACL changes)
+    await file.save(req.file.buffer, {
+      contentType: "image/jpeg",
+      metadata: { cacheControl: "public, max-age=31536000" },
     });
 
-    if (!gcsRes.ok) {
-      const errText = await gcsRes.text();
-      req.log.error({ status: gcsRes.status, body: errText }, "GCS PUT xatosi");
-      throw new Error(`GCS yuklash xatosi (${gcsRes.status}): ${errText}`);
-    }
+    req.log.info({ objectName }, "GCS ga saqlandi");
 
-    req.log.info("GCS ga yuklash muvaffaqiyatli");
+    // Return an API URL so this server serves the image (avoids ACL/signed-URL issues)
+    const host = req.headers.host ?? "";
+    const protocol = req.headers["x-forwarded-proto"] ?? "https";
+    const imageUrl = `${protocol}://${host}/api/product-image/${uuid}`;
 
-    // 3. Signed GET URL olish (10 yil — amalda doimiy)
-    const TEN_YEARS_SEC = 10 * 365 * 24 * 3600;
-    const getUrl = await getSignedUrl(bucketId, objectName, "GET", TEN_YEARS_SEC);
-    req.log.info("Signed GET URL olindi");
-
-    res.json({ url: getUrl });
+    req.log.info({ imageUrl }, "Yuklash muvaffaqiyatli, URL qaytarildi");
+    res.json({ url: imageUrl });
   } catch (err) {
-    req.log.error({ err }, "Product image upload failed");
     const msg = err instanceof Error ? err.message : String(err);
+    req.log.error({ err }, "Product image upload failed");
     res.status(500).json({ error: `Yuklashda xato: ${msg}` });
   }
 });
