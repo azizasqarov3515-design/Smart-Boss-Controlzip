@@ -7,11 +7,14 @@ import {
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import * as Haptics from "expo-haptics";
+import * as ImagePicker from "expo-image-picker";
 import { useLocalSearchParams, useNavigation, useRouter } from "expo-router";
 import React, { useEffect, useLayoutEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
+  Alert,
   Animated,
+  Image,
   Modal,
   Platform,
   ScrollView,
@@ -32,6 +35,10 @@ import {
   useCameraPermissions,
   type BarcodeScanningResult,
 } from "expo-camera";
+
+const API_BASE = process.env.EXPO_PUBLIC_DOMAIN
+  ? `https://${process.env.EXPO_PUBLIC_DOMAIN}`
+  : "";
 
 // ─── Inline barcode scanner modal ──────────────────────────────────────────
 function BarcodeScanModal({
@@ -236,6 +243,35 @@ type FormValues = {
 
 const INITIAL: FormValues = { name: "", brand: "", costPrice: "", salePrice: "", quantity: "", barcode: "" };
 
+async function uploadProductImage(
+  localUri: string,
+  token: string | null,
+): Promise<string> {
+  const fileName = localUri.split("/").pop() ?? "image.jpg";
+  const match = /\.(\w+)$/.exec(fileName);
+  const mimeType = match ? `image/${match[1]}` : "image/jpeg";
+
+  const formData = new FormData();
+  formData.append("image", { uri: localUri, name: fileName, type: mimeType } as unknown as Blob);
+
+  const headers: Record<string, string> = {};
+  if (token) headers["Authorization"] = `Bearer ${token}`;
+
+  const response = await fetch(`${API_BASE}/upload/product-image`, {
+    method: "POST",
+    headers,
+    body: formData,
+  });
+
+  if (!response.ok) {
+    const err = await response.text();
+    throw new Error(`Upload failed: ${err}`);
+  }
+
+  const data = await response.json();
+  return data.url as string;
+}
+
 const FIELDS: Array<{
   key: FieldKey;
   label: string;
@@ -260,11 +296,14 @@ function ProductFormScreenInner() {
   const isEdit = productId !== null;
   const isWeb = Platform.OS === "web";
   const queryClient = useQueryClient();
+  const { token } = useAuth();
 
   const [form, setForm] = useState<FormValues>(INITIAL);
   const [errors, setErrors] = useState<Partial<FormValues>>({});
   const [submitted, setSubmitted] = useState(false);
   const [scannerOpen, setScannerOpen] = useState(false);
+  const [imageUrl, setImageUrl] = useState<string | null>(null);
+  const [imageUploading, setImageUploading] = useState(false);
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data: products } = useGetProducts({ query: { enabled: isEdit } as any });
@@ -285,9 +324,68 @@ function ProductFormScreenInner() {
           quantity: String(product.quantity),
           barcode: product.barcode ?? "",
         });
+        setImageUrl(product.imageUrl ?? null);
       }
     }
   }, [isEdit, products, productId]);
+
+  const pickImage = async (source: "camera" | "gallery") => {
+    try {
+      let result: ImagePicker.ImagePickerResult;
+      if (source === "camera") {
+        const { status } = await ImagePicker.requestCameraPermissionsAsync();
+        if (status !== "granted") {
+          Alert.alert("Kamera ruxsati yo'q", "Sozlamalarda kamera ruxsatini bering.");
+          return;
+        }
+        result = await ImagePicker.launchCameraAsync({
+          mediaTypes: "images",
+          quality: 0.7,
+          allowsEditing: true,
+          aspect: [1, 1],
+        });
+      } else {
+        const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+        if (status !== "granted") {
+          Alert.alert("Galereya ruxsati yo'q", "Sozlamalarda galereya ruxsatini bering.");
+          return;
+        }
+        result = await ImagePicker.launchImageLibraryAsync({
+          mediaTypes: "images",
+          quality: 0.7,
+          allowsEditing: true,
+          aspect: [1, 1],
+        });
+      }
+      if (result.canceled || !result.assets?.[0]?.uri) return;
+      const uri = result.assets[0].uri;
+      setImageUploading(true);
+      try {
+        const url = await uploadProductImage(uri, token);
+        setImageUrl(url);
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      } catch {
+        Alert.alert("Xato", "Rasm yuklashda xato yuz berdi. Qayta urinib ko'ring.");
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      } finally {
+        setImageUploading(false);
+      }
+    } catch {
+      Alert.alert("Xato", "Rasm tanlashda muammo yuz berdi.");
+    }
+  };
+
+  const showImagePicker = () => {
+    if (Platform.OS === "web") {
+      pickImage("gallery");
+      return;
+    }
+    Alert.alert("Rasm qo'shish", "Qayerdan olasiz?", [
+      { text: "Kamera", onPress: () => pickImage("camera") },
+      { text: "Galereya", onPress: () => pickImage("gallery") },
+      { text: "Bekor qilish", style: "cancel" },
+    ]);
+  };
 
   const { mutate: createProduct, isPending: creating } = useCreateProduct({
     mutation: {
@@ -318,7 +416,7 @@ function ProductFormScreenInner() {
     },
   });
 
-  const isPending = creating || updating;
+  const isPending = creating || updating || imageUploading;
 
   const validate = (): boolean => {
     const newErrors: Partial<FormValues> = {};
@@ -346,6 +444,7 @@ function ProductFormScreenInner() {
       salePrice: parseFloat(form.salePrice),
       quantity: parseInt(form.quantity),
       barcode: form.barcode.trim() || null,
+      imageUrl: imageUrl || null,
     };
     if (isEdit && productId) {
       updateProduct({ id: productId, data: payload });
@@ -494,6 +593,75 @@ function ProductFormScreenInner() {
                 📷 Skaner tugmasini bosib kamera orqali o'qing yoki qo'lda kiriting
               </Text>
             </View>
+
+            {/* Image field */}
+            <View style={styles.fieldWrap}>
+              <View style={styles.labelRow}>
+                <MaterialIcons name="image" size={14} color={colors.primary} />
+                <Text style={[styles.label, { color: colors.foreground }]}>Mahsulot rasmi</Text>
+                <Text style={[styles.optionalTag, { color: colors.mutedForeground, borderColor: colors.border }]}>
+                  ixtiyoriy
+                </Text>
+              </View>
+
+              {imageUrl ? (
+                <View style={styles.imagePreviewWrap}>
+                  <Image
+                    source={{ uri: imageUrl }}
+                    style={styles.imagePreview}
+                    resizeMode="cover"
+                  />
+                  <View style={styles.imageActions}>
+                    <TouchableOpacity
+                      style={[styles.imageActionBtn, { backgroundColor: colors.primary }]}
+                      onPress={showImagePicker}
+                      activeOpacity={0.85}
+                    >
+                      <MaterialIcons name="edit" size={16} color="#fff" />
+                      <Text style={styles.imageActionText}>Almashtirish</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={[styles.imageActionBtn, { backgroundColor: "#EF5350" }]}
+                      onPress={() => setImageUrl(null)}
+                      activeOpacity={0.85}
+                    >
+                      <MaterialIcons name="delete" size={16} color="#fff" />
+                      <Text style={styles.imageActionText}>O'chirish</Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              ) : (
+                <TouchableOpacity
+                  style={[
+                    styles.imagePickerBtn,
+                    {
+                      backgroundColor: colors.surfaceVariant,
+                      borderColor: colors.border,
+                    },
+                  ]}
+                  onPress={showImagePicker}
+                  activeOpacity={0.8}
+                  disabled={imageUploading}
+                >
+                  {imageUploading ? (
+                    <View style={styles.imagePickerInner}>
+                      <ActivityIndicator size="small" color={colors.primary} />
+                      <Text style={[styles.imagePickerText, { color: colors.mutedForeground }]}>
+                        Yuklanmoqda...
+                      </Text>
+                    </View>
+                  ) : (
+                    <View style={styles.imagePickerInner}>
+                      <MaterialIcons name="add-photo-alternate" size={32} color={colors.primary} />
+                      <Text style={[styles.imagePickerText, { color: colors.mutedForeground }]}>
+                        Kamera yoki galereya
+                      </Text>
+                    </View>
+                  )}
+                </TouchableOpacity>
+              )}
+              {imageUploading && imageUrl === null && null}
+            </View>
           </View>
 
           {showProfit && (
@@ -625,6 +793,24 @@ const styles = StyleSheet.create({
   },
   barcodePreviewText: { fontFamily: "Inter_500Medium", fontSize: 12 },
   barcodeHint: { fontSize: 11, fontFamily: "Inter_400Regular", marginTop: 5, lineHeight: 16 },
+
+  imagePickerBtn: {
+    borderWidth: 1.5, borderRadius: 12, borderStyle: "dashed",
+    paddingVertical: 20, alignItems: "center", justifyContent: "center",
+  },
+  imagePickerInner: { alignItems: "center", gap: 8 },
+  imagePickerText: { fontFamily: "Inter_400Regular", fontSize: 13 },
+  imagePreviewWrap: { gap: 10 },
+  imagePreview: {
+    width: "100%", height: 180, borderRadius: 12,
+    backgroundColor: "#F5F5F5",
+  },
+  imageActions: { flexDirection: "row", gap: 10 },
+  imageActionBtn: {
+    flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center",
+    gap: 6, borderRadius: 10, paddingVertical: 10,
+  },
+  imageActionText: { color: "#fff", fontFamily: "Inter_600SemiBold", fontSize: 13 },
 
   profitCard: { borderRadius: 14, borderWidth: 1.5, padding: 14, marginTop: 14, gap: 6 },
   profitRow: { flexDirection: "row", alignItems: "center", gap: 6 },

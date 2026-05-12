@@ -17,6 +17,7 @@ export interface Product {
   salePrice: number;
   quantity: number;
   barcode?: string | null;
+  imageUrl?: string | null;
   createdAt: string;
 }
 
@@ -27,6 +28,7 @@ export interface CreateProduct {
   salePrice: number;
   quantity: number;
   barcode?: string | null;
+  imageUrl?: string | null;
 }
 
 export interface DashboardStats {

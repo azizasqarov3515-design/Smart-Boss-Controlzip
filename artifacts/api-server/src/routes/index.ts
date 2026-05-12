@@ -11,6 +11,7 @@ import customersRouter from "./customers";
 import workersRouter from "./workers";
 import deleteRequestsRouter from "./delete_requests";
 import adminRouter from "./admin";
+import uploadRouter from "./upload";
 import { requireAuth } from "../lib/auth";
 
 const router: IRouter = Router();
@@ -146,6 +147,7 @@ router.use(checkBlocked);
 router.use(checkSubscription);
 router.use(checkWorkerStatus);
 
+router.use(uploadRouter);
 router.use(salesRouter);
 router.use(productsRouter);
 router.use(backupRouter);

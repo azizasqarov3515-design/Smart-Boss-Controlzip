@@ -20,6 +20,7 @@ const productInputSchema = z.object({
     .transform((v) => parseInt(String(v), 10))
     .pipe(z.number().int().min(0)),
   barcode: z.string().trim().min(1).nullish().transform((v) => v ?? null),
+  imageUrl: z.string().url().nullish().transform((v) => v ?? null),
 });
 
 type ProductRow = {
@@ -31,6 +32,7 @@ type ProductRow = {
   salePrice: string;
   quantity: number;
   barcode: string | null;
+  imageUrl: string | null;
   createdAt: Date;
 };
 
@@ -43,6 +45,7 @@ function mapProduct(p: ProductRow) {
     salePrice: parseFloat(p.salePrice),
     quantity: p.quantity,
     barcode: p.barcode ?? null,
+    imageUrl: p.imageUrl ?? null,
     createdAt: p.createdAt.toISOString(),
   };
 }
@@ -84,6 +87,7 @@ router.post("/products", async (req, res) => {
         salePrice: d.salePrice,
         quantity: d.quantity,
         barcode: d.barcode,
+        imageUrl: d.imageUrl,
       })
       .returning();
     res.status(201).json(mapProduct(product!));
@@ -144,6 +148,7 @@ router.put("/products/:id", async (req, res) => {
         salePrice: d.salePrice,
         quantity: d.quantity,
         barcode: d.barcode,
+        imageUrl: d.imageUrl,
       })
       .where(condition)
       .returning();
