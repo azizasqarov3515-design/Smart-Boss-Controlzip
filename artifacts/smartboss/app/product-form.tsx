@@ -247,51 +247,73 @@ async function uploadProductImage(
   localUri: string,
   token: string | null,
 ): Promise<string> {
-  // iOS returns file:// URIs — strip the prefix so React Native's fetch handles it correctly
-  const fixedUri = Platform.OS === "ios" ? localUri.replace("file://", "") : localUri;
+  // Keep the URI exactly as returned by ImagePicker — React Native's fetch handles
+  // file:// and content:// URIs natively on both iOS and Android.
+  // Do NOT strip file:// — doing so breaks the upload on iOS.
+  const uri = localUri;
 
-  // Always use a stable name + jpeg type for maximum server compatibility
   const fileName = `product_${Date.now()}.jpg`;
   const mimeType = "image/jpeg";
 
-  console.log("[ImageUpload] Starting upload:", { fixedUri, fileName, mimeType, apiBase: API_BASE });
+  console.log("[ImageUpload] Platform:", Platform.OS);
+  console.log("[ImageUpload] URI:", uri);
+  console.log("[ImageUpload] API_BASE:", API_BASE || "(empty — EXPO_PUBLIC_DOMAIN not set!)");
+
+  if (!API_BASE) {
+    throw new Error("API_BASE is empty. EXPO_PUBLIC_DOMAIN env var is missing in the bundle.");
+  }
 
   const formData = new FormData();
-  // React Native requires the object shape { uri, name, type } cast as unknown
+  // React Native FormData requires the { uri, name, type } shape (not a real Blob)
   formData.append("image", {
-    uri: fixedUri,
+    uri,
     name: fileName,
     type: mimeType,
   } as unknown as Blob);
 
+  // IMPORTANT: Do NOT set Content-Type manually when using FormData in React Native.
+  // React Native's fetch automatically sets "multipart/form-data; boundary=..." which
+  // includes the required boundary string. Setting it manually without boundary breaks parsing.
   const headers: Record<string, string> = {};
   if (token) {
     headers["Authorization"] = `Bearer ${token}`;
-    console.log("[ImageUpload] Auth token present:", token.slice(0, 20) + "…");
+    console.log("[ImageUpload] Token (first 20):", token.slice(0, 20) + "…");
   } else {
-    console.warn("[ImageUpload] No auth token — request may fail with 401");
+    console.warn("[ImageUpload] WARNING: No auth token — server will return 401");
   }
 
   const uploadUrl = `${API_BASE}/upload/product-image`;
   console.log("[ImageUpload] POST →", uploadUrl);
 
-  const response = await fetch(uploadUrl, {
-    method: "POST",
-    headers,
-    body: formData,
-  });
+  let response: Response;
+  try {
+    response = await fetch(uploadUrl, {
+      method: "POST",
+      headers,
+      body: formData,
+    });
+  } catch (networkErr) {
+    console.error("[ImageUpload] Network error (device can't reach server):", networkErr);
+    throw new Error(`Tarmoq xatosi: server ${uploadUrl} manziliga ulanib bo'lmadi. Wi-Fi/internet aloqasini tekshiring.`);
+  }
 
   const responseText = await response.text();
-  console.log("[ImageUpload] Response status:", response.status);
+  console.log("[ImageUpload] HTTP status:", response.status);
   console.log("[ImageUpload] Response body:", responseText);
 
   if (!response.ok) {
-    throw new Error(`Upload failed (${response.status}): ${responseText}`);
+    throw new Error(`Server xatosi (${response.status}): ${responseText}`);
   }
 
-  const data = JSON.parse(responseText);
-  console.log("[ImageUpload] Success — url:", data.url);
-  return data.url as string;
+  let data: { url: string };
+  try {
+    data = JSON.parse(responseText);
+  } catch {
+    throw new Error(`Server noto'g'ri javob qaytardi: ${responseText}`);
+  }
+
+  console.log("[ImageUpload] SUCCESS — url:", data.url);
+  return data.url;
 }
 
 const FIELDS: Array<{
