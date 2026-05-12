@@ -8,6 +8,7 @@ import {
 import { useQueryClient } from "@tanstack/react-query";
 import * as Haptics from "expo-haptics";
 import * as ImagePicker from "expo-image-picker";
+import { manipulateAsync, SaveFormat } from "expo-image-manipulator";
 import { useLocalSearchParams, useNavigation, useRouter } from "expo-router";
 import React, { useEffect, useLayoutEffect, useRef, useState } from "react";
 import {
@@ -443,11 +444,22 @@ function ProductFormScreenInner() {
         return;
       }
 
-      const uri = result.assets[0].uri;
-      console.log("[ImagePicker] Selected uri:", uri);
+      const rawUri = result.assets[0].uri;
+      console.log("[ImagePicker] Selected uri:", rawUri);
 
       setImageUploading(true);
       try {
+        // Compress & resize before upload: max 800px wide, JPEG quality 0.65
+        // Reduces 3-4 MB camera photo → ~150-250 KB → 5-10x faster upload
+        console.log("[ImagePicker] Compressing image…");
+        const compressed = await manipulateAsync(
+          rawUri,
+          [{ resize: { width: 800 } }],
+          { compress: 0.65, format: SaveFormat.JPEG }
+        );
+        const uri = compressed.uri;
+        console.log("[ImagePicker] Compressed uri:", uri);
+
         const url = await uploadProductImage(uri, token);
         setImageUrl(url);
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);

@@ -8,6 +8,7 @@ import {
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import * as Haptics from "expo-haptics";
+import { Image } from "expo-image";
 import { useRouter } from "expo-router";
 import React, { useCallback, useRef, useState } from "react";
 import {
@@ -62,6 +63,7 @@ function ProductCard({
   query,
   onEdit,
   onDelete,
+  onImagePress,
   isEven,
   colors,
   isWorker,
@@ -70,6 +72,7 @@ function ProductCard({
   query: string;
   onEdit: (p: Product) => void;
   onDelete: (p: Product) => void;
+  onImagePress: (url: string) => void;
   isEven: boolean;
   colors: ReturnType<typeof import("@/hooks/useColors").useColors>;
   isWorker: boolean;
@@ -123,12 +126,30 @@ function ProductCard({
             />
           </View>
 
-          {isLowStock && (
-            <View style={[styles.lowBadge, { backgroundColor: colors.destructive }]}>
-              <MaterialIcons name="warning" size={10} color="#fff" />
-              <Text style={styles.lowBadgeText}>Kam</Text>
-            </View>
-          )}
+          <View style={styles.cardTopRight}>
+            {product.imageUrl ? (
+              <TouchableOpacity
+                onPress={() => {
+                  Haptics.selectionAsync();
+                  onImagePress(product.imageUrl!);
+                }}
+                activeOpacity={0.85}
+              >
+                <Image
+                  source={{ uri: product.imageUrl }}
+                  style={styles.thumbnail}
+                  contentFit="cover"
+                  transition={200}
+                />
+              </TouchableOpacity>
+            ) : null}
+            {isLowStock && (
+              <View style={[styles.lowBadge, { backgroundColor: colors.destructive }]}>
+                <MaterialIcons name="warning" size={10} color="#fff" />
+                <Text style={styles.lowBadgeText}>Kam</Text>
+              </View>
+            )}
+          </View>
         </View>
 
         <View style={styles.cardBottom}>
@@ -193,6 +214,7 @@ function ProductsScreenInner() {
   const [sortKey, setSortKey] = useState<SortKey>("name");
   const [sortAsc, setSortAsc] = useState(true);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [imagePreviewUrl, setImagePreviewUrl] = useState<string | null>(null);
 
   // Confirm modal for manager (direct delete) and worker (send request)
   const [confirmProduct, setConfirmProduct] = useState<Product | null>(null);
@@ -396,6 +418,7 @@ function ProductsScreenInner() {
               query={debouncedSearch}
               onEdit={handleEdit}
               onDelete={handleDelete}
+              onImagePress={setImagePreviewUrl}
               isEven={index % 2 === 0}
               colors={colors}
               isWorker={isWorker}
@@ -419,6 +442,39 @@ function ProductsScreenInner() {
           keyboardDismissMode="on-drag"
         />
       )}
+
+      {/* Full-size image preview Modal */}
+      <Modal
+        visible={!!imagePreviewUrl}
+        transparent
+        animationType="fade"
+        statusBarTranslucent
+        onRequestClose={() => setImagePreviewUrl(null)}
+      >
+        <TouchableOpacity
+          style={styles.imgModalBackdrop}
+          activeOpacity={1}
+          onPress={() => setImagePreviewUrl(null)}
+        >
+          <View style={styles.imgModalContent}>
+            {imagePreviewUrl && (
+              <Image
+                source={{ uri: imagePreviewUrl }}
+                style={styles.imgModalImage}
+                contentFit="contain"
+                transition={150}
+              />
+            )}
+            <TouchableOpacity
+              style={styles.imgModalClose}
+              onPress={() => setImagePreviewUrl(null)}
+              activeOpacity={0.8}
+            >
+              <MaterialIcons name="close" size={20} color="#fff" />
+            </TouchableOpacity>
+          </View>
+        </TouchableOpacity>
+      </Modal>
 
       {/* Confirm / Request Modal */}
       <Modal
@@ -598,6 +654,43 @@ const styles = StyleSheet.create({
   },
   cardTop: { flexDirection: "row", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 8 },
   cardLeft: { flex: 1, paddingRight: 8 },
+  cardTopRight: { flexDirection: "column", alignItems: "flex-end", gap: 4 },
+  thumbnail: {
+    width: 52,
+    height: 52,
+    borderRadius: 10,
+    backgroundColor: "#F0F0F0",
+    borderWidth: 1,
+    borderColor: "rgba(0,0,0,0.08)",
+  },
+  imgModalBackdrop: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.88)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  imgModalContent: {
+    width: "90%",
+    aspectRatio: 1,
+    borderRadius: 16,
+    overflow: "hidden",
+    position: "relative",
+  },
+  imgModalImage: {
+    width: "100%",
+    height: "100%",
+  },
+  imgModalClose: {
+    position: "absolute",
+    top: 10,
+    right: 10,
+    backgroundColor: "rgba(0,0,0,0.55)",
+    borderRadius: 20,
+    width: 36,
+    height: 36,
+    alignItems: "center",
+    justifyContent: "center",
+  },
   nameLine: { flexDirection: "row", alignItems: "center", gap: 6, flexWrap: "wrap", marginBottom: 2 },
   idBadge: {
     paddingHorizontal: 5,

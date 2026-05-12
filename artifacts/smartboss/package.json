@@ -58,6 +58,7 @@
   "dependencies": {
     "expo-camera": "^17.0.10",
     "expo-file-system": "^19.0.22",
+    "expo-image-manipulator": "^14.0.8",
     "expo-print": "^55.0.13",
     "expo-sharing": "^14.0.8"
   }
