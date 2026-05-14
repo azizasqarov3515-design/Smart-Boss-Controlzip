@@ -79,8 +79,8 @@ export function SubscriptionGuard({ children }: SubscriptionGuardProps) {
     );
   }
 
-  // Show subscription expired screen
-  if (subscriptionEnd !== null && (subscriptionExpired || !subscriptionActive)) {
+  // Show subscription expired screen (for both timed and unlimited plans)
+  if ((subscriptionEnd !== null || subscriptionPlan === "unlimited") && (subscriptionExpired || !subscriptionActive)) {
     const handleLogout = () => {
       Alert.alert("Chiqish", "Tizimdan chiqishni xohlaysizmi?", [
         { text: "Bekor", style: "cancel" },

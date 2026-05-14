@@ -84,8 +84,10 @@ function fmtDateTime(s: string | null): string {
   if (!s) return "—";
   return new Date(s).toLocaleString("uz-UZ", { year: "numeric", month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" });
 }
-function daysClass(days: number | null, active: boolean): string {
-  if (!active || days === null) return "bg-red-950/60 text-red-400 border-red-900";
+function daysClass(days: number | null, active: boolean, plan?: string | null): string {
+  if (!active) return "bg-red-950/60 text-red-400 border-red-900";
+  if (plan === "unlimited") return "bg-purple-950/60 text-purple-400 border-purple-900";
+  if (days === null) return "bg-red-950/60 text-red-400 border-red-900";
   if (days <= 0) return "bg-red-950/60 text-red-400 border-red-900";
   if (days <= 3) return "bg-orange-950/60 text-orange-400 border-orange-900";
   if (days <= 14) return "bg-yellow-950/60 text-yellow-400 border-yellow-900";
@@ -93,6 +95,7 @@ function daysClass(days: number | null, active: boolean): string {
 }
 function statusLabel(m: Manager): string {
   if (!m.subscriptionActive) return "Faol emas";
+  if (m.subscriptionPlan === "unlimited") return "♾️ Cheksiz";
   if (m.subscriptionDaysLeft === null) return "Muddatsiz";
   if (m.subscriptionDaysLeft <= 0) return "Tugagan";
   return `${m.subscriptionDaysLeft} kun`;
@@ -202,18 +205,24 @@ function SubscriptionModal({ manager, onClose }: { manager: Manager; onClose: ()
   });
 
   const plans = [
-    { value: "1m", label: "1 oylik", days: 30, price: "1 oy" },
-    { value: "3m", label: "3 oylik", days: 90, price: "3 oy" },
-    { value: "6m", label: "6 oylik", days: 180, price: "6 oy" },
-    { value: "1y", label: "1 yillik", days: 365, price: "1 yil" },
+    { value: "1m", label: "1 oylik", sub: "30 kun" },
+    { value: "3m", label: "3 oylik", sub: "90 kun" },
+    { value: "6m", label: "6 oylik", sub: "180 kun" },
+    { value: "1y", label: "1 yillik", sub: "365 kun" },
+    { value: "unlimited", label: "♾️ Cheksiz", sub: "Muddatsiz" },
   ];
+
+  const isUnlimited = plan === "unlimited";
 
   return (
     <BottomSheet open title="Obunani boshqarish" subtitle={manager.storeName} onClose={onClose}>
-      {manager.subscriptionEnd && (
-        <div className={`border rounded-xl px-4 py-3 text-sm mb-5 ${daysClass(manager.subscriptionDaysLeft, manager.subscriptionActive)}`}>
+      {(manager.subscriptionEnd || manager.subscriptionPlan === "unlimited") && (
+        <div className={`border rounded-xl px-4 py-3 text-sm mb-5 ${daysClass(manager.subscriptionDaysLeft, manager.subscriptionActive, manager.subscriptionPlan)}`}>
           <p className="font-medium">Joriy obuna: {manager.subscriptionPlanLabel}</p>
-          <p className="text-xs mt-1 opacity-80">Tugash: {fmtDate(manager.subscriptionEnd)} · {statusLabel(manager)}</p>
+          {manager.subscriptionPlan === "unlimited"
+            ? <p className="text-xs mt-1 opacity-80">Cheksiz · {manager.subscriptionActive ? "Faol" : "Faol emas"}</p>
+            : <p className="text-xs mt-1 opacity-80">Tugash: {fmtDate(manager.subscriptionEnd)} · {statusLabel(manager)}</p>
+          }
         </div>
       )}
 
@@ -225,17 +234,19 @@ function SubscriptionModal({ manager, onClose }: { manager: Manager; onClose: ()
             onClick={() => setPlan(p.value)}
             className={`border rounded-2xl py-4 px-3 text-sm font-semibold transition active:scale-95 ${
               plan === p.value
-                ? "bg-primary/15 border-primary text-primary"
+                ? p.value === "unlimited"
+                  ? "bg-purple-500/15 border-purple-500 text-purple-400"
+                  : "bg-primary/15 border-primary text-primary"
                 : "border-border text-muted-foreground active:bg-secondary"
-            }`}
+            } ${p.value === "unlimited" ? "col-span-2" : ""}`}
           >
             {p.label}
-            <span className="block text-xs mt-1 font-normal opacity-70">{p.days} kun</span>
+            <span className="block text-xs mt-1 font-normal opacity-70">{p.sub}</span>
           </button>
         ))}
       </div>
 
-      {manager.subscriptionActive && (manager.subscriptionDaysLeft ?? 0) > 0 && (
+      {!isUnlimited && manager.subscriptionActive && (manager.subscriptionDaysLeft ?? 0) > 0 && (
         <label className="flex items-start gap-3 text-sm text-muted-foreground mb-5 cursor-pointer select-none p-3 bg-secondary/50 rounded-xl border border-border">
           <input
             type="checkbox"
@@ -245,6 +256,13 @@ function SubscriptionModal({ manager, onClose }: { manager: Manager; onClose: ()
           />
           <span>Hozirgi sanadan hisoblash <span className="text-foreground">(o'chirilmasa, joriy muddatga qo'shiladi)</span></span>
         </label>
+      )}
+
+      {isUnlimited && (
+        <div className="flex items-center gap-2 text-xs text-purple-400 bg-purple-950/30 border border-purple-900/50 rounded-xl px-3 py-2.5 mb-5">
+          <span>♾️</span>
+          <span>Cheksiz obunada kun sanalmaydi. Admin istalgan payt o'chirishi mumkin.</span>
+        </div>
       )}
 
       <div className="flex gap-2.5">
@@ -503,7 +521,7 @@ function ManagerCard({ m, onSub, onCred, onBlock }: { m: Manager; onSub: () => v
           </div>
           <div className="flex flex-col items-end gap-1.5 flex-shrink-0">
             {!m.blocked && (
-              <span className={`text-xs font-semibold border px-2.5 py-1 rounded-full ${daysClass(m.subscriptionDaysLeft, m.subscriptionActive)}`}>
+              <span className={`text-xs font-semibold border px-2.5 py-1 rounded-full ${daysClass(m.subscriptionDaysLeft, m.subscriptionActive, m.subscriptionPlan)}`}>
                 {statusLabel(m)}
               </span>
             )}
@@ -514,7 +532,7 @@ function ManagerCard({ m, onSub, onCred, onBlock }: { m: Manager; onSub: () => v
         <div className="flex items-center gap-4 mt-3 text-xs text-muted-foreground">
           <span>📦 {m.salesCount}</span>
           <span>👥 {m.workerCount}</span>
-          <span>📅 {fmtDate(m.subscriptionEnd)}</span>
+          <span>📅 {m.subscriptionPlan === "unlimited" ? "♾️ Cheksiz" : fmtDate(m.subscriptionEnd)}</span>
           <span className="ml-auto text-xs font-medium text-foreground/70">{m.subscriptionPlanLabel}</span>
         </div>
       </div>

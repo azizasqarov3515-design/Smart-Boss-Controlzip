@@ -54,12 +54,13 @@ function buildSubscriptionInfo(manager: {
   subscriptionEnd: Date | null;
   subscriptionActive: boolean;
 }) {
-  const daysLeft = subscriptionDaysLeft(manager.subscriptionEnd);
+  const isUnlimited = manager.subscriptionPlan === "unlimited";
+  const daysLeft = isUnlimited ? null : subscriptionDaysLeft(manager.subscriptionEnd);
   const isExpired = !manager.subscriptionActive ||
-    (manager.subscriptionEnd !== null && manager.subscriptionEnd < new Date());
+    (!isUnlimited && manager.subscriptionEnd !== null && manager.subscriptionEnd < new Date());
   return {
     subscriptionPlan: manager.subscriptionPlan,
-    subscriptionEnd: manager.subscriptionEnd,
+    subscriptionEnd: isUnlimited ? null : manager.subscriptionEnd,
     subscriptionActive: manager.subscriptionActive,
     subscriptionDaysLeft: daysLeft,
     subscriptionExpired: isExpired,

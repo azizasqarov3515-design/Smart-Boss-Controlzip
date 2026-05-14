@@ -14,7 +14,7 @@ export const managersTable = pgTable("managers", {
   email: text("email"),
   encryptedPassword: text("encrypted_password"),
   // Subscription fields
-  subscriptionPlan: text("subscription_plan"), // '1m' | '3m' | '6m' | '1y'
+  subscriptionPlan: text("subscription_plan"), // '1m' | '3m' | '6m' | '1y' | 'unlimited'
   subscriptionEnd: timestamp("subscription_end"),
   subscriptionActive: boolean("subscription_active").notNull().default(false),
   // Block field

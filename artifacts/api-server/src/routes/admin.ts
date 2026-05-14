@@ -109,6 +109,7 @@ function planLabel(plan: string | null): string {
     case "3m": return "3 oylik";
     case "6m": return "6 oylik";
     case "1y": return "1 yillik";
+    case "unlimited": return "Muddatsiz (cheksiz)";
     default: return "Yo'q";
   }
 }
@@ -393,7 +394,7 @@ router.get("/admin/managers/:id", requireAdmin, async (req, res) => {
 
 // PUT /api/admin/managers/:id/subscription
 const subscriptionSchema = z.object({
-  plan: z.enum(["1m", "3m", "6m", "1y"]),
+  plan: z.enum(["1m", "3m", "6m", "1y", "unlimited"]),
   active: z.boolean().optional().default(true),
   startFromNow: z.boolean().optional().default(true),
 });
@@ -404,21 +405,23 @@ router.put("/admin/managers/:id/subscription", requireAdmin, async (req, res) =>
   try {
     const body = subscriptionSchema.parse(req.body);
 
-    const planDays: Record<string, number> = { "1m": 30, "3m": 90, "6m": 180, "1y": 365 };
-    const days = planDays[body.plan] ?? 30;
+    let subscriptionEnd: Date | null = null;
 
-    const [existing] = await db
-      .select({ subscriptionEnd: managersTable.subscriptionEnd, subscriptionActive: managersTable.subscriptionActive })
-      .from(managersTable)
-      .where(eq(managersTable.id, id));
+    if (body.plan !== "unlimited") {
+      const planDays: Record<string, number> = { "1m": 30, "3m": 90, "6m": 180, "1y": 365 };
+      const days = planDays[body.plan] ?? 30;
 
-    let startDate = new Date();
-    // If subscription still active and not expired, extend from current end
-    if (!body.startFromNow && existing?.subscriptionEnd && existing.subscriptionEnd > new Date()) {
-      startDate = existing.subscriptionEnd;
+      const [existing] = await db
+        .select({ subscriptionEnd: managersTable.subscriptionEnd, subscriptionActive: managersTable.subscriptionActive })
+        .from(managersTable)
+        .where(eq(managersTable.id, id));
+
+      let startDate = new Date();
+      if (!body.startFromNow && existing?.subscriptionEnd && existing.subscriptionEnd > new Date()) {
+        startDate = existing.subscriptionEnd;
+      }
+      subscriptionEnd = new Date(startDate.getTime() + days * 24 * 60 * 60 * 1000);
     }
-
-    const subscriptionEnd = new Date(startDate.getTime() + days * 24 * 60 * 60 * 1000);
 
     const [updated] = await db
       .update(managersTable)
@@ -432,10 +435,14 @@ router.put("/admin/managers/:id/subscription", requireAdmin, async (req, res) =>
 
     if (!updated) { res.status(404).json({ error: "Rahbar topilmadi" }); return; }
 
+    const auditDetails = body.plan === "unlimited"
+      ? `Plan: unlimited (Muddatsiz cheksiz), faol: ${body.active}`
+      : `Plan: ${body.plan} (${planLabel(body.plan)}), tugash: ${subscriptionEnd!.toISOString().slice(0, 10)}, faol: ${body.active}`;
+
     await db.insert(auditLogsTable).values({
       managerId: id,
       action: "subscription_changed",
-      details: `Plan: ${body.plan} (${planLabel(body.plan)}), tugash: ${subscriptionEnd.toISOString().slice(0, 10)}, faol: ${body.active}`,
+      details: auditDetails,
     });
 
     req.log.info({ managerId: id, plan: body.plan, subscriptionEnd }, "Subscription updated by admin");
