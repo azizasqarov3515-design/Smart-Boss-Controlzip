@@ -111,6 +111,7 @@ function BarcodeScanModal({
                 style={StyleSheet.absoluteFill}
                 facing="back"
                 autoFocus="on"
+                zoom={0.15}
                 barcodeScannerSettings={{
                   barcodeTypes: [
                     "ean13", "ean8", "qr", "code128",
