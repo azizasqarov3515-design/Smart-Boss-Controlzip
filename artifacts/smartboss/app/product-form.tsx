@@ -110,6 +110,7 @@ function BarcodeScanModal({
               <CameraView
                 style={StyleSheet.absoluteFill}
                 facing="back"
+                autoFocus="on"
                 barcodeScannerSettings={{
                   barcodeTypes: [
                     "ean13", "ean8", "qr", "code128",
@@ -137,7 +138,7 @@ function BarcodeScanModal({
                           transform: [{
                             translateY: lineAnim.interpolate({
                               inputRange: [0, 1],
-                              outputRange: [0, 180],
+                              outputRange: [0, 265],
                             }),
                           }],
                         },
@@ -207,11 +208,11 @@ const scanStyles = StyleSheet.create({
   headerTitle: { color: "#fff", fontSize: 17, fontFamily: "Inter_600SemiBold" },
   cameraWrap: { flex: 1, position: "relative" },
   overlayTop: { position: "absolute", top: 0, left: 0, right: 0, height: "20%", backgroundColor: "rgba(0,0,0,0.6)" },
-  overlayMiddle: { position: "absolute", top: "20%", left: 0, right: 0, height: 220, flexDirection: "row" },
+  overlayMiddle: { position: "absolute", top: "20%", left: 0, right: 0, height: 300, flexDirection: "row" },
   overlaySide: { flex: 1, backgroundColor: "rgba(0,0,0,0.6)" },
-  frame: { width: 240, height: 220 },
+  frame: { width: 300, height: 300 },
   overlayBottom: { position: "absolute", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: "rgba(0,0,0,0.6)", zIndex: -1 },
-  corner: { position: "absolute", width: 24, height: 24, borderColor: "#1565C0", borderWidth: 3 },
+  corner: { position: "absolute", width: 28, height: 28, borderColor: "#1565C0", borderWidth: 3.5 },
   cTL: { top: 0, left: 0, borderRightWidth: 0, borderBottomWidth: 0, borderTopLeftRadius: 4 },
   cTR: { top: 0, right: 0, borderLeftWidth: 0, borderBottomWidth: 0, borderTopRightRadius: 4 },
   cBL: { bottom: 0, left: 0, borderRightWidth: 0, borderTopWidth: 0, borderBottomLeftRadius: 4 },

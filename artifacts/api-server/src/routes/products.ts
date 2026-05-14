@@ -1,6 +1,6 @@
 import { db } from "@workspace/db";
 import { productsTable } from "@workspace/db/schema";
-import { and, eq, sql } from "drizzle-orm";
+import { and, eq, or, sql } from "drizzle-orm";
 import { Router } from "express";
 import { z } from "zod";
 
@@ -98,13 +98,18 @@ router.post("/products", async (req, res) => {
 });
 
 // GET /products/barcode/:barcode — must be before /:id
+// Searches by barcode OR product name (model equivalent)
 router.get("/products/barcode/:barcode", async (req, res) => {
   try {
     const barcode = req.params["barcode"]!;
     const managerId = res.locals.user?.managerId;
+    const matchCondition = or(
+      eq(productsTable.barcode, barcode),
+      eq(productsTable.name, barcode),
+    );
     const condition = managerId !== undefined
-      ? and(eq(productsTable.barcode, barcode), eq(productsTable.managerId, managerId))
-      : eq(productsTable.barcode, barcode);
+      ? and(matchCondition, eq(productsTable.managerId, managerId))
+      : matchCondition;
     const [product] = await db
       .select()
       .from(productsTable)

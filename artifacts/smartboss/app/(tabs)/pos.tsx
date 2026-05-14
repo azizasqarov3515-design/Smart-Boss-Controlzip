@@ -146,6 +146,7 @@ function ScannerModal({
             <CameraView
               style={StyleSheet.absoluteFill}
               facing="back"
+              autoFocus="on"
               barcodeScannerSettings={{
                 barcodeTypes: [
                   "ean13", "ean8", "qr", "code128",
@@ -175,7 +176,7 @@ function ScannerModal({
                         transform: [{
                           translateY: lineAnim.interpolate({
                             inputRange: [0, 1],
-                            outputRange: [0, 180],
+                            outputRange: [0, 265],
                           }),
                         }],
                       },
@@ -389,10 +390,16 @@ function POSScreenInner() {
   // Called by scanner modal when a barcode is found
   const handleScanned = useCallback(
     (data: string) => {
-      // Try exact barcode match first
+      // 1. Exact barcode match
       let found = products?.find((p) => p.barcode === data);
 
-      // If not found by barcode, try matching as numeric product ID
+      // 2. Model/name exact match (case-insensitive)
+      if (!found) {
+        const lower = data.toLowerCase();
+        found = products?.find((p) => p.name.toLowerCase() === lower);
+      }
+
+      // 3. Numeric product ID match
       if (!found) {
         const asId = parseInt(data, 10);
         if (!isNaN(asId)) {
@@ -407,7 +414,7 @@ function POSScreenInner() {
       } else {
         Alert.alert(
           "Topilmadi",
-          `"${data}" — bu barcode yoki ID bazada yo'q.\n\nMahsulotda barcode biriktirilganini tekshiring.`,
+          `"${data}" — bu barcode, model nomi yoki ID bazada yo'q.\n\nMahsulotda barcode yoki to'g'ri model nomi biriktirilganini tekshiring.`,
           [
             { text: "Qayta urinish", onPress: () => {} },
             {
@@ -1305,21 +1312,21 @@ const styles = StyleSheet.create({
     position: "absolute",
     top: 90,
     left: 0, right: 0,
-    height: 220,
+    height: 300,
     flexDirection: "row",
     zIndex: 2,
   },
   overlaySide: { flex: 1, backgroundColor: "rgba(0,0,0,0.62)" },
   overlayBottom: {
     position: "absolute",
-    top: 310,
+    top: 390,
     left: 0, right: 0, bottom: 0,
     backgroundColor: "rgba(0,0,0,0.62)",
     zIndex: 2,
   },
   scanFrame: {
-    width: 220,
-    height: 220,
+    width: 300,
+    height: 300,
     position: "relative",
     overflow: "hidden",
   },
