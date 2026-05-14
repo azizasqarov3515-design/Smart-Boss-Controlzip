@@ -19,6 +19,7 @@ import {
   printDoc,
   sharePdf,
   type PrintFormat,
+  type PdfSeller,
   FORMAT_LABELS,
   FORMAT_DESC,
   FORMAT_ICON,
@@ -314,8 +315,19 @@ function POSScreenInner() {
   const [isPrinting, setIsPrinting] = useState(false);
   const [printError, setPrintError] = useState<string | null>(null);
 
-  const { managerId } = useAuth();
+  const { managerId, role, workerName, username, managerPhone } = useAuth();
   const { settings } = useSettings(managerId);
+
+  const getPdfSeller = (): PdfSeller => {
+    if (role === "worker") {
+      return { name: workerName ?? "Ishchi", phone: undefined, isManager: false };
+    }
+    return {
+      name: settings.sellers[0]?.name ?? username ?? "Menejer",
+      phone: settings.sellers[0]?.phone ?? managerPhone ?? undefined,
+      isManager: true,
+    };
+  };
 
   const { data: products, isLoading: productsLoading, refetch: refetchProducts, isRefetching: productsRefetching } = useGetProducts();
   const { data: customers, refetch: refetchCustomers, isLoading: customersLoading } = useGetCustomers();
@@ -519,7 +531,7 @@ function POSScreenInner() {
     setIsPrinting(true);
     setPrintError(null);
     try {
-      const html = buildPrintHtml(lastSale, settings, getPdfCustomer(), printFormat);
+      const html = buildPrintHtml(lastSale, settings, getPdfCustomer(), printFormat, getPdfSeller());
       await printDoc(html);
     } catch (e) {
       setPrintError(e instanceof Error ? e.message : "Chop etishda xato yuz berdi");
@@ -533,7 +545,7 @@ function POSScreenInner() {
     setIsPrinting(true);
     setPrintError(null);
     try {
-      const html = buildPrintHtml(lastSale, settings, getPdfCustomer(), printFormat);
+      const html = buildPrintHtml(lastSale, settings, getPdfCustomer(), printFormat, getPdfSeller());
       const name = `${settings.storeName}-${FORMAT_LABELS[printFormat].replace(/\s/g, "_")}-${lastSale.id}.pdf`;
       await sharePdf(html, name);
     } catch (e) {

@@ -8,6 +8,12 @@ export interface PdfCustomer {
   address?: string | null;
 }
 
+export interface PdfSeller {
+  name: string;
+  phone?: string | null;
+  isManager: boolean;
+}
+
 const PRIMARY = "#1565C0";
 const DARK = "#0D1117";
 
@@ -34,102 +40,117 @@ function baseStyles(): string {
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body {
       font-family: 'Inter', Arial, sans-serif;
-      font-size: 13px;
+      font-size: 11px;
       color: ${DARK};
       background: #fff;
-      padding: 32px 36px;
+      padding: 14px 18px;
       max-width: 700px;
       margin: 0 auto;
     }
-    .header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 28px; }
-    .store-name { font-size: 22px; font-weight: 700; color: ${PRIMARY}; letter-spacing: -0.5px; }
-    .store-sub { font-size: 11px; color: #6B7280; margin-top: 3px; }
+    .header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px; }
+    .store-name { font-size: 18px; font-weight: 700; color: ${PRIMARY}; letter-spacing: -0.5px; }
+    .store-sub { font-size: 10px; color: #6B7280; margin-top: 2px; }
     .doc-title-block { text-align: right; }
-    .doc-title { font-size: 18px; font-weight: 700; color: ${DARK}; }
-    .doc-num { font-size: 12px; color: #6B7280; margin-top: 4px; }
-    .divider { border: none; border-top: 2px solid ${PRIMARY}; margin: 18px 0; }
-    .divider-thin { border: none; border-top: 1px solid #E5E7EB; margin: 12px 0; }
-    .meta-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 24px; }
-    .meta-box { background: #F8FAFC; border-radius: 10px; padding: 12px 14px; }
-    .meta-label { font-size: 10px; font-weight: 600; color: #9CA3AF; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; }
-    .meta-val { font-size: 13px; font-weight: 600; color: ${DARK}; }
-    .meta-sub { font-size: 11px; color: #6B7280; margin-top: 3px; }
+    .doc-title { font-size: 15px; font-weight: 700; color: ${DARK}; }
+    .doc-num { font-size: 10px; color: #6B7280; margin-top: 2px; }
+    .divider { border: none; border-top: 2px solid ${PRIMARY}; margin: 7px 0; }
+    .divider-thin { border: none; border-top: 1px solid #E5E7EB; margin: 5px 0; }
+    .meta-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; margin-bottom: 10px; }
+    .meta-box { background: #F8FAFC; border-radius: 7px; padding: 6px 9px; border: 1px solid #E5E7EB; }
+    .meta-label { font-size: 8px; font-weight: 600; color: #9CA3AF; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 3px; }
+    .meta-val { font-size: 11px; font-weight: 600; color: ${DARK}; }
+    .meta-sub { font-size: 9px; color: #6B7280; margin-top: 2px; }
     table { width: 100%; border-collapse: collapse; margin-top: 4px; }
     thead tr { background: ${PRIMARY}; }
     thead th {
       color: #fff;
-      font-size: 11px;
+      font-size: 9px;
       font-weight: 600;
       text-align: left;
-      padding: 10px 12px;
+      padding: 6px 8px;
       text-transform: uppercase;
       letter-spacing: 0.4px;
+      border: 1px solid rgba(255,255,255,0.15);
     }
     thead th:last-child { text-align: right; }
     tbody tr:nth-child(even) { background: #F8FAFC; }
     tbody tr:nth-child(odd) { background: #fff; }
-    tbody td { padding: 10px 12px; font-size: 12px; vertical-align: middle; border-bottom: 1px solid #F1F5F9; }
+    tbody td { padding: 5px 8px; font-size: 11px; vertical-align: middle; border: 1px solid #E5E7EB; }
     tbody td:last-child { text-align: right; font-weight: 600; color: ${PRIMARY}; }
     .qty-cell { text-align: center !important; color: #374151 !important; font-weight: 500 !important; }
     .price-cell { text-align: right !important; color: #374151 !important; }
-    .total-section { margin-top: 20px; }
-    .total-row { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; }
-    .total-row.grand { background: ${PRIMARY}; color: #fff; border-radius: 10px; padding: 14px 18px; margin-top: 10px; }
-    .total-label { font-size: 13px; }
-    .total-val { font-size: 14px; font-weight: 700; }
-    .total-row.grand .total-label, .total-row.grand .total-val { color: #fff; font-size: 15px; }
+    .total-section { margin-top: 8px; }
+    .total-row { display: flex; justify-content: space-between; align-items: center; padding: 3px 0; }
+    .total-row.grand { background: ${PRIMARY}; color: #fff; border-radius: 8px; padding: 9px 14px; margin-top: 5px; }
+    .total-label { font-size: 11px; }
+    .total-val { font-size: 12px; font-weight: 700; }
+    .total-row.grand .total-label, .total-row.grand .total-val { color: #fff; font-size: 13px; }
     .footer {
-      margin-top: 40px;
+      margin-top: 16px;
       text-align: center;
-      padding: 18px 0 0;
+      padding: 9px 0 0;
       border-top: 1.5px dashed #CBD5E1;
     }
-    .footer-thanks { font-size: 15px; font-weight: 700; color: ${PRIMARY}; letter-spacing: 0.2px; }
-    .footer-sub { font-size: 11px; color: #9CA3AF; margin-top: 5px; }
+    .footer-thanks { font-size: 12px; font-weight: 700; color: ${PRIMARY}; letter-spacing: 0.2px; }
+    .footer-sub { font-size: 9px; color: #9CA3AF; margin-top: 3px; }
     .badge {
       display: inline-block;
       background: #EEF2FF;
       color: ${PRIMARY};
-      font-size: 10px;
+      font-size: 9px;
       font-weight: 600;
-      padding: 2px 7px;
-      border-radius: 5px;
-      margin-right: 4px;
+      padding: 1px 5px;
+      border-radius: 4px;
+      margin-right: 3px;
     }
-    .sign-row { display: flex; justify-content: space-between; margin-top: 36px; gap: 32px; }
+    .sign-row { display: flex; justify-content: space-between; margin-top: 14px; gap: 20px; }
     .sign-box { flex: 1; }
-    .sign-label { font-size: 11px; color: #6B7280; margin-bottom: 28px; }
-    .sign-line { border-bottom: 1.5px solid #D1D5DB; padding-top: 4px; }
-    .sign-name { font-size: 10px; color: #9CA3AF; margin-top: 4px; }
-    .waybill-info { background: #EFF6FF; border: 1.5px solid #BFDBFE; border-radius: 10px; padding: 14px 16px; margin-bottom: 20px; }
-    .waybill-row { display: flex; justify-content: space-between; padding: 5px 0; font-size: 12px; }
+    .sign-label { font-size: 10px; color: #6B7280; margin-bottom: 16px; }
+    .sign-line { border-bottom: 1.5px solid #D1D5DB; padding-top: 2px; }
+    .sign-name { font-size: 9px; color: #9CA3AF; margin-top: 3px; }
+    .waybill-info { background: #EFF6FF; border: 1.5px solid #BFDBFE; border-radius: 7px; padding: 9px 11px; margin-bottom: 10px; }
+    .waybill-row { display: flex; justify-content: space-between; padding: 3px 0; font-size: 10px; }
     .waybill-key { color: #6B7280; font-weight: 500; }
     .waybill-val { color: ${DARK}; font-weight: 600; }
-    .status-chip { display: inline-block; background: #D1FAE5; color: #065F46; border-radius: 6px; padding: 3px 10px; font-size: 11px; font-weight: 600; }
-    .customer-box { background: #F0F9FF; border: 1.5px solid #BAE6FD; border-radius: 10px; padding: 12px 14px; margin-bottom: 20px; }
-    .customer-title { font-size: 10px; font-weight: 600; color: #0369A1; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; }
-    .customer-row { display: flex; gap: 8px; font-size: 12px; padding: 2px 0; }
-    .customer-key { color: #6B7280; min-width: 80px; }
+    .status-chip { display: inline-block; background: #D1FAE5; color: #065F46; border-radius: 5px; padding: 2px 7px; font-size: 9px; font-weight: 600; }
+    .customer-box { background: #F0F9FF; border: 1.5px solid #BAE6FD; border-radius: 7px; padding: 7px 10px; margin-bottom: 9px; }
+    .customer-title { font-size: 9px; font-weight: 600; color: #0369A1; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 5px; }
+    .customer-row { display: flex; gap: 6px; font-size: 10px; padding: 1px 0; }
+    .customer-key { color: #6B7280; min-width: 65px; }
     .customer-val { color: ${DARK}; font-weight: 600; }
     @media print {
-      body { padding: 24px; }
+      body { padding: 10px; }
       .no-print { display: none !important; }
     }
   `;
 }
 
-function sellerBlock(settings: StoreSettings): string {
-  const s = settings.sellers[0];
-  if (!s) return "";
+function sellerBlock(seller?: PdfSeller | null): string {
+  if (!seller) {
+    return `<div style="margin-top:4px"><div class="store-sub" style="color:#DC2626">Sotuvchi: —</div></div>`;
+  }
+  const label = seller.isManager ? `${seller.name} ★` : seller.name;
   return `
     <div style="margin-top:4px">
-      <div class="store-sub">Sotuvchi: ${s.name}</div>
-      <div class="store-sub">Tel: ${s.phone}</div>
+      <div class="store-sub"><strong>Sotuvchi: ${label}</strong></div>
+      ${seller.phone ? `<div class="store-sub">Tel: ${seller.phone}</div>` : ""}
     </div>`;
 }
 
+function sellerLabel(seller?: PdfSeller | null): string {
+  if (!seller) return "________________________";
+  return seller.isManager ? `${seller.name} ★` : seller.name;
+}
+
 function customerBlock(customer?: PdfCustomer | null): string {
-  if (!customer || (!customer.name && !customer.phone && !customer.address)) return "";
+  if (!customer || (!customer.name && !customer.phone && !customer.address)) {
+    return `
+    <div class="customer-box">
+      <div class="customer-title">📋 Xaridor ma'lumotlari</div>
+      <div class="customer-row"><span class="customer-key">Ism:</span><span class="customer-val" style="color:#D1D5DB;font-weight:400">________________________</span></div>
+      <div class="customer-row"><span class="customer-key">Telefon:</span><span class="customer-val" style="color:#D1D5DB;font-weight:400">__________________</span></div>
+    </div>`;
+  }
   return `
     <div class="customer-box">
       <div class="customer-title">📋 Xaridor ma'lumotlari</div>
@@ -143,7 +164,8 @@ function customerBlock(customer?: PdfCustomer | null): string {
 export function buildInvoiceHtml(
   sale: SaleWithItems,
   settings: StoreSettings = DEFAULT_SETTINGS,
-  customer?: PdfCustomer | null
+  customer?: PdfCustomer | null,
+  seller?: PdfSeller | null
 ): string {
   const rows = sale.items
     .map(
@@ -152,7 +174,7 @@ export function buildInvoiceHtml(
         <td>${i + 1}</td>
         <td>
           <strong>${item.productName}</strong><br/>
-          <span style="color:#6B7280;font-size:11px">${item.brand}</span>
+          <span style="color:#6B7280;font-size:10px">${item.brand}</span>
         </td>
         <td class="qty-cell">${item.quantity}</td>
         <td class="price-cell">${fmtMoney(item.unitPrice)}</td>
@@ -160,8 +182,6 @@ export function buildInvoiceHtml(
       </tr>`
     )
     .join("");
-
-  const primarySeller = settings.sellers[0];
 
   return `<!DOCTYPE html>
 <html lang="uz">
@@ -177,7 +197,7 @@ export function buildInvoiceHtml(
       <div class="store-name">${settings.storeName}</div>
       <div class="store-sub">${settings.storeSubtitle}</div>
       ${settings.storeAddress ? `<div class="store-sub">📍 ${settings.storeAddress}</div>` : ""}
-      ${sellerBlock(settings)}
+      ${sellerBlock(seller)}
     </div>
     <div class="doc-title-block">
       <div class="doc-title">HISOB-FAKTURA</div>
@@ -237,14 +257,14 @@ export function buildInvoiceHtml(
 
   <div class="sign-row">
     <div class="sign-box">
-      <div class="sign-label">Sotuvchi: ${primarySeller ? `${primarySeller.name} · ${primarySeller.phone}` : ""}</div>
+      <div class="sign-label">Sotuvchi: ${sellerLabel(seller)}</div>
       <div class="sign-line"></div>
-      <div class="sign-name">Imzo</div>
+      <div class="sign-name">F.I.Sh / Imzo</div>
     </div>
     <div class="sign-box">
       <div class="sign-label">Xaridor: ${customer?.name ?? "________________________"}</div>
       <div class="sign-line"></div>
-      <div class="sign-name">Imzo</div>
+      <div class="sign-name">F.I.Sh / Imzo</div>
     </div>
   </div>
 
@@ -260,7 +280,8 @@ export function buildInvoiceHtml(
 export function buildReceiptHtml(
   sale: SaleWithItems,
   settings: StoreSettings = DEFAULT_SETTINGS,
-  customer?: PdfCustomer | null
+  customer?: PdfCustomer | null,
+  seller?: PdfSeller | null
 ): string {
   const rows = sale.items
     .map(
@@ -278,8 +299,6 @@ export function buildReceiptHtml(
     )
     .join("");
 
-  const primarySeller = settings.sellers[0];
-
   return `<!DOCTYPE html>
 <html lang="uz">
 <head>
@@ -288,14 +307,14 @@ export function buildReceiptHtml(
   <title>Savdo cheki #${sale.id}</title>
   <style>
     ${baseStyles()}
-    body { max-width: 420px; padding: 24px 28px; }
-    .receipt-header { text-align: center; margin-bottom: 20px; }
-    .receipt-logo { font-size: 20px; font-weight: 700; color: ${PRIMARY}; }
-    .receipt-sub { font-size: 11px; color: #6B7280; margin-top: 2px; }
-    .receipt-title { font-size: 14px; font-weight: 700; margin-top: 12px; letter-spacing: 2px; color: ${DARK}; }
-    .receipt-meta { display: flex; justify-content: space-between; font-size: 12px; margin: 14px 0; color: #374151; }
+    body { max-width: 420px; padding: 14px 18px; }
+    .receipt-header { text-align: center; margin-bottom: 12px; }
+    .receipt-logo { font-size: 18px; font-weight: 700; color: ${PRIMARY}; }
+    .receipt-sub { font-size: 10px; color: #6B7280; margin-top: 2px; }
+    .receipt-title { font-size: 12px; font-weight: 700; margin-top: 8px; letter-spacing: 2px; color: ${DARK}; }
+    .receipt-meta { display: flex; justify-content: space-between; font-size: 11px; margin: 8px 0; color: #374151; }
     .receipt-meta span { color: #6B7280; margin-right: 4px; }
-    .dashed { border-top: 1.5px dashed #CBD5E1; margin: 10px 0; }
+    .dashed { border-top: 1.5px dashed #CBD5E1; margin: 7px 0; }
   </style>
 </head>
 <body>
@@ -303,7 +322,7 @@ export function buildReceiptHtml(
     <div class="receipt-logo">${settings.storeName}</div>
     <div class="receipt-sub">${settings.storeSubtitle}</div>
     ${settings.storeAddress ? `<div class="receipt-sub">📍 ${settings.storeAddress}</div>` : ""}
-    ${primarySeller ? `<div class="receipt-sub">Sotuvchi: ${primarySeller.name} · ${primarySeller.phone}</div>` : ""}
+    <div class="receipt-sub"><strong>Sotuvchi: ${sellerLabel(seller)}</strong></div>
     <div class="receipt-title">— SAVDO CHEKI —</div>
   </div>
 
@@ -349,16 +368,16 @@ export function buildReceiptHtml(
     </div>
   </div>
 
-  <div class="sign-row" style="margin-top:28px">
+  <div class="sign-row" style="margin-top:14px">
     <div class="sign-box">
-      <div class="sign-label" style="font-size:11px;color:#6B7280;margin-bottom:22px">Sotuvchi: ${primarySeller?.name ?? ""}</div>
+      <div class="sign-label" style="font-size:10px;color:#6B7280;margin-bottom:16px">Sotuvchi: ${sellerLabel(seller)}</div>
       <div class="sign-line"></div>
-      <div class="sign-name">Imzo</div>
+      <div class="sign-name">F.I.Sh / Imzo</div>
     </div>
     <div class="sign-box">
-      <div class="sign-label" style="font-size:11px;color:#6B7280;margin-bottom:22px">Xaridor: ${customer?.name ?? ""}</div>
+      <div class="sign-label" style="font-size:10px;color:#6B7280;margin-bottom:16px">Xaridor: ${customer?.name ?? "________________________"}</div>
       <div class="sign-line"></div>
-      <div class="sign-name">Imzo</div>
+      <div class="sign-name">F.I.Sh / Imzo</div>
     </div>
   </div>
 
@@ -374,7 +393,8 @@ export function buildReceiptHtml(
 export function buildA5InvoiceHtml(
   sale: SaleWithItems,
   settings: StoreSettings = DEFAULT_SETTINGS,
-  customer?: PdfCustomer | null
+  customer?: PdfCustomer | null,
+  seller?: PdfSeller | null
 ): string {
   const rows = sale.items
     .map(
@@ -389,7 +409,6 @@ export function buildA5InvoiceHtml(
     )
     .join("");
 
-  const primarySeller = settings.sellers[0];
   const payLabel: Record<string, string> = { cash: "Naqd to'lov", card: "Karta orqali", debt: "Qarz (nasiya)" };
 
   return `<!DOCTYPE html>
@@ -439,7 +458,7 @@ export function buildA5InvoiceHtml(
       <div class="store-name">${settings.storeName}</div>
       <div class="store-sub">${settings.storeSubtitle}</div>
       ${settings.storeAddress ? `<div class="store-sub">📍 ${settings.storeAddress}</div>` : ""}
-      ${primarySeller ? `<div class="store-sub">Sotuvchi: ${primarySeller.name} · ${primarySeller.phone}</div>` : ""}
+      <div class="store-sub"><strong>Sotuvchi: ${sellerLabel(seller)}</strong></div>
     </div>
     <div>
       <div class="doc-num">FAKTURA № INV-${String(sale.id).padStart(5, "0")}</div>
@@ -487,13 +506,13 @@ export function buildA5InvoiceHtml(
   </div>
   <div class="footer">
     <div class="sign-box" style="max-width:44%">
-      <div class="sign-label">Sotuvchi: ${primarySeller ? primarySeller.name : ""}</div>
+      <div class="sign-label">Sotuvchi: ${sellerLabel(seller)}</div>
       <div class="sign-line"></div>
       <div class="sign-name">F.I.Sh / Imzo</div>
     </div>
     <div class="thanks">Xaridingiz uchun<br/>tashakkur!</div>
     <div class="sign-box" style="max-width:44%;text-align:right">
-      <div class="sign-label" style="text-align:right">Xaridor: ${customer?.name ?? "____________"}</div>
+      <div class="sign-label" style="text-align:right">Xaridor: ${customer?.name ?? "________________________"}</div>
       <div class="sign-line"></div>
       <div class="sign-name" style="text-align:right">F.I.Sh / Imzo</div>
     </div>
@@ -506,7 +525,8 @@ export function buildA5InvoiceHtml(
 export function buildThermalHtml(
   sale: SaleWithItems,
   settings: StoreSettings = DEFAULT_SETTINGS,
-  customer?: PdfCustomer | null
+  customer?: PdfCustomer | null,
+  seller?: PdfSeller | null
 ): string {
   const rows = sale.items
     .map(
@@ -521,7 +541,6 @@ export function buildThermalHtml(
     )
     .join("");
 
-  const primarySeller = settings.sellers[0];
   const payLabel: Record<string, string> = { cash: "NAQD", card: "KARTA", debt: "QARZ" };
   const paidAmt = sale.paidAmount ?? sale.totalAmount;
   const debtAmt = sale.debtAmount ?? 0;
@@ -565,7 +584,7 @@ export function buildThermalHtml(
     <div class="logo">${settings.storeName}</div>
     <div class="sub">${settings.storeSubtitle}</div>
     ${settings.storeAddress ? `<div class="sub">📍 ${settings.storeAddress}</div>` : ""}
-    ${primarySeller ? `<div class="sub">Sotuvchi: ${primarySeller.name} · ${primarySeller.phone}</div>` : ""}
+    <div class="sub"><strong>Sotuvchi: ${sellerLabel(seller)}</strong></div>
     <div class="title">— SAVDO CHEKI —</div>
   </div>
   <hr class="dash"/>
@@ -603,7 +622,8 @@ export function buildThermalHtml(
 export function buildWaybillHtml(
   sale: SaleWithItems,
   settings: StoreSettings = DEFAULT_SETTINGS,
-  customer?: PdfCustomer | null
+  customer?: PdfCustomer | null,
+  seller?: PdfSeller | null
 ): string {
   const rows = sale.items
     .map(
@@ -612,7 +632,7 @@ export function buildWaybillHtml(
         <td>${i + 1}</td>
         <td>
           <strong>${item.productName}</strong><br/>
-          <span style="color:#6B7280;font-size:11px">${item.brand}</span>
+          <span style="color:#6B7280;font-size:10px">${item.brand}</span>
         </td>
         <td class="qty-cell">${item.quantity}</td>
         <td class="price-cell">${fmtMoney(item.unitPrice)}</td>
@@ -620,8 +640,6 @@ export function buildWaybillHtml(
       </tr>`
     )
     .join("");
-
-  const primarySeller = settings.sellers[0];
 
   return `<!DOCTYPE html>
 <html lang="uz">
@@ -637,7 +655,7 @@ export function buildWaybillHtml(
       <div class="store-name">${settings.storeName}</div>
       <div class="store-sub">${settings.storeSubtitle}</div>
       ${settings.storeAddress ? `<div class="store-sub">📍 ${settings.storeAddress}</div>` : ""}
-      ${sellerBlock(settings)}
+      ${sellerBlock(seller)}
     </div>
     <div class="doc-title-block">
       <div class="doc-title">YUK XATI</div>
@@ -675,9 +693,9 @@ export function buildWaybillHtml(
     <div class="meta-box">
       <div class="meta-label">Jo'natuvchi (Sotuvchi)</div>
       <div class="meta-val">${settings.storeName}</div>
-      ${primarySeller ? `
-        <div class="meta-sub">${primarySeller.name}</div>
-        <div class="meta-sub">📞 ${primarySeller.phone}</div>
+      ${seller ? `
+        <div class="meta-sub"><strong>${sellerLabel(seller)}</strong></div>
+        ${seller.phone ? `<div class="meta-sub">📞 ${seller.phone}</div>` : ""}
       ` : ""}
       ${settings.storeAddress ? `<div class="meta-sub">📍 ${settings.storeAddress}</div>` : ""}
     </div>
@@ -721,12 +739,12 @@ export function buildWaybillHtml(
 
   <div class="sign-row">
     <div class="sign-box">
-      <div class="sign-label">Jo'natuvchi: ${primarySeller ? `${primarySeller.name}` : ""}</div>
+      <div class="sign-label">Jo'natuvchi: ${sellerLabel(seller)}</div>
       <div class="sign-line"></div>
       <div class="sign-name">F.I.Sh / Imzo / Muhr</div>
     </div>
     <div class="sign-box">
-      <div class="sign-label">Qabul qiluvchi: ${customer?.name ?? ""}</div>
+      <div class="sign-label">Qabul qiluvchi: ${customer?.name ?? "________________________"}</div>
       <div class="sign-line"></div>
       <div class="sign-name">F.I.Sh / Imzo / Sana</div>
     </div>

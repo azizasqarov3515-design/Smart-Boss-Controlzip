@@ -7,7 +7,10 @@ import {
   buildA5InvoiceHtml,
   buildThermalHtml,
   type PdfCustomer,
+  type PdfSeller,
 } from "./pdfTemplates";
+
+export type { PdfSeller };
 
 export type PrintFormat = "a4" | "a5" | "thermal";
 
@@ -38,11 +41,12 @@ export function buildPrintHtml(
   settings: StoreSettings,
   customer: PdfCustomer | null | undefined,
   format: PrintFormat,
+  seller?: PdfSeller | null,
 ): string {
   switch (format) {
-    case "a4": return buildInvoiceHtml(sale, settings, customer);
-    case "a5": return buildA5InvoiceHtml(sale, settings, customer);
-    case "thermal": return buildThermalHtml(sale, settings, customer);
+    case "a4": return buildInvoiceHtml(sale, settings, customer, seller);
+    case "a5": return buildA5InvoiceHtml(sale, settings, customer, seller);
+    case "thermal": return buildThermalHtml(sale, settings, customer, seller);
   }
 }
 
