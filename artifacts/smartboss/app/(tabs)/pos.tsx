@@ -307,6 +307,9 @@ function POSScreenInner() {
   const [customerPickerOpen, setCustomerPickerOpen] = useState(false);
   const [customerSearch, setCustomerSearch] = useState("");
   const [customerConfirmVisible, setCustomerConfirmVisible] = useState(false);
+  const [unitFilter, setUnitFilter] = useState<"all" | "dona" | "kg" | "m">("all");
+  const [qtyPromptProduct, setQtyPromptProduct] = useState<Product | null>(null);
+  const [qtyPromptValue, setQtyPromptValue] = useState("");
 
   // Print modal state
   const [lastSale, setLastSale] = useState<SaleWithItems | null>(null);
@@ -384,9 +387,9 @@ function POSScreenInner() {
       setCart((prev) => {
         const next = new Map(prev);
         const existing = next.get(product.id);
-        const newQty = (existing?.quantity ?? 0) + qty;
+        const newQty = Math.round(((existing?.quantity ?? 0) + qty) * 1000) / 1000;
         if (newQty > product.quantity) {
-          Alert.alert("Stok yetarli emas", `Faqat ${product.quantity} dona mavjud`);
+          Alert.alert("Stok yetarli emas", `Faqat ${product.quantity} ${product.unit} mavjud`);
           return prev;
         }
         next.set(product.id, { product, quantity: newQty });
@@ -401,12 +404,13 @@ function POSScreenInner() {
       const next = new Map(prev);
       const item = next.get(productId);
       if (!item) return prev;
-      if (qty <= 0) {
+      const rounded = Math.round(qty * 1000) / 1000;
+      if (rounded <= 0) {
         next.delete(productId);
-      } else if (qty > item.product.quantity) {
-        Alert.alert("Stok yetarli emas", `Faqat ${item.product.quantity} dona mavjud`);
+      } else if (rounded > item.product.quantity) {
+        Alert.alert("Stok yetarli emas", `Faqat ${item.product.quantity} ${item.product.unit} mavjud`);
       } else {
-        next.set(productId, { ...item, quantity: qty });
+        next.set(productId, { ...item, quantity: rounded });
       }
       return next;
     });
@@ -465,7 +469,7 @@ function POSScreenInner() {
   );
 
   const cartItems = Array.from(cart.values());
-  const total = cartItems.reduce((s, i) => s + i.product.salePrice * i.quantity, 0);
+  const total = Math.round(cartItems.reduce((s, i) => s + i.product.salePrice * i.quantity, 0) * 100) / 100;
   const totalItems = cartItems.reduce((s, i) => s + i.quantity, 0);
 
   const handleCheckout = () => {
@@ -562,7 +566,20 @@ function POSScreenInner() {
     setSelectedCustomer(null);
   };
 
+  const handleQtyPromptConfirm = useCallback(() => {
+    if (!qtyPromptProduct) return;
+    const qty = parseFloat(qtyPromptValue.replace(",", "."));
+    if (isNaN(qty) || qty <= 0) {
+      Alert.alert("Xato", "To'g'ri miqdor kiriting (masalan: 1.5)");
+      return;
+    }
+    addToCart(qtyPromptProduct, qty);
+    setQtyPromptProduct(null);
+    setQtyPromptValue("");
+  }, [qtyPromptProduct, qtyPromptValue, addToCart]);
+
   const filteredProducts = (products ?? []).filter((p) => {
+    if (unitFilter !== "all" && p.unit !== unitFilter) return false;
     if (!search.trim()) return true;
     const q = search.toLowerCase();
     return (
@@ -580,6 +597,57 @@ function POSScreenInner() {
         onClose={() => setScannerOpen(false)}
         onScanned={handleScanned}
       />
+
+      {/* ── Qty Prompt Modal (for kg/m products) ── */}
+      <Modal
+        visible={!!qtyPromptProduct}
+        transparent
+        animationType="fade"
+        statusBarTranslucent
+        onRequestClose={() => setQtyPromptProduct(null)}
+      >
+        <TouchableOpacity
+          style={styles.confirmBackdrop}
+          activeOpacity={1}
+          onPress={() => setQtyPromptProduct(null)}
+        />
+        <View style={[styles.qtyPromptSheet, { backgroundColor: colors.card }]}>
+          <View style={[styles.confirmHandle, { backgroundColor: colors.border }]} />
+          <Text style={[styles.qtyPromptTitle, { color: colors.foreground }]} numberOfLines={1}>
+            {qtyPromptProduct?.name}
+          </Text>
+          <Text style={[styles.qtyPromptSub, { color: colors.mutedForeground }]}>
+            Miqdorni kiriting ({qtyPromptProduct?.unit === "kg" ? "kilogramm" : "metr"})
+          </Text>
+          <TextInput
+            style={[styles.qtyPromptInput, { color: colors.foreground, borderColor: colors.primary, backgroundColor: colors.muted }]}
+            value={qtyPromptValue}
+            onChangeText={setQtyPromptValue}
+            keyboardType="decimal-pad"
+            placeholder="Masalan: 1.5"
+            placeholderTextColor={colors.mutedForeground}
+            autoFocus
+            selectTextOnFocus
+          />
+          <View style={styles.qtyPromptBtns}>
+            <TouchableOpacity
+              style={[styles.qtyPromptCancel, { backgroundColor: colors.muted, borderColor: colors.border }]}
+              onPress={() => setQtyPromptProduct(null)}
+              activeOpacity={0.8}
+            >
+              <Text style={[styles.qtyPromptCancelText, { color: colors.mutedForeground }]}>Bekor</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.qtyPromptConfirm, { backgroundColor: colors.primary }]}
+              onPress={handleQtyPromptConfirm}
+              activeOpacity={0.85}
+            >
+              <MaterialIcons name="add-shopping-cart" size={16} color="#fff" />
+              <Text style={styles.qtyPromptConfirmText}>Savatga qo'shish</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
 
       {/* ── In-app checkout confirmation modal ── */}
       <Modal
@@ -751,10 +819,10 @@ function POSScreenInner() {
                   {item.product.name}
                 </Text>
                 <Text style={[styles.confirmItemQty, { color: colors.mutedForeground }]}>
-                  {item.quantity} × {item.product.salePrice.toLocaleString()}
+                  {item.quantity} {item.product.unit} × {item.product.salePrice.toLocaleString()}
                 </Text>
                 <Text style={[styles.confirmItemTotal, { color: colors.primary }]}>
-                  {(item.product.salePrice * item.quantity).toLocaleString()}
+                  {(Math.round(item.product.salePrice * item.quantity * 100) / 100).toLocaleString()}
                 </Text>
               </View>
             ))}
@@ -763,7 +831,7 @@ function POSScreenInner() {
           {/* Total */}
           <View style={[styles.confirmTotalRow, { borderTopColor: colors.border }]}>
             <Text style={[styles.confirmTotalLabel, { color: colors.mutedForeground }]}>
-              Jami ({totalItems} dona):
+              Jami ({cartItems.length} ta mahsulot):
             </Text>
             <Text style={[styles.confirmTotalVal, { color: colors.foreground }]}>
               {formatMoney(total)}
@@ -1179,7 +1247,7 @@ function POSScreenInner() {
               >
                 <View style={styles.checkoutRow}>
                   <Text style={[styles.checkoutLabel, { color: colors.mutedForeground }]}>
-                    Jami ({totalItems} dona):
+                    Jami ({cartItems.length} ta):
                   </Text>
                   <Text style={[styles.checkoutTotal, { color: colors.foreground }]}>
                     {formatMoney(total)}
@@ -1248,6 +1316,42 @@ function POSScreenInner() {
             </View>
           </View>
 
+          {/* Unit category tabs */}
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.unitTabsContainer}
+            style={styles.unitTabsScroll}
+          >
+            {([
+              { key: "all", label: "Barchasi" },
+              { key: "dona", label: "🔢 Donalilar" },
+              { key: "kg", label: "⚖️ Kilolilar" },
+              { key: "m", label: "📏 Metrlilar" },
+            ] as const).map((ut) => (
+              <TouchableOpacity
+                key={ut.key}
+                style={[
+                  styles.unitTab,
+                  unitFilter === ut.key
+                    ? { backgroundColor: colors.primary, borderColor: colors.primary }
+                    : { backgroundColor: colors.card, borderColor: colors.border },
+                ]}
+                onPress={() => setUnitFilter(ut.key)}
+                activeOpacity={0.8}
+              >
+                <Text
+                  style={[
+                    styles.unitTabText,
+                    { color: unitFilter === ut.key ? "#fff" : colors.mutedForeground },
+                  ]}
+                >
+                  {ut.label}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+
           <WebRefreshBar refreshing={productsRefetching} onRefresh={refetchProducts} />
           {productsLoading ? (
             <View style={styles.loader}>
@@ -1280,7 +1384,14 @@ function POSScreenInner() {
                         borderColor: inCart ? colors.primary : colors.border,
                       },
                     ]}
-                    onPress={() => addToCart(p)}
+                    onPress={() => {
+                      if ((p.unit === "kg" || p.unit === "m") && p.quantity > 0) {
+                        setQtyPromptProduct(p);
+                        setQtyPromptValue("1");
+                      } else {
+                        addToCart(p);
+                      }
+                    }}
                     activeOpacity={0.8}
                     disabled={p.quantity === 0}
                   >
@@ -1353,7 +1464,7 @@ function POSScreenInner() {
                         ]}
                       >
                         <Text style={styles.stockText}>
-                          {p.quantity === 0 ? "Tugagan" : `${p.quantity} dona`}
+                          {p.quantity === 0 ? "Tugagan" : `${p.quantity} ${p.unit}`}
                         </Text>
                       </View>
                       {inCart ? (
@@ -1364,7 +1475,7 @@ function POSScreenInner() {
                           ]}
                         >
                           <Text style={styles.inCartText}>
-                            Savat: {inCart.quantity}
+                            {inCart.quantity} {inCart.product.unit}
                           </Text>
                         </View>
                       ) : p.quantity > 0 ? (
@@ -1415,7 +1526,8 @@ function CartCard({
   onQty: (id: number, qty: number) => void;
   onRemove: (id: number) => void;
 }) {
-  const subtotal = item.product.salePrice * item.quantity;
+  const isFloat = item.product.unit === "kg" || item.product.unit === "m";
+  const subtotal = Math.round(item.product.salePrice * item.quantity * 100) / 100;
   return (
     <View style={[styles.cartCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
       <View style={styles.cartCardTop}>
@@ -1441,22 +1553,38 @@ function CartCard({
 
       <View style={styles.cartCardBottom}>
         <Text style={[styles.unitPrice, { color: colors.mutedForeground }]}>
-          {item.product.salePrice.toLocaleString()} UZS × {item.quantity}
+          {item.product.salePrice.toLocaleString()} UZS × {item.quantity} {item.product.unit}
         </Text>
         <View style={styles.qtyControls}>
-          <TouchableOpacity
-            style={[styles.qtyBtn, { backgroundColor: colors.muted, borderColor: colors.border }]}
-            onPress={() => onQty(item.product.id, item.quantity - 1)}
-          >
-            <MaterialIcons name="remove" size={16} color={colors.foreground} />
-          </TouchableOpacity>
-          <Text style={[styles.qtyText, { color: colors.foreground }]}>{item.quantity}</Text>
-          <TouchableOpacity
-            style={[styles.qtyBtn, { backgroundColor: colors.primary }]}
-            onPress={() => onQty(item.product.id, item.quantity + 1)}
-          >
-            <MaterialIcons name="add" size={16} color="#fff" />
-          </TouchableOpacity>
+          {isFloat ? (
+            <TextInput
+              style={[styles.qtyDecimalInput, { color: colors.foreground, borderColor: colors.border, backgroundColor: colors.muted }]}
+              value={String(item.quantity)}
+              onChangeText={(v) => {
+                const parsed = parseFloat(v.replace(",", "."));
+                if (!isNaN(parsed)) onQty(item.product.id, parsed);
+                else if (v === "" || v === "0") onQty(item.product.id, 0);
+              }}
+              keyboardType="decimal-pad"
+              selectTextOnFocus
+            />
+          ) : (
+            <>
+              <TouchableOpacity
+                style={[styles.qtyBtn, { backgroundColor: colors.muted, borderColor: colors.border }]}
+                onPress={() => onQty(item.product.id, item.quantity - 1)}
+              >
+                <MaterialIcons name="remove" size={16} color={colors.foreground} />
+              </TouchableOpacity>
+              <Text style={[styles.qtyText, { color: colors.foreground }]}>{item.quantity}</Text>
+              <TouchableOpacity
+                style={[styles.qtyBtn, { backgroundColor: colors.primary }]}
+                onPress={() => onQty(item.product.id, item.quantity + 1)}
+              >
+                <MaterialIcons name="add" size={16} color="#fff" />
+              </TouchableOpacity>
+            </>
+          )}
         </View>
         <Text style={[styles.subtotal, { color: colors.primary }]}>
           {subtotal.toLocaleString()} UZS
@@ -1767,6 +1895,83 @@ const styles = StyleSheet.create({
     minWidth: 90,
     textAlign: "right",
   },
+  qtyDecimalInput: {
+    width: 80,
+    height: 36,
+    borderRadius: 10,
+    borderWidth: 1.5,
+    paddingHorizontal: 10,
+    fontFamily: "Inter_600SemiBold",
+    fontSize: 15,
+    textAlign: "center",
+  },
+
+  // Unit filter tabs
+  unitTabsScroll: { flexGrow: 0, maxHeight: 44 },
+  unitTabsContainer: {
+    flexDirection: "row",
+    gap: 8,
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+    alignItems: "center",
+  },
+  unitTab: {
+    paddingHorizontal: 14,
+    paddingVertical: 7,
+    borderRadius: 20,
+    borderWidth: 1.5,
+  },
+  unitTabText: { fontFamily: "Inter_600SemiBold", fontSize: 13 },
+
+  // Qty prompt modal
+  qtyPromptSheet: {
+    position: "absolute",
+    bottom: 0,
+    left: 0,
+    right: 0,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    padding: 20,
+    paddingBottom: 36,
+    gap: 14,
+    alignItems: "stretch",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: -8 },
+    shadowOpacity: 0.12,
+    shadowRadius: 20,
+    elevation: 16,
+  },
+  qtyPromptTitle: { fontFamily: "Inter_700Bold", fontSize: 17, textAlign: "center" },
+  qtyPromptSub: { fontFamily: "Inter_400Regular", fontSize: 13, textAlign: "center", marginTop: -6 },
+  qtyPromptInput: {
+    borderWidth: 2,
+    borderRadius: 14,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    fontFamily: "Inter_700Bold",
+    fontSize: 22,
+    textAlign: "center",
+  },
+  qtyPromptBtns: { flexDirection: "row", gap: 12 },
+  qtyPromptCancel: {
+    flex: 1,
+    paddingVertical: 14,
+    borderRadius: 14,
+    borderWidth: 1,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  qtyPromptCancelText: { fontFamily: "Inter_600SemiBold", fontSize: 15 },
+  qtyPromptConfirm: {
+    flex: 2,
+    flexDirection: "row",
+    paddingVertical: 14,
+    borderRadius: 14,
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+  },
+  qtyPromptConfirmText: { fontFamily: "Inter_700Bold", fontSize: 15, color: "#fff" },
 
   // Checkout
   checkoutPanel: {

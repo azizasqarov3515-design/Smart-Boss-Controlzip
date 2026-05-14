@@ -1,0 +1,19 @@
+**CRITICAL FEATURE: Smart UoM System, Auto-Categorization & Decimal Cart Math**
+
+We need to implement a universal Unit of Measurement (UoM) system with smart UI filters and flawless float-based checkout logic. Please implement exactly as follows:
+
+**Task 1: Database Schema & Core Logic**
+- Add a `unit` field to the Product schema with strictly 3 allowed values: `dona` (pieces), `kg` (kilograms), and `m` (meters). Default is `dona`.
+- **CRITICAL:** Update all schema fields related to `quantity` (stock quantity, cart item quantity, order quantity) to support `FLOAT` or `DECIMAL` types. Do not use strict Integers, because `kg` and `m` will be sold in fractional amounts (e.g., 1.5, 0.75).
+
+**Task 2: Smart Auto-Categorization UI (POS & Products)**
+- Above the product grid, implement a modern, horizontal, scrollable Category Tabs bar (beautiful pill-shaped buttons with clear active/inactive states).
+- The tabs MUST strictly be generated based on the `unit` field to prevent human error.
+- The tabs are: "Barchasi" (All), "Donalilar" (Pieces), "Kilolilar" (Kg), and "Metrlilar" (Meters).
+- "Barchasi" is selected by default and shows the mixed list. Clicking "Kilolilar" automatically filters the list to show ONLY products where `unit === 'kg'`, and so on. No manual category assignment is needed from the user.
+
+**Task 3: Seamless Mixed Checkout & Flawless Math**
+- In the POS screen, when a user adds a `kg` or `m` product to the cart, the quantity input MUST open a decimal-friendly numeric keyboard allowing floats (e.g., `2.5`). For `dona`, keep standard integer logic.
+- Ensure the cart perfectly handles mixed items simultaneously. 
+- The Total Sum calculation must be absolutely flawless: `Total = Price * Float_Quantity`. Handle JS floating-point precision issues gracefully (e.g., proper rounding to prevent sums like `100.00000001`).
+- Everywhere a quantity is shown (Product list, Cart, Checkout, Printed Receipt), append the correct unit suffix next to it (e.g., `3 dona`, `1.5 kg`, `2.4 m`).

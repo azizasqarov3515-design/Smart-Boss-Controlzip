@@ -6,6 +6,8 @@ import { z } from "zod";
 
 const router = Router();
 
+const VALID_UNITS = ["dona", "kg", "m"] as const;
+
 const productInputSchema = z.object({
   name: z.string().trim().min(1, "Nomi kiritilishi shart"),
   brand: z.string().trim().min(1, "Brendi kiritilishi shart"),
@@ -17,8 +19,9 @@ const productInputSchema = z.object({
     .transform((v) => String(v)),
   quantity: z
     .union([z.string(), z.number()])
-    .transform((v) => parseInt(String(v), 10))
-    .pipe(z.number().int().min(0)),
+    .transform((v) => parseFloat(String(v)))
+    .pipe(z.number().min(0)),
+  unit: z.enum(VALID_UNITS).optional().default("dona"),
   barcode: z.string().trim().min(1).nullish().transform((v) => v ?? null),
   imageUrl: z.string().url().nullish().transform((v) => v ?? null),
 });
@@ -30,7 +33,8 @@ type ProductRow = {
   brand: string;
   costPrice: string;
   salePrice: string;
-  quantity: number;
+  quantity: string;
+  unit: string;
   barcode: string | null;
   imageUrl: string | null;
   createdAt: Date;
@@ -43,7 +47,8 @@ function mapProduct(p: ProductRow) {
     brand: p.brand,
     costPrice: parseFloat(p.costPrice),
     salePrice: parseFloat(p.salePrice),
-    quantity: p.quantity,
+    quantity: parseFloat(p.quantity),
+    unit: (VALID_UNITS as readonly string[]).includes(p.unit) ? p.unit : "dona",
     barcode: p.barcode ?? null,
     imageUrl: p.imageUrl ?? null,
     createdAt: p.createdAt.toISOString(),
@@ -85,7 +90,8 @@ router.post("/products", async (req, res) => {
         brand: d.brand,
         costPrice: d.costPrice,
         salePrice: d.salePrice,
-        quantity: d.quantity,
+        quantity: String(d.quantity),
+        unit: d.unit,
         barcode: d.barcode,
         imageUrl: d.imageUrl,
       })
@@ -98,7 +104,6 @@ router.post("/products", async (req, res) => {
 });
 
 // GET /products/barcode/:barcode — must be before /:id
-// Searches by barcode OR product name (model equivalent)
 router.get("/products/barcode/:barcode", async (req, res) => {
   try {
     const barcode = req.params["barcode"]!;
@@ -151,7 +156,8 @@ router.put("/products/:id", async (req, res) => {
         brand: d.brand,
         costPrice: d.costPrice,
         salePrice: d.salePrice,
-        quantity: d.quantity,
+        quantity: String(d.quantity),
+        unit: d.unit,
         barcode: d.barcode,
         imageUrl: d.imageUrl,
       })
@@ -197,10 +203,10 @@ router.get("/dashboard/stats", async (req, res) => {
     const [stats] = await db
       .select({
         totalProducts: sql<number>`count(*)::int`,
-        totalItems: sql<number>`coalesce(sum(${productsTable.quantity}), 0)::int`,
-        totalCostValue: sql<number>`coalesce(sum(${productsTable.costPrice}::numeric * ${productsTable.quantity}), 0)::numeric`,
-        totalSaleValue: sql<number>`coalesce(sum(${productsTable.salePrice}::numeric * ${productsTable.quantity}), 0)::numeric`,
-        lowStockCount: sql<number>`count(case when ${productsTable.quantity} < 5 then 1 end)::int`,
+        totalItems: sql<number>`coalesce(sum(${productsTable.quantity}::numeric), 0)::numeric`,
+        totalCostValue: sql<number>`coalesce(sum(${productsTable.costPrice}::numeric * ${productsTable.quantity}::numeric), 0)::numeric`,
+        totalSaleValue: sql<number>`coalesce(sum(${productsTable.salePrice}::numeric * ${productsTable.quantity}::numeric), 0)::numeric`,
+        lowStockCount: sql<number>`count(case when ${productsTable.quantity}::numeric < 5 then 1 end)::int`,
       })
       .from(productsTable)
       .where(mgrCond);
@@ -220,7 +226,7 @@ router.get("/dashboard/stats", async (req, res) => {
       : sql`1=1`;
 
     const profitResult = await db.execute(sql`
-      SELECT COALESCE(SUM((si.unit_price::numeric - p.cost_price::numeric) * si.quantity), 0) AS today_net_profit
+      SELECT COALESCE(SUM((si.unit_price::numeric - p.cost_price::numeric) * si.quantity::numeric), 0) AS today_net_profit
       FROM ${saleItemsTable} si
       JOIN ${salesTable} s ON si.sale_id = s.id
       JOIN ${productsTable} p ON si.product_id = p.id
@@ -231,7 +237,7 @@ router.get("/dashboard/stats", async (req, res) => {
 
     res.json({
       totalProducts: stats?.totalProducts ?? 0,
-      totalItems: stats?.totalItems ?? 0,
+      totalItems: parseFloat(String(stats?.totalItems ?? 0)),
       totalCostValue: parseFloat(String(stats?.totalCostValue ?? 0)),
       totalSaleValue: parseFloat(String(stats?.totalSaleValue ?? 0)),
       lowStockCount: stats?.lowStockCount ?? 0,

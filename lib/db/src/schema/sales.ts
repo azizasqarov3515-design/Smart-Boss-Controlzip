@@ -30,7 +30,8 @@ export const saleItemsTable = pgTable("sale_items", {
   productName: text("product_name").notNull(),
   brand: text("brand").notNull(),
   unitPrice: numeric("unit_price", { precision: 12, scale: 2 }).notNull(),
-  quantity: integer("quantity").notNull(),
+  quantity: numeric("quantity", { precision: 10, scale: 3 }).notNull(),
+  unit: text("unit").notNull().default("dona"),
   totalPrice: numeric("total_price", { precision: 14, scale: 2 }).notNull(),
 });
 

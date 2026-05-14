@@ -11,7 +11,7 @@ const createSaleSchema = z.object({
     .array(
       z.object({
         productId: z.number().int().positive(),
-        quantity: z.number().int().positive(),
+        quantity: z.number().positive(),
       })
     )
     .min(1),
@@ -43,7 +43,8 @@ function mapSaleRow(
       productName: i.productName,
       brand: i.brand,
       unitPrice: parseFloat(i.unitPrice),
-      quantity: i.quantity,
+      quantity: parseFloat(i.quantity as unknown as string),
+      unit: i.unit ?? "dona",
       totalPrice: parseFloat(i.totalPrice),
     })),
   };
@@ -118,9 +119,10 @@ router.post("/sales", async (req, res) => {
         res.status(404).json({ error: `Mahsulot topilmadi: ID ${item.productId}` });
         return;
       }
-      if (product.quantity < item.quantity) {
+      const stockQty = parseFloat(product.quantity as unknown as string);
+      if (stockQty < item.quantity) {
         res.status(400).json({
-          error: `"${product.name}" mahsulotida yetarli stok yo'q. Mavjud: ${product.quantity}, so'ralgan: ${item.quantity}`,
+          error: `"${product.name}" mahsulotida yetarli stok yo'q. Mavjud: ${stockQty}, so'ralgan: ${item.quantity}`,
         });
         return;
       }
@@ -130,19 +132,22 @@ router.post("/sales", async (req, res) => {
     const saleItemsData = body.items.map((item) => {
       const product = productMap.get(item.productId)!;
       const unitPrice = parseFloat(product.salePrice);
-      const totalPrice = unitPrice * item.quantity;
+      const qty = Math.round(item.quantity * 1000) / 1000;
+      const totalPrice = Math.round(unitPrice * qty * 100) / 100;
       totalAmount += totalPrice;
       return {
         productId: product.id,
         productName: product.name,
         brand: product.brand,
         unitPrice: String(unitPrice),
-        quantity: item.quantity,
+        quantity: String(qty),
+        unit: (product as any).unit ?? "dona",
         totalPrice: String(totalPrice),
       };
     });
+    totalAmount = Math.round(totalAmount * 100) / 100;
 
-    const totalItemCount = body.items.reduce((sum, i) => sum + i.quantity, 0);
+    const totalItemCount = body.items.length;
 
     const paidAmount =
       body.paymentType === "debt"

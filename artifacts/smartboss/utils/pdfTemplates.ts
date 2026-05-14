@@ -176,7 +176,7 @@ export function buildInvoiceHtml(
           <strong>${item.productName}</strong><br/>
           <span style="color:#6B7280;font-size:10px">${item.brand}</span>
         </td>
-        <td class="qty-cell">${item.quantity}</td>
+        <td class="qty-cell">${item.quantity} ${item.unit ?? ""}</td>
         <td class="price-cell">${fmtMoney(item.unitPrice)}</td>
         <td>${fmtMoney(item.totalPrice)}</td>
       </tr>`
@@ -292,7 +292,7 @@ export function buildReceiptHtml(
           <strong>${item.productName}</strong><br/>
           <span style="color:#6B7280;font-size:11px">${item.brand}</span>
         </td>
-        <td class="qty-cell">${item.quantity}</td>
+        <td class="qty-cell">${item.quantity} ${item.unit ?? ""}</td>
         <td class="price-cell">${fmtMoney(item.unitPrice)}</td>
         <td>${fmtMoney(item.totalPrice)}</td>
       </tr>`
@@ -402,7 +402,7 @@ export function buildA5InvoiceHtml(
       <tr>
         <td>${i + 1}</td>
         <td><strong>${item.productName}</strong><span class="brand">${item.brand}</span></td>
-        <td class="c">${item.quantity}</td>
+        <td class="c">${item.quantity} ${item.unit ?? ""}</td>
         <td class="r">${fmtMoney(item.unitPrice)}</td>
         <td class="r bold">${fmtMoney(item.totalPrice)}</td>
       </tr>`
@@ -534,7 +534,7 @@ export function buildThermalHtml(
     <div class="item">
       <div class="item-name">${i + 1}. ${item.productName} <span class="brand">(${item.brand})</span></div>
       <div class="item-row">
-        <span>${item.quantity} × ${item.unitPrice.toLocaleString("uz-UZ")}</span>
+        <span>${item.quantity} ${item.unit ?? ""} × ${item.unitPrice.toLocaleString("uz-UZ")}</span>
         <span class="item-total">${item.totalPrice.toLocaleString("uz-UZ")} UZS</span>
       </div>
     </div>`
@@ -634,7 +634,7 @@ export function buildWaybillHtml(
           <strong>${item.productName}</strong><br/>
           <span style="color:#6B7280;font-size:10px">${item.brand}</span>
         </td>
-        <td class="qty-cell">${item.quantity}</td>
+        <td class="qty-cell">${item.quantity} ${item.unit ?? ""}</td>
         <td class="price-cell">${fmtMoney(item.unitPrice)}</td>
         <td>${fmtMoney(item.totalPrice)}</td>
       </tr>`

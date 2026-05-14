@@ -9,6 +9,8 @@ export interface HealthStatus {
   status: string;
 }
 
+export type ProductUnit = 'dona' | 'kg' | 'm';
+
 export interface Product {
   id: number;
   name: string;
@@ -16,6 +18,7 @@ export interface Product {
   costPrice: number;
   salePrice: number;
   quantity: number;
+  unit: ProductUnit;
   barcode?: string | null;
   imageUrl?: string | null;
   createdAt: string;
@@ -27,6 +30,7 @@ export interface CreateProduct {
   costPrice: number;
   salePrice: number;
   quantity: number;
+  unit?: ProductUnit;
   barcode?: string | null;
   imageUrl?: string | null;
 }
@@ -121,6 +125,7 @@ export interface SaleItem {
   brand: string;
   unitPrice: number;
   quantity: number;
+  unit: string;
   totalPrice: number;
 }
 

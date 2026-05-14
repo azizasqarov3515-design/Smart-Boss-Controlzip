@@ -6,6 +6,8 @@
  * OpenAPI spec version: 0.1.0
  */
 
+export type ProductUnit = 'dona' | 'kg' | 'm';
+
 export interface Product {
   id: number;
   name: string;
@@ -13,6 +15,7 @@ export interface Product {
   costPrice: number;
   salePrice: number;
   quantity: number;
+  unit: ProductUnit;
   barcode?: string | null;
   createdAt: string;
 }
