@@ -19,6 +19,7 @@ export interface Product {
   salePrice: number;
   quantity: number;
   unit: ProductUnit;
+  thickness?: number | null;
   barcode?: string | null;
   imageUrl?: string | null;
   createdAt: string;
@@ -31,6 +32,7 @@ export interface CreateProduct {
   salePrice: number;
   quantity: number;
   unit?: ProductUnit;
+  thickness?: number | null;
   barcode?: string | null;
   imageUrl?: string | null;
 }

@@ -10,7 +10,7 @@ const VALID_UNITS = ["dona", "kg", "m"] as const;
 
 const productInputSchema = z.object({
   name: z.string().trim().min(1, "Nomi kiritilishi shart"),
-  brand: z.string().trim().min(1, "Brendi kiritilishi shart"),
+  brand: z.string().trim(),
   costPrice: z
     .union([z.string(), z.number()])
     .transform((v) => String(v)),
@@ -22,6 +22,12 @@ const productInputSchema = z.object({
     .transform((v) => parseFloat(String(v)))
     .pipe(z.number().min(0)),
   unit: z.enum(VALID_UNITS).optional().default("dona"),
+  thickness: z
+    .union([z.string(), z.number()])
+    .transform((v) => parseFloat(String(v)))
+    .pipe(z.number().min(0))
+    .nullish()
+    .transform((v) => (v != null && !isNaN(v) ? String(v) : null)),
   barcode: z.string().trim().min(1).nullish().transform((v) => v ?? null),
   imageUrl: z.string().url().nullish().transform((v) => v ?? null),
 });
@@ -35,6 +41,7 @@ type ProductRow = {
   salePrice: string;
   quantity: string;
   unit: string;
+  thickness: string | null;
   barcode: string | null;
   imageUrl: string | null;
   createdAt: Date;
@@ -49,6 +56,7 @@ function mapProduct(p: ProductRow) {
     salePrice: parseFloat(p.salePrice),
     quantity: parseFloat(p.quantity),
     unit: (VALID_UNITS as readonly string[]).includes(p.unit) ? p.unit : "dona",
+    thickness: p.thickness != null ? parseFloat(p.thickness) : null,
     barcode: p.barcode ?? null,
     imageUrl: p.imageUrl ?? null,
     createdAt: p.createdAt.toISOString(),
@@ -92,6 +100,7 @@ router.post("/products", async (req, res) => {
         salePrice: d.salePrice,
         quantity: String(d.quantity),
         unit: d.unit,
+        thickness: d.thickness,
         barcode: d.barcode,
         imageUrl: d.imageUrl,
       })
@@ -158,6 +167,7 @@ router.put("/products/:id", async (req, res) => {
         salePrice: d.salePrice,
         quantity: String(d.quantity),
         unit: d.unit,
+        thickness: d.thickness,
         barcode: d.barcode,
         imageUrl: d.imageUrl,
       })

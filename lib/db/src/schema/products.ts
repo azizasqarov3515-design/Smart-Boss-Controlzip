@@ -11,6 +11,7 @@ export const productsTable = pgTable("products", {
   salePrice: numeric("sale_price", { precision: 12, scale: 2 }).notNull(),
   quantity: numeric("quantity", { precision: 10, scale: 3 }).notNull().default("0"),
   unit: text("unit").notNull().default("dona"),
+  thickness: numeric("thickness", { precision: 8, scale: 2 }),
   barcode: text("barcode"),
   imageUrl: text("image_url"),
   createdAt: timestamp("created_at").notNull().defaultNow(),

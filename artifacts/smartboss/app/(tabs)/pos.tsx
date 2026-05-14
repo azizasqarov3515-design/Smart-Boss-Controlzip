@@ -1926,25 +1926,25 @@ const styles = StyleSheet.create({
   unitTab: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 5,
-    paddingHorizontal: 16,
-    paddingVertical: 8,
+    gap: 6,
+    paddingHorizontal: 20,
+    paddingVertical: 12,
     borderRadius: 100,
     borderWidth: 1.5,
   },
   unitTabActive: {
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.25,
-    shadowRadius: 6,
-    elevation: 4,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 5,
   },
   unitTabInactive: {
     shadowOpacity: 0,
     elevation: 0,
   },
-  unitTabIcon: { fontSize: 14, lineHeight: 18 },
-  unitTabText: { fontFamily: "Inter_500Medium", fontSize: 13 },
-  unitTabTextActive: { fontFamily: "Inter_700Bold", fontSize: 13 },
+  unitTabIcon: { fontSize: 16, lineHeight: 20 },
+  unitTabText: { fontFamily: "Inter_500Medium", fontSize: 14 },
+  unitTabTextActive: { fontFamily: "Inter_700Bold", fontSize: 14 },
 
   // Qty prompt modal
   qtyPromptSheet: {

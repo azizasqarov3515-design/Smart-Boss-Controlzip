@@ -243,9 +243,10 @@ type FormValues = {
   salePrice: string;
   quantity: string;
   barcode: string;
+  thickness: string;
 };
 
-const INITIAL: FormValues = { name: "", brand: "", costPrice: "", salePrice: "", quantity: "", barcode: "" };
+const INITIAL: FormValues = { name: "", brand: "", costPrice: "", salePrice: "", quantity: "", barcode: "", thickness: "" };
 
 async function uploadProductImage(
   localUri: string,
@@ -320,18 +321,42 @@ async function uploadProductImage(
   return data.url;
 }
 
-const BASE_FIELDS: Array<{
+function getBaseFields(unit: ProductUnit): Array<{
   key: FieldKey;
   label: string;
   placeholder: string;
   keyboardType: "default" | "numeric" | "decimal-pad";
   icon: keyof typeof MaterialIcons.glyphMap;
-}> = [
-  { key: "name", label: "Mahsulot nomi", placeholder: "Masalan: iPhone 15 Pro Max qopqoq", keyboardType: "default", icon: "label-outline" },
-  { key: "brand", label: "Brend", placeholder: "Masalan: Apple, Samsung, Xiaomi", keyboardType: "default", icon: "store" },
-  { key: "costPrice", label: "Tan narxi (UZS)", placeholder: "0", keyboardType: "numeric", icon: "account-balance-wallet" },
-  { key: "salePrice", label: "Sotuv narxi (UZS)", placeholder: "0", keyboardType: "numeric", icon: "sell" },
-];
+}> {
+  return [
+    {
+      key: "name",
+      label: "Mahsulot nomi",
+      placeholder:
+        unit === "kg"
+          ? "Masalan: Olma, Kartoshka..."
+          : unit === "m"
+          ? "Masalan: Alyumin profil, Kabel, Santexnika trubasi..."
+          : "Masalan: iPhone 15 Pro Max qopqoq",
+      keyboardType: "default",
+      icon: "label-outline",
+    },
+    {
+      key: "brand",
+      label: unit === "kg" ? "Navi yoki Turi" : "Brend",
+      placeholder:
+        unit === "kg"
+          ? "Masalan: Samarqand, Lazer..."
+          : unit === "m"
+          ? ""
+          : "Masalan: Apple, Samsung, Xiaomi",
+      keyboardType: "default",
+      icon: "store",
+    },
+    { key: "costPrice", label: "Tan narxi (UZS)", placeholder: "0", keyboardType: "numeric", icon: "account-balance-wallet" },
+    { key: "salePrice", label: "Sotuv narxi (UZS)", placeholder: "0", keyboardType: "numeric", icon: "sell" },
+  ];
+}
 
 const UNIT_OPTIONS: Array<{ value: ProductUnit; label: string; sub: string; icon: string }> = [
   { value: "dona", label: "Dona", sub: "Shtuka", icon: "🔢" },
@@ -377,6 +402,7 @@ function ProductFormScreenInner() {
           salePrice: String(product.salePrice),
           quantity: String(product.quantity),
           barcode: product.barcode ?? "",
+          thickness: product.thickness != null ? String(product.thickness) : "",
         });
         setUnit(product.unit ?? "dona");
         setImageUrl(product.imageUrl ?? null);
@@ -541,7 +567,6 @@ function ProductFormScreenInner() {
   const validate = (): boolean => {
     const newErrors: Partial<FormValues> = {};
     if (!form.name.trim()) newErrors.name = "Nomi kiritilishi shart";
-    if (!form.brand.trim()) newErrors.brand = "Brendi kiritilishi shart";
     const cost = parseFloat(form.costPrice);
     const sale = parseFloat(form.salePrice);
     const qty = isFloatUnit ? parseFloat(form.quantity) : parseInt(form.quantity);
@@ -560,6 +585,9 @@ function ProductFormScreenInner() {
     const qty = isFloatUnit
       ? parseFloat(form.quantity.replace(",", "."))
       : parseInt(form.quantity);
+    const thicknessVal = unit === "m" && form.thickness.trim()
+      ? parseFloat(form.thickness.replace(",", "."))
+      : null;
     const payload = {
       name: form.name.trim(),
       brand: form.brand.trim(),
@@ -567,6 +595,7 @@ function ProductFormScreenInner() {
       salePrice: parseFloat(form.salePrice),
       quantity: qty,
       unit,
+      thickness: thicknessVal,
       barcode: form.barcode.trim() || null,
       imageUrl: imageUrl || null,
     };
@@ -663,8 +692,8 @@ function ProductFormScreenInner() {
               </View>
             </View>
 
-            {/* Base fields (name, brand, prices) */}
-            {BASE_FIELDS.map((field) => (
+            {/* Base fields (name, brand, prices) — dynamic by unit */}
+            {getBaseFields(unit).map((field) => (
               <View key={field.key} style={styles.fieldWrap}>
                 <View style={styles.labelRow}>
                   <MaterialIcons name={field.icon} size={14} color={colors.primary} />
@@ -729,6 +758,36 @@ function ProductFormScreenInner() {
                 </View>
               ) : null}
             </View>
+
+            {/* Thickness field — only for metr */}
+            {unit === "m" && (
+              <View style={styles.fieldWrap}>
+                <View style={styles.labelRow}>
+                  <MaterialIcons name="line-weight" size={14} color={colors.primary} />
+                  <Text style={[styles.label, { color: colors.foreground }]}>Qalinligi (mm)</Text>
+                  <Text style={[styles.optionalTag, { color: colors.mutedForeground, borderColor: colors.border }]}>
+                    ixtiyoriy
+                  </Text>
+                </View>
+                <TextInput
+                  style={[
+                    styles.input,
+                    {
+                      backgroundColor: colors.surfaceVariant,
+                      borderColor: colors.border,
+                      color: colors.foreground,
+                      fontFamily: "Inter_400Regular",
+                    },
+                  ]}
+                  value={form.thickness}
+                  onChangeText={(v) => setForm((prev) => ({ ...prev, thickness: v }))}
+                  placeholder="Masalan: 1.5, 3, 6..."
+                  placeholderTextColor={colors.mutedForeground}
+                  keyboardType="decimal-pad"
+                  returnKeyType="next"
+                />
+              </View>
+            )}
 
             {/* Barcode field */}
             <View style={styles.fieldWrap}>
