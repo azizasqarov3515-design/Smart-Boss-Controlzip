@@ -931,10 +931,9 @@ export default function SettingsScreen() {
           <TouchableOpacity
             style={[styles.aboutBtn, { backgroundColor: colors.card, borderColor: colors.border }]}
             onPress={() => {
-              Haptics.selectionAsync();
               Alert.alert(
                 "Biz haqimizda",
-                "Admin: tel: +99894 689-35-15\n            +99893 483-12-89\nt.me/@smartboss_admin\n\nIshni bizga yuklang, siz esa dam oling!"
+                "Admin: tel: +99894 689-35-15\n                 +99893 483-12-89\n     t.me/@smartboss_admin\n\nIshni bizga yuklang siz esa dam oling!"
               );
             }}
             activeOpacity={0.8}
