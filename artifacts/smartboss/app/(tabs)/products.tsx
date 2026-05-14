@@ -20,6 +20,7 @@ import {
   Modal,
   Platform,
   RefreshControl,
+  ScrollView,
   StyleSheet,
   Text,
   TextInput,
@@ -173,7 +174,7 @@ function ProductCard({
             </Text>
           </View>
           <View style={[styles.qtyChip, { backgroundColor: isLowStock ? colors.destructive : colors.primary }]}>
-            <Text style={styles.qtyChipText}>{product.quantity} dona</Text>
+            <Text style={styles.qtyChipText}>{product.quantity} {product.unit ?? "dona"}</Text>
           </View>
 
           <View style={styles.actions}>
@@ -215,6 +216,7 @@ function ProductsScreenInner() {
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [sortKey, setSortKey] = useState<SortKey>("name");
   const [sortAsc, setSortAsc] = useState(true);
+  const [unitFilter, setUnitFilter] = useState<"all" | "dona" | "kg" | "m">("all");
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [imagePreviewUrl, setImagePreviewUrl] = useState<string | null>(null);
   const [imageSearching, setImageSearching] = useState(false);
@@ -345,6 +347,7 @@ function ProductsScreenInner() {
   const filtered = (products ?? [])
     .filter((p) => {
       if (imageMatchedIds !== null) return imageMatchedIds.includes(p.id);
+      if (unitFilter !== "all" && p.unit !== unitFilter) return false;
       if (!debouncedSearch.trim()) return true;
       const q = debouncedSearch.toLowerCase();
       return p.name.toLowerCase().includes(q) || p.brand.toLowerCase().includes(q);
@@ -478,6 +481,45 @@ function ProductsScreenInner() {
           <SortBtn col="quantity" label="Soni" />
         </View>
       </View>
+
+      {/* Unit filter tabs */}
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.unitTabsContainer}
+        style={styles.unitTabsScroll}
+      >
+        {([
+          { key: "all", label: "Barchasi", icon: "📦" },
+          { key: "dona", label: "Dona", icon: "🔢" },
+          { key: "kg", label: "Kg", icon: "⚖️" },
+          { key: "m", label: "Metr", icon: "📏" },
+        ] as const).map((ut) => {
+          const isActive = unitFilter === ut.key;
+          return (
+            <TouchableOpacity
+              key={ut.key}
+              style={[
+                styles.unitTab,
+                isActive
+                  ? { backgroundColor: colors.primary, borderColor: colors.primary, shadowColor: colors.primary, shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.25, shadowRadius: 6, elevation: 4 }
+                  : { backgroundColor: colors.card, borderColor: colors.border },
+              ]}
+              onPress={() => { Haptics.selectionAsync(); setUnitFilter(ut.key); }}
+              activeOpacity={0.75}
+            >
+              <Text style={{ fontSize: 14 }}>{ut.icon}</Text>
+              <Text style={[
+                styles.unitTabText,
+                { color: isActive ? "#fff" : colors.foreground },
+                isActive && { fontFamily: "Inter_700Bold" },
+              ]}>
+                {ut.label}
+              </Text>
+            </TouchableOpacity>
+          );
+        })}
+      </ScrollView>
 
       {isLoading ? (
         <View style={styles.loader}>
@@ -695,6 +737,24 @@ function ProductsScreenInner() {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
+  unitTabsScroll: { flexGrow: 0, maxHeight: 52 },
+  unitTabsContainer: {
+    flexDirection: "row",
+    gap: 8,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    alignItems: "center",
+  },
+  unitTab: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 100,
+    borderWidth: 1.5,
+  },
+  unitTabText: { fontFamily: "Inter_500Medium", fontSize: 13 },
   topBar: { flexDirection: "row", alignItems: "center", gap: 10 },
   searchWrap: {
     flex: 1,

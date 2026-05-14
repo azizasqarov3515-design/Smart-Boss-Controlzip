@@ -4,6 +4,7 @@ import {
   useUpdateProduct,
   getGetProductsQueryKey,
   getGetDashboardStatsQueryKey,
+  type ProductUnit,
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import * as Haptics from "expo-haptics";
@@ -319,18 +320,23 @@ async function uploadProductImage(
   return data.url;
 }
 
-const FIELDS: Array<{
+const BASE_FIELDS: Array<{
   key: FieldKey;
   label: string;
   placeholder: string;
-  keyboardType: "default" | "numeric";
+  keyboardType: "default" | "numeric" | "decimal-pad";
   icon: keyof typeof MaterialIcons.glyphMap;
 }> = [
   { key: "name", label: "Mahsulot nomi", placeholder: "Masalan: iPhone 15 Pro Max qopqoq", keyboardType: "default", icon: "label-outline" },
   { key: "brand", label: "Brend", placeholder: "Masalan: Apple, Samsung, Xiaomi", keyboardType: "default", icon: "store" },
   { key: "costPrice", label: "Tan narxi (UZS)", placeholder: "0", keyboardType: "numeric", icon: "account-balance-wallet" },
   { key: "salePrice", label: "Sotuv narxi (UZS)", placeholder: "0", keyboardType: "numeric", icon: "sell" },
-  { key: "quantity", label: "Miqdori (dona)", placeholder: "0", keyboardType: "numeric", icon: "inventory" },
+];
+
+const UNIT_OPTIONS: Array<{ value: ProductUnit; label: string; sub: string; icon: string }> = [
+  { value: "dona", label: "Dona", sub: "Shtuka", icon: "🔢" },
+  { value: "kg", label: "Kilogramm", sub: "kg", icon: "⚖️" },
+  { value: "m", label: "Metr", sub: "uzunlik", icon: "📏" },
 ];
 
 function ProductFormScreenInner() {
@@ -346,6 +352,7 @@ function ProductFormScreenInner() {
   const { token } = useAuth();
 
   const [form, setForm] = useState<FormValues>(INITIAL);
+  const [unit, setUnit] = useState<ProductUnit>("dona");
   const [errors, setErrors] = useState<Partial<FormValues>>({});
   const [submitted, setSubmitted] = useState(false);
   const [scannerOpen, setScannerOpen] = useState(false);
@@ -371,6 +378,7 @@ function ProductFormScreenInner() {
           quantity: String(product.quantity),
           barcode: product.barcode ?? "",
         });
+        setUnit(product.unit ?? "dona");
         setImageUrl(product.imageUrl ?? null);
       }
     }
@@ -528,16 +536,18 @@ function ProductFormScreenInner() {
 
   const isPending = creating || updating || imageUploading;
 
+  const isFloatUnit = unit === "kg" || unit === "m";
+
   const validate = (): boolean => {
     const newErrors: Partial<FormValues> = {};
     if (!form.name.trim()) newErrors.name = "Nomi kiritilishi shart";
     if (!form.brand.trim()) newErrors.brand = "Brendi kiritilishi shart";
     const cost = parseFloat(form.costPrice);
     const sale = parseFloat(form.salePrice);
-    const qty = parseInt(form.quantity);
+    const qty = isFloatUnit ? parseFloat(form.quantity) : parseInt(form.quantity);
     if (!form.costPrice || isNaN(cost) || cost < 0) newErrors.costPrice = "To'g'ri narx kiriting";
     if (!form.salePrice || isNaN(sale) || sale < 0) newErrors.salePrice = "To'g'ri narx kiriting";
-    if (!form.quantity || isNaN(qty) || qty < 0) newErrors.quantity = "To'g'ri son kiriting";
+    if (!form.quantity || isNaN(qty) || qty < 0) newErrors.quantity = "To'g'ri miqdor kiriting";
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -547,12 +557,16 @@ function ProductFormScreenInner() {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       return;
     }
+    const qty = isFloatUnit
+      ? parseFloat(form.quantity.replace(",", "."))
+      : parseInt(form.quantity);
     const payload = {
       name: form.name.trim(),
       brand: form.brand.trim(),
       costPrice: parseFloat(form.costPrice),
       salePrice: parseFloat(form.salePrice),
-      quantity: parseInt(form.quantity),
+      quantity: qty,
+      unit,
       barcode: form.barcode.trim() || null,
       imageUrl: imageUrl || null,
     };
@@ -611,8 +625,46 @@ function ProductFormScreenInner() {
           )}
 
           <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
-            {/* Regular fields */}
-            {FIELDS.map((field) => (
+
+            {/* Unit selector */}
+            <View style={styles.fieldWrap}>
+              <View style={styles.labelRow}>
+                <MaterialIcons name="straighten" size={14} color={colors.primary} />
+                <Text style={[styles.label, { color: colors.foreground }]}>O'lchov birligi</Text>
+              </View>
+              <View style={styles.unitRow}>
+                {UNIT_OPTIONS.map((opt) => {
+                  const isActive = unit === opt.value;
+                  return (
+                    <TouchableOpacity
+                      key={opt.value}
+                      style={[
+                        styles.unitOptionBtn,
+                        isActive
+                          ? { backgroundColor: colors.primary, borderColor: colors.primary }
+                          : { backgroundColor: colors.surfaceVariant, borderColor: colors.border },
+                      ]}
+                      onPress={() => {
+                        Haptics.selectionAsync();
+                        setUnit(opt.value);
+                      }}
+                      activeOpacity={0.8}
+                    >
+                      <Text style={[styles.unitOptionIcon]}>{opt.icon}</Text>
+                      <Text style={[styles.unitOptionLabel, { color: isActive ? "#fff" : colors.foreground }]}>
+                        {opt.label}
+                      </Text>
+                      <Text style={[styles.unitOptionSub, { color: isActive ? "rgba(255,255,255,0.75)" : colors.mutedForeground }]}>
+                        {opt.sub}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            </View>
+
+            {/* Base fields (name, brand, prices) */}
+            {BASE_FIELDS.map((field) => (
               <View key={field.key} style={styles.fieldWrap}>
                 <View style={styles.labelRow}>
                   <MaterialIcons name={field.icon} size={14} color={colors.primary} />
@@ -644,6 +696,39 @@ function ProductFormScreenInner() {
                 ) : null}
               </View>
             ))}
+
+            {/* Quantity field — dynamic label & keyboard based on unit */}
+            <View style={styles.fieldWrap}>
+              <View style={styles.labelRow}>
+                <MaterialIcons name="inventory" size={14} color={colors.primary} />
+                <Text style={[styles.label, { color: colors.foreground }]}>
+                  Miqdori ({unit === "kg" ? "kilogramm" : unit === "m" ? "metr" : "dona"})
+                </Text>
+              </View>
+              <TextInput
+                style={[
+                  styles.input,
+                  {
+                    backgroundColor: colors.surfaceVariant,
+                    borderColor: errors.quantity ? colors.destructive : colors.border,
+                    color: colors.foreground,
+                    fontFamily: "Inter_400Regular",
+                  },
+                ]}
+                value={form.quantity}
+                onChangeText={(v) => setField("quantity", v)}
+                placeholder={isFloatUnit ? "0.000" : "0"}
+                placeholderTextColor={colors.mutedForeground}
+                keyboardType={isFloatUnit ? "decimal-pad" : "numeric"}
+                returnKeyType="next"
+              />
+              {errors.quantity ? (
+                <View style={styles.errorRow}>
+                  <MaterialIcons name="error-outline" size={12} color={colors.destructive} />
+                  <Text style={[styles.errorText, { color: colors.destructive }]}>{errors.quantity}</Text>
+                </View>
+              ) : null}
+            </View>
 
             {/* Barcode field */}
             <View style={styles.fieldWrap}>
@@ -806,14 +891,14 @@ function ProductFormScreenInner() {
               </View>
               {qty > 0 && (
                 <Text style={[styles.profitTotal, { color: profit >= 0 ? "#388E3C" : "#C62828" }]}>
-                  {qty} dona × {profit >= 0 ? "+" : ""}{profit.toLocaleString()} = {(profit * qty).toLocaleString()} UZS jami
+                  {qty} {unit} × {profit >= 0 ? "+" : ""}{profit.toLocaleString()} = {(profit * qty).toLocaleString()} UZS jami
                 </Text>
               )}
-              {form.quantity && parseInt(form.quantity) < 5 && parseInt(form.quantity) >= 0 && (
+              {form.quantity && parseFloat(form.quantity) < 5 && parseFloat(form.quantity) >= 0 && (
                 <View style={styles.lowWarn}>
                   <MaterialIcons name="warning" size={13} color="#E65100" />
                   <Text style={[styles.lowWarnText, { color: "#E65100" }]}>
-                    Diqqat: {parseInt(form.quantity)} dona — stok kam!
+                    Diqqat: {parseFloat(form.quantity)} {unit} — stok kam!
                   </Text>
                 </View>
               )}
@@ -931,6 +1016,23 @@ const styles = StyleSheet.create({
   profitTotal: { fontFamily: "Inter_500Medium", fontSize: 12 },
   lowWarn: { flexDirection: "row", alignItems: "center", gap: 5, marginTop: 4 },
   lowWarnText: { fontFamily: "Inter_500Medium", fontSize: 12 },
+  unitRow: {
+    flexDirection: "row",
+    gap: 8,
+  },
+  unitOptionBtn: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 12,
+    paddingHorizontal: 8,
+    borderRadius: 14,
+    borderWidth: 1.5,
+    gap: 3,
+  },
+  unitOptionIcon: { fontSize: 20 },
+  unitOptionLabel: { fontFamily: "Inter_600SemiBold", fontSize: 13 },
+  unitOptionSub: { fontFamily: "Inter_400Regular", fontSize: 11 },
   submitBtn: {
     flexDirection: "row", alignItems: "center", justifyContent: "center",
     gap: 8, borderRadius: 14, paddingVertical: 16, marginTop: 20,

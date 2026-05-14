@@ -1324,32 +1324,40 @@ function POSScreenInner() {
             style={styles.unitTabsScroll}
           >
             {([
-              { key: "all", label: "Barchasi" },
-              { key: "dona", label: "🔢 Donalilar" },
-              { key: "kg", label: "⚖️ Kilolilar" },
-              { key: "m", label: "📏 Metrlilar" },
-            ] as const).map((ut) => (
-              <TouchableOpacity
-                key={ut.key}
-                style={[
-                  styles.unitTab,
-                  unitFilter === ut.key
-                    ? { backgroundColor: colors.primary, borderColor: colors.primary }
-                    : { backgroundColor: colors.card, borderColor: colors.border },
-                ]}
-                onPress={() => setUnitFilter(ut.key)}
-                activeOpacity={0.8}
-              >
-                <Text
+              { key: "all", label: "Barchasi", icon: "📦" },
+              { key: "dona", label: "Dona", icon: "🔢" },
+              { key: "kg", label: "Kg", icon: "⚖️" },
+              { key: "m", label: "Metr", icon: "📏" },
+            ] as const).map((ut) => {
+              const isActive = unitFilter === ut.key;
+              return (
+                <TouchableOpacity
+                  key={ut.key}
                   style={[
-                    styles.unitTabText,
-                    { color: unitFilter === ut.key ? "#fff" : colors.mutedForeground },
+                    styles.unitTab,
+                    isActive
+                      ? styles.unitTabActive
+                      : styles.unitTabInactive,
+                    isActive
+                      ? { backgroundColor: colors.primary, borderColor: colors.primary, shadowColor: colors.primary }
+                      : { backgroundColor: colors.card, borderColor: colors.border },
                   ]}
+                  onPress={() => setUnitFilter(ut.key)}
+                  activeOpacity={0.75}
                 >
-                  {ut.label}
-                </Text>
-              </TouchableOpacity>
-            ))}
+                  <Text style={styles.unitTabIcon}>{ut.icon}</Text>
+                  <Text
+                    style={[
+                      styles.unitTabText,
+                      { color: isActive ? "#fff" : colors.foreground },
+                      isActive && styles.unitTabTextActive,
+                    ]}
+                  >
+                    {ut.label}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
           </ScrollView>
 
           <WebRefreshBar refreshing={productsRefetching} onRefresh={refetchProducts} />
@@ -1907,21 +1915,36 @@ const styles = StyleSheet.create({
   },
 
   // Unit filter tabs
-  unitTabsScroll: { flexGrow: 0, maxHeight: 44 },
+  unitTabsScroll: { flexGrow: 0, maxHeight: 52 },
   unitTabsContainer: {
     flexDirection: "row",
     gap: 8,
     paddingHorizontal: 14,
-    paddingVertical: 6,
+    paddingVertical: 8,
     alignItems: "center",
   },
   unitTab: {
-    paddingHorizontal: 14,
-    paddingVertical: 7,
-    borderRadius: 20,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 100,
     borderWidth: 1.5,
   },
-  unitTabText: { fontFamily: "Inter_600SemiBold", fontSize: 13 },
+  unitTabActive: {
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.25,
+    shadowRadius: 6,
+    elevation: 4,
+  },
+  unitTabInactive: {
+    shadowOpacity: 0,
+    elevation: 0,
+  },
+  unitTabIcon: { fontSize: 14, lineHeight: 18 },
+  unitTabText: { fontFamily: "Inter_500Medium", fontSize: 13 },
+  unitTabTextActive: { fontFamily: "Inter_700Bold", fontSize: 13 },
 
   // Qty prompt modal
   qtyPromptSheet: {
