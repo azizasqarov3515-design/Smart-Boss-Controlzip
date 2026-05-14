@@ -462,11 +462,184 @@ function DeleteRequestsSection({ colors }: { colors: ReturnType<typeof useColors
   );
 }
 
+// ─── Subscription Info Card ───────────────────────────────────────────────────
+function SubscriptionInfoCard({
+  plan, active, daysLeft, endDate, colors,
+}: {
+  plan: string | null;
+  active: boolean;
+  daysLeft: number | null;
+  endDate: Date | null;
+  colors: ReturnType<typeof useColors>;
+}) {
+  const isUnlimited = plan === "unlimited";
+
+  const planLabels: Record<string, string> = {
+    "1m": "1 oylik obuna",
+    "3m": "3 oylik obuna",
+    "6m": "6 oylik obuna",
+    "1y": "1 yillik obuna",
+    unlimited: "Cheksiz obuna",
+  };
+
+  const planTotalDays: Record<string, number> = {
+    "1m": 30, "3m": 90, "6m": 180, "1y": 365,
+  };
+
+  const planLabel = plan ? (planLabels[plan] ?? plan) : "Obuna yo'q";
+
+  // Determine color scheme
+  let accentColor = "#6B7280";
+  let bgColor = "#F9FAFB";
+  let iconName: React.ComponentProps<typeof MaterialIcons>["name"] = "info-outline";
+
+  if (!plan || !active) {
+    accentColor = "#DC2626"; bgColor = "#FEF2F2"; iconName = "block";
+  } else if (isUnlimited) {
+    accentColor = "#7C3AED"; bgColor = "#F5F3FF"; iconName = "all-inclusive";
+  } else if (daysLeft !== null && daysLeft <= 0) {
+    accentColor = "#DC2626"; bgColor = "#FEF2F2"; iconName = "event-busy";
+  } else if (daysLeft !== null && daysLeft <= 3) {
+    accentColor = "#EA580C"; bgColor = "#FFF7ED"; iconName = "schedule";
+  } else if (daysLeft !== null && daysLeft <= 14) {
+    accentColor = "#D97706"; bgColor = "#FFFBEB"; iconName = "timer";
+  } else {
+    accentColor = "#16A34A"; bgColor = "#F0FDF4"; iconName = "verified";
+  }
+
+  const totalDays = plan ? (planTotalDays[plan] ?? null) : null;
+  const usedDays = (totalDays !== null && daysLeft !== null) ? Math.max(0, totalDays - daysLeft) : null;
+  const progressRatio = (totalDays && usedDays !== null) ? Math.min(1, usedDays / totalDays) : null;
+
+  const fmtDate = (d: Date | null) => {
+    if (!d) return "—";
+    return d.toLocaleDateString("uz-UZ", { year: "numeric", month: "long", day: "numeric" });
+  };
+
+  return (
+    <View style={[subStyles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
+      {/* Header */}
+      <View style={[subStyles.cardHeader, { backgroundColor: accentColor + "18", borderBottomColor: colors.border }]}>
+        <View style={[subStyles.headerIconWrap, { backgroundColor: accentColor + "22" }]}>
+          <MaterialIcons name={iconName} size={20} color={accentColor} />
+        </View>
+        <View style={{ flex: 1 }}>
+          <Text style={[subStyles.headerLabel, { color: colors.mutedForeground }]}>Obuna holati</Text>
+          <Text style={[subStyles.headerTitle, { color: colors.foreground }]}>{planLabel}</Text>
+        </View>
+        <View style={[subStyles.statusPill, { backgroundColor: active ? accentColor + "22" : "#FEE2E2" }]}>
+          <View style={[subStyles.statusDot, { backgroundColor: active ? accentColor : "#DC2626" }]} />
+          <Text style={[subStyles.statusText, { color: active ? accentColor : "#DC2626" }]}>
+            {active ? "Faol" : "Faol emas"}
+          </Text>
+        </View>
+      </View>
+
+      <View style={subStyles.cardBody}>
+        {/* Days left big display */}
+        {!isUnlimited && plan && (
+          <View style={[subStyles.daysBlock, { backgroundColor: bgColor, borderColor: accentColor + "33" }]}>
+            {daysLeft !== null && daysLeft > 0 ? (
+              <>
+                <Text style={[subStyles.daysNumber, { color: accentColor }]}>{daysLeft}</Text>
+                <Text style={[subStyles.daysLabel, { color: accentColor }]}>kun qoldi</Text>
+              </>
+            ) : (
+              <>
+                <MaterialIcons name="event-busy" size={32} color={accentColor} />
+                <Text style={[subStyles.daysLabel, { color: accentColor, marginTop: 4 }]}>
+                  {!active ? "Faolsizlantirilgan" : "Muddati tugagan"}
+                </Text>
+              </>
+            )}
+          </View>
+        )}
+
+        {/* Unlimited big display */}
+        {isUnlimited && (
+          <View style={[subStyles.daysBlock, { backgroundColor: "#F5F3FF", borderColor: "#7C3AED33" }]}>
+            <Text style={[subStyles.infinitySymbol, { color: "#7C3AED" }]}>∞</Text>
+            <Text style={[subStyles.daysLabel, { color: "#7C3AED" }]}>Cheksiz foydalanish</Text>
+          </View>
+        )}
+
+        {/* No plan */}
+        {!plan && (
+          <View style={[subStyles.daysBlock, { backgroundColor: "#F9FAFB", borderColor: "#E5E7EB" }]}>
+            <MaterialIcons name="subscriptions" size={32} color={colors.border} />
+            <Text style={[subStyles.daysLabel, { color: colors.mutedForeground, marginTop: 4 }]}>Obuna ulanmagan</Text>
+          </View>
+        )}
+
+        {/* Progress bar for timed plans */}
+        {!isUnlimited && progressRatio !== null && daysLeft !== null && daysLeft > 0 && (
+          <View style={subStyles.progressSection}>
+            <View style={[subStyles.progressTrack, { backgroundColor: colors.muted }]}>
+              <View style={[subStyles.progressFill, { width: `${progressRatio * 100}%` as any, backgroundColor: accentColor }]} />
+            </View>
+            <View style={subStyles.progressLabels}>
+              <Text style={[subStyles.progressLabelText, { color: colors.mutedForeground }]}>
+                {usedDays} kun ishlatildi
+              </Text>
+              <Text style={[subStyles.progressLabelText, { color: colors.mutedForeground }]}>
+                {totalDays} kundan
+              </Text>
+            </View>
+          </View>
+        )}
+
+        {/* Info rows */}
+        <View style={[subStyles.infoGrid, { borderTopColor: colors.border }]}>
+          <View style={subStyles.infoRow}>
+            <MaterialIcons name="event" size={15} color={colors.mutedForeground} />
+            <Text style={[subStyles.infoRowLabel, { color: colors.mutedForeground }]}>Tugash sanasi</Text>
+            <Text style={[subStyles.infoRowValue, { color: colors.foreground }]}>
+              {isUnlimited ? "Belgilanmagan" : fmtDate(endDate)}
+            </Text>
+          </View>
+          <View style={[subStyles.infoRow, { borderTopWidth: 1, borderTopColor: colors.border }]}>
+            <MaterialIcons name="workspace-premium" size={15} color={colors.mutedForeground} />
+            <Text style={[subStyles.infoRowLabel, { color: colors.mutedForeground }]}>Tarif rejasi</Text>
+            <Text style={[subStyles.infoRowValue, { color: accentColor, fontFamily: "Inter_700Bold" }]}>
+              {plan ? planLabel.replace(" obuna", "") : "—"}
+            </Text>
+          </View>
+        </View>
+      </View>
+    </View>
+  );
+}
+
+const subStyles = StyleSheet.create({
+  card: { borderRadius: 16, borderWidth: 1, overflow: "hidden" },
+  cardHeader: { flexDirection: "row", alignItems: "center", gap: 10, paddingHorizontal: 14, paddingVertical: 12, borderBottomWidth: 1 },
+  headerIconWrap: { width: 38, height: 38, borderRadius: 10, alignItems: "center", justifyContent: "center" },
+  headerLabel: { fontFamily: "Inter_400Regular", fontSize: 11, marginBottom: 1 },
+  headerTitle: { fontFamily: "Inter_700Bold", fontSize: 15 },
+  statusPill: { flexDirection: "row", alignItems: "center", gap: 5, paddingHorizontal: 10, paddingVertical: 5, borderRadius: 20 },
+  statusDot: { width: 7, height: 7, borderRadius: 4 },
+  statusText: { fontFamily: "Inter_600SemiBold", fontSize: 12 },
+  cardBody: { padding: 14, gap: 12 },
+  daysBlock: { borderRadius: 14, borderWidth: 1, padding: 20, alignItems: "center", justifyContent: "center", minHeight: 90 },
+  daysNumber: { fontFamily: "Inter_700Bold", fontSize: 52, lineHeight: 60 },
+  infinitySymbol: { fontFamily: "Inter_700Bold", fontSize: 56, lineHeight: 64 },
+  daysLabel: { fontFamily: "Inter_500Medium", fontSize: 13, marginTop: 2 },
+  progressSection: { gap: 6 },
+  progressTrack: { height: 8, borderRadius: 4, overflow: "hidden" },
+  progressFill: { height: "100%", borderRadius: 4 },
+  progressLabels: { flexDirection: "row", justifyContent: "space-between" },
+  progressLabelText: { fontFamily: "Inter_400Regular", fontSize: 11 },
+  infoGrid: { borderTopWidth: 1, paddingTop: 12, gap: 0 },
+  infoRow: { flexDirection: "row", alignItems: "center", gap: 8, paddingVertical: 8 },
+  infoRowLabel: { fontFamily: "Inter_400Regular", fontSize: 13, flex: 1 },
+  infoRowValue: { fontFamily: "Inter_600SemiBold", fontSize: 13 },
+});
+
 export default function SettingsScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const { mode: themeMode, setMode: setThemeMode } = useTheme();
-  const { role, managerId, managerLogin, managerStoreId, deleteAccount } = useAuth();
+  const { role, managerId, managerLogin, managerStoreId, deleteAccount, subscriptionPlan, subscriptionEnd, subscriptionDaysLeft, subscriptionActive } = useAuth();
   const { settings, saveSettings, isLoading } = useSettings(managerId);
   const queryClient = useQueryClient();
 
@@ -639,6 +812,15 @@ export default function SettingsScreen() {
           <SectionCard title="O'chirish so'rovlari" icon="delete-sweep" colors={colors} badge={pendingDeleteReqs?.length}>
             <DeleteRequestsSection colors={colors} />
           </SectionCard>
+
+          {/* Subscription Info */}
+          <SubscriptionInfoCard
+            plan={subscriptionPlan}
+            active={subscriptionActive}
+            daysLeft={subscriptionDaysLeft}
+            endDate={subscriptionEnd}
+            colors={colors}
+          />
 
           {/* Store info */}
           <SectionCard title="Do'kon ma'lumotlari" icon="store" colors={colors}>
