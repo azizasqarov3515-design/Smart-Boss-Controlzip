@@ -429,8 +429,7 @@ function ProductsScreenInner() {
             </TouchableOpacity>
           )}
         </View>
-        {!isWorker && (
-          <TouchableOpacity
+        <TouchableOpacity
             style={[styles.addFab, { backgroundColor: colors.primary }]}
             onPress={() => {
               Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -440,7 +439,6 @@ function ProductsScreenInner() {
           >
             <MaterialIcons name="add" size={22} color="#fff" />
           </TouchableOpacity>
-        )}
       </View>
 
       {lowStockCount > 0 && (
@@ -548,7 +546,7 @@ function ProductsScreenInner() {
               <Text style={styles.emptyBtnText}>Qidiruvni tozalash</Text>
             </TouchableOpacity>
           )}
-          {!debouncedSearch && imageMatchedIds === null && !isWorker && (
+          {!debouncedSearch && imageMatchedIds === null && (
             <TouchableOpacity
               style={[styles.emptyBtn, { backgroundColor: colors.primary }]}
               onPress={() => router.push("/product-form")}
