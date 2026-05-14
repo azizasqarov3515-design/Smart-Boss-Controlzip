@@ -2,6 +2,7 @@ import * as Haptics from "expo-haptics";
 import React, { useState, useEffect, useCallback } from "react";
 import {
   ActivityIndicator,
+  Alert,
   KeyboardAvoidingView,
   Modal,
   Platform,
@@ -925,6 +926,31 @@ export default function SettingsScreen() {
               <Text style={styles.deleteAccountBtnText}>Profilni yo'q qilish</Text>
             </TouchableOpacity>
           </SectionCard>
+
+          {/* Biz haqimizda */}
+          <TouchableOpacity
+            style={[styles.aboutBtn, { backgroundColor: colors.card, borderColor: colors.border }]}
+            onPress={() => {
+              Haptics.selectionAsync();
+              Alert.alert(
+                "Biz haqimizda",
+                "Admin: tel: +99894 689-35-15\n            +99893 483-12-89\nt.me/@smartboss_admin\n\nIshni bizga yuklang, siz esa dam oling!"
+              );
+            }}
+            activeOpacity={0.8}
+          >
+            <View style={[styles.aboutIconWrap, { backgroundColor: colors.primary + "18" }]}>
+              <MaterialIcons name="info-outline" size={20} color={colors.primary} />
+            </View>
+            <Text style={[styles.aboutBtnText, { color: colors.foreground }]}>Biz haqimizda</Text>
+            <MaterialIcons name="chevron-right" size={20} color={colors.mutedForeground} style={{ marginLeft: "auto" }} />
+          </TouchableOpacity>
+
+          {/* Version info box */}
+          <View style={[styles.versionBox, { backgroundColor: colors.card, borderColor: colors.border }]}>
+            <Text style={[styles.versionLabel, { color: colors.mutedForeground }]}>Ilova haqida</Text>
+            <Text style={[styles.versionValue, { color: colors.foreground }]}>Versiya: 1.0</Text>
+          </View>
         </ScrollView>
       </KeyboardAvoidingView>
 
@@ -1160,4 +1186,18 @@ const styles = StyleSheet.create({
     paddingVertical: 13, marginTop: 4,
   },
   deleteAccountBtnText: { fontFamily: "Inter_700Bold", fontSize: 14, color: "#DC2626" },
+  // About button
+  aboutBtn: {
+    flexDirection: "row", alignItems: "center", gap: 12,
+    borderRadius: 14, borderWidth: 1, padding: 14,
+  },
+  aboutIconWrap: { width: 36, height: 36, borderRadius: 10, alignItems: "center", justifyContent: "center" },
+  aboutBtnText: { fontFamily: "Inter_600SemiBold", fontSize: 15 },
+  // Version box
+  versionBox: {
+    borderRadius: 14, borderWidth: 1, padding: 14,
+    alignItems: "center", gap: 4,
+  },
+  versionLabel: { fontFamily: "Inter_400Regular", fontSize: 12 },
+  versionValue: { fontFamily: "Inter_700Bold", fontSize: 15 },
 });
