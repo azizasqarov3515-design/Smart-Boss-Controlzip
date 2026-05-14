@@ -139,7 +139,7 @@ function customerBlock(customer?: PdfCustomer | null): string {
     </div>`;
 }
 
-// ── Invoice (Hisob-faktura) ───────────────────────────────────────────────────
+// ── Invoice (Hisob-faktura) — A4 Portrait ────────────────────────────────────
 export function buildInvoiceHtml(
   sale: SaleWithItems,
   settings: StoreSettings = DEFAULT_SETTINGS,
@@ -366,6 +366,235 @@ export function buildReceiptHtml(
     <div class="footer-thanks">Xaridingiz uchun tashakkur!</div>
     <div class="footer-sub">${settings.storeName} — ${fmtDate(sale.createdAt)}</div>
   </div>
+</body>
+</html>`;
+}
+
+// ── A5 Landscape Invoice (Qisqa faktura) ─────────────────────────────────────
+export function buildA5InvoiceHtml(
+  sale: SaleWithItems,
+  settings: StoreSettings = DEFAULT_SETTINGS,
+  customer?: PdfCustomer | null
+): string {
+  const rows = sale.items
+    .map(
+      (item, i) => `
+      <tr>
+        <td>${i + 1}</td>
+        <td><strong>${item.productName}</strong><span class="brand">${item.brand}</span></td>
+        <td class="c">${item.quantity}</td>
+        <td class="r">${fmtMoney(item.unitPrice)}</td>
+        <td class="r bold">${fmtMoney(item.totalPrice)}</td>
+      </tr>`
+    )
+    .join("");
+
+  const primarySeller = settings.sellers[0];
+  const payLabel: Record<string, string> = { cash: "Naqd to'lov", card: "Karta orqali", debt: "Qarz (nasiya)" };
+
+  return `<!DOCTYPE html>
+<html lang="uz">
+<head>
+  <meta charset="UTF-8"/>
+  <title>Faktura #${sale.id}</title>
+  <style>
+    @page { size: A5 landscape; margin: 10mm 12mm; }
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body { font-family: Arial, sans-serif; font-size: 11px; color: #0D1117; background:#fff; }
+    .top { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:10px; }
+    .store-name { font-size:15px; font-weight:700; color:${PRIMARY}; }
+    .store-sub { font-size:9px; color:#6B7280; margin-top:2px; }
+    .doc-num { font-size:12px; font-weight:700; text-align:right; }
+    .doc-meta { font-size:9px; color:#6B7280; text-align:right; margin-top:2px; }
+    hr.div { border:none; border-top:2px solid ${PRIMARY}; margin:7px 0; }
+    .info-grid { display:grid; grid-template-columns:1fr 1fr; gap:6px; margin-bottom:9px; }
+    .info-box { background:#F8FAFC; border-radius:5px; padding:6px 8px; }
+    .info-label { font-size:8px; font-weight:600; color:#9CA3AF; text-transform:uppercase; letter-spacing:0.4px; margin-bottom:2px; }
+    .info-val { font-size:10px; font-weight:600; color:#0D1117; }
+    table { width:100%; border-collapse:collapse; font-size:10px; }
+    thead tr { background:${PRIMARY}; }
+    thead th { color:#fff; padding:5px 7px; text-align:left; font-size:9px; font-weight:600; text-transform:uppercase; }
+    thead th.r { text-align:right; }
+    tbody tr:nth-child(even) { background:#F8FAFC; }
+    tbody td { padding:5px 7px; border-bottom:1px solid #F1F5F9; vertical-align:middle; }
+    .brand { display:block; font-size:9px; color:#6B7280; }
+    td.c { text-align:center; }
+    td.r { text-align:right; }
+    td.bold { font-weight:600; color:${PRIMARY}; }
+    .totals { margin-top:7px; display:flex; flex-direction:column; align-items:flex-end; }
+    .grand-row { background:${PRIMARY}; color:#fff; border-radius:6px; padding:6px 12px; margin-top:4px; display:flex; justify-content:space-between; align-items:center; min-width:260px; }
+    .grand-label { font-size:11px; font-weight:700; }
+    .grand-val { font-size:12px; font-weight:700; }
+    .footer { margin-top:10px; display:flex; justify-content:space-between; align-items:flex-end; border-top:1px dashed #CBD5E1; padding-top:7px; }
+    .sign-box { flex:1; }
+    .sign-label { font-size:9px; color:#6B7280; margin-bottom:14px; }
+    .sign-line { border-bottom:1px solid #D1D5DB; }
+    .sign-name { font-size:8px; color:#9CA3AF; margin-top:2px; }
+    .thanks { text-align:center; font-size:10px; font-weight:700; color:${PRIMARY}; }
+  </style>
+</head>
+<body>
+  <div class="top">
+    <div>
+      <div class="store-name">${settings.storeName}</div>
+      <div class="store-sub">${settings.storeSubtitle}</div>
+      ${settings.storeAddress ? `<div class="store-sub">📍 ${settings.storeAddress}</div>` : ""}
+      ${primarySeller ? `<div class="store-sub">Sotuvchi: ${primarySeller.name} · ${primarySeller.phone}</div>` : ""}
+    </div>
+    <div>
+      <div class="doc-num">FAKTURA № INV-${String(sale.id).padStart(5, "0")}</div>
+      <div class="doc-meta">${fmtDate(sale.createdAt)} · ${fmtTime(sale.createdAt)}</div>
+    </div>
+  </div>
+  <hr class="div"/>
+  <div class="info-grid">
+    <div class="info-box">
+      <div class="info-label">Xaridor</div>
+      <div class="info-val">${customer?.name ?? "——"}</div>
+      ${customer?.phone ? `<div style="font-size:9px;color:#6B7280">📞 ${customer.phone}</div>` : ""}
+    </div>
+    <div class="info-box">
+      <div class="info-label">To'lov turi</div>
+      <div class="info-val">${payLabel[sale.paymentType ?? "cash"] ?? "Naqd to'lov"}</div>
+    </div>
+    <div class="info-box">
+      <div class="info-label">Mahsulotlar soni</div>
+      <div class="info-val">${sale.itemCount} dona (${sale.items.length} xil)</div>
+    </div>
+    <div class="info-box">
+      <div class="info-label">Holat</div>
+      <div class="info-val" style="color:#059669">✓ To'langan</div>
+    </div>
+  </div>
+  <table>
+    <thead>
+      <tr>
+        <th style="width:26px">#</th>
+        <th>Mahsulot</th>
+        <th style="width:46px" class="r">Dona</th>
+        <th style="width:110px" class="r">Birlik narxi</th>
+        <th style="width:120px" class="r">Jami</th>
+      </tr>
+    </thead>
+    <tbody>${rows}</tbody>
+  </table>
+  <div class="totals">
+    ${sale.note ? `<div style="font-size:10px;color:#6B7280;margin-bottom:3px">Izoh: ${sale.note}</div>` : ""}
+    <div class="grand-row">
+      <span class="grand-label">JAMI TO'LOV</span>
+      <span class="grand-val">${fmtMoney(sale.totalAmount)}</span>
+    </div>
+  </div>
+  <div class="footer">
+    <div class="sign-box" style="max-width:44%">
+      <div class="sign-label">Sotuvchi: ${primarySeller ? primarySeller.name : ""}</div>
+      <div class="sign-line"></div>
+      <div class="sign-name">F.I.Sh / Imzo</div>
+    </div>
+    <div class="thanks">Xaridingiz uchun<br/>tashakkur!</div>
+    <div class="sign-box" style="max-width:44%;text-align:right">
+      <div class="sign-label" style="text-align:right">Xaridor: ${customer?.name ?? "____________"}</div>
+      <div class="sign-line"></div>
+      <div class="sign-name" style="text-align:right">F.I.Sh / Imzo</div>
+    </div>
+  </div>
+</body>
+</html>`;
+}
+
+// ── Thermal Receipt (Termal chek, 80mm) ───────────────────────────────────────
+export function buildThermalHtml(
+  sale: SaleWithItems,
+  settings: StoreSettings = DEFAULT_SETTINGS,
+  customer?: PdfCustomer | null
+): string {
+  const rows = sale.items
+    .map(
+      (item, i) => `
+    <div class="item">
+      <div class="item-name">${i + 1}. ${item.productName} <span class="brand">(${item.brand})</span></div>
+      <div class="item-row">
+        <span>${item.quantity} × ${item.unitPrice.toLocaleString("uz-UZ")}</span>
+        <span class="item-total">${item.totalPrice.toLocaleString("uz-UZ")} UZS</span>
+      </div>
+    </div>`
+    )
+    .join("");
+
+  const primarySeller = settings.sellers[0];
+  const payLabel: Record<string, string> = { cash: "NAQD", card: "KARTA", debt: "QARZ" };
+  const paidAmt = sale.paidAmount ?? sale.totalAmount;
+  const debtAmt = sale.debtAmount ?? 0;
+
+  return `<!DOCTYPE html>
+<html lang="uz">
+<head>
+  <meta charset="UTF-8"/>
+  <title>Chek #${sale.id}</title>
+  <style>
+    @page { size: 80mm auto; margin: 3mm 2mm; }
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body {
+      font-family: 'Courier New', Courier, monospace;
+      font-size: 11px;
+      color: #000;
+      background: #fff;
+      width: 74mm;
+      max-width: 74mm;
+    }
+    .center { text-align:center; }
+    .logo { font-size:14px; font-weight:bold; letter-spacing:1px; }
+    .sub { font-size:9px; color:#333; margin-top:2px; }
+    .dash { border:none; border-top:1px dashed #000; margin:5px 0; }
+    .title { font-size:11px; font-weight:bold; letter-spacing:3px; margin:5px 0 2px; }
+    .row { display:flex; justify-content:space-between; font-size:9px; margin:2px 0; }
+    .lbl { color:#555; }
+    .item { margin:3px 0; }
+    .item-name { font-size:10px; font-weight:bold; word-break:break-word; }
+    .brand { font-weight:normal; font-size:9px; color:#555; }
+    .item-row { display:flex; justify-content:space-between; font-size:10px; padding-left:6px; margin-top:1px; }
+    .item-total { font-weight:bold; }
+    .t-row { display:flex; justify-content:space-between; font-size:10px; padding:1px 0; }
+    .grand { font-size:13px; font-weight:bold; border-top:2px solid #000; padding-top:3px; margin-top:3px; }
+    .thanks { font-size:11px; font-weight:bold; text-align:center; margin-top:6px; }
+    .footer { text-align:center; font-size:9px; color:#555; margin-top:3px; }
+  </style>
+</head>
+<body>
+  <div class="center">
+    <div class="logo">${settings.storeName}</div>
+    <div class="sub">${settings.storeSubtitle}</div>
+    ${settings.storeAddress ? `<div class="sub">📍 ${settings.storeAddress}</div>` : ""}
+    ${primarySeller ? `<div class="sub">Sotuvchi: ${primarySeller.name} · ${primarySeller.phone}</div>` : ""}
+    <div class="title">— SAVDO CHEKI —</div>
+  </div>
+  <hr class="dash"/>
+  <div class="row"><span class="lbl">Chek №:</span><span>RCP-${String(sale.id).padStart(5, "0")}</span></div>
+  <div class="row"><span class="lbl">Sana:</span><span>${fmtDate(sale.createdAt)}</span></div>
+  <div class="row"><span class="lbl">Vaqt:</span><span>${fmtTime(sale.createdAt)}</span></div>
+  <div class="row"><span class="lbl">To'lov:</span><span>${payLabel[sale.paymentType ?? "cash"] ?? "NAQD"}</span></div>
+  ${customer?.name ? `
+  <hr class="dash"/>
+  <div class="row"><span class="lbl">Xaridor:</span><span>${customer.name}</span></div>
+  ${customer.phone ? `<div class="row"><span class="lbl">Tel:</span><span>${customer.phone}</span></div>` : ""}
+  ` : ""}
+  <hr class="dash"/>
+  ${rows}
+  <hr class="dash"/>
+  <div class="t-row"><span>Mahsulotlar:</span><span>${sale.itemCount} dona</span></div>
+  ${sale.note ? `<div class="t-row"><span>Izoh:</span><span>${sale.note}</span></div>` : ""}
+  <div class="t-row grand">
+    <span>JAMI:</span>
+    <span>${sale.totalAmount.toLocaleString("uz-UZ")} UZS</span>
+  </div>
+  ${debtAmt > 0 ? `
+  <div class="t-row"><span>To'langan:</span><span>${paidAmt.toLocaleString("uz-UZ")} UZS</span></div>
+  <div class="t-row"><span>Qarz:</span><span>${debtAmt.toLocaleString("uz-UZ")} UZS</span></div>
+  ` : ""}
+  <hr class="dash"/>
+  <div class="thanks">Xaridingiz uchun tashakkur!</div>
+  <div class="footer">${settings.storeName} · ${fmtDate(sale.createdAt)}</div>
+  <br/><br/>
 </body>
 </html>`;
 }

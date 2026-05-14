@@ -8,7 +8,21 @@ import {
   getGetCustomersQueryKey,
   type Product,
   type Customer,
+  type SaleWithItems,
 } from "@workspace/api-client-react";
+import { useSettings } from "@/hooks/useSettings";
+import * as Sharing from "expo-sharing";
+import * as Print from "expo-print";
+import {
+  autoSelectFormat,
+  buildPrintHtml,
+  printDoc,
+  sharePdf,
+  type PrintFormat,
+  FORMAT_LABELS,
+  FORMAT_DESC,
+  FORMAT_ICON,
+} from "@/utils/PrintService";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   CameraView,
@@ -284,7 +298,6 @@ function POSScreenInner() {
   const [scannerOpen, setScannerOpen] = useState(false);
   const [search, setSearch] = useState("");
   const [tab, setTab] = useState<"cart" | "products">("cart");
-  const [checkoutSuccess, setCheckoutSuccess] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [saleError, setSaleError] = useState<string | null>(null);
   const [paymentType, setPaymentType] = useState<"cash" | "card" | "debt">("cash");
@@ -293,7 +306,16 @@ function POSScreenInner() {
   const [customerPickerOpen, setCustomerPickerOpen] = useState(false);
   const [customerSearch, setCustomerSearch] = useState("");
   const [customerConfirmVisible, setCustomerConfirmVisible] = useState(false);
-  const successAnim = useRef(new Animated.Value(0)).current;
+
+  // Print modal state
+  const [lastSale, setLastSale] = useState<SaleWithItems | null>(null);
+  const [printModalOpen, setPrintModalOpen] = useState(false);
+  const [printFormat, setPrintFormat] = useState<PrintFormat>("a5");
+  const [isPrinting, setIsPrinting] = useState(false);
+  const [printError, setPrintError] = useState<string | null>(null);
+
+  const { managerId } = useAuth();
+  const { settings } = useSettings(managerId);
 
   const { data: products, isLoading: productsLoading, refetch: refetchProducts, isRefetching: productsRefetching } = useGetProducts();
   const { data: customers, refetch: refetchCustomers, isLoading: customersLoading } = useGetCustomers();
@@ -317,7 +339,7 @@ function POSScreenInner() {
   }, [routeParams.preCustomerId, customers]);
   const { mutate: createSale, isPending: checkingOut } = useCreateSale({
     mutation: {
-      onSuccess: () => {
+      onSuccess: (data: SaleWithItems) => {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         queryClient.invalidateQueries({ queryKey: getGetProductsQueryKey() });
         queryClient.invalidateQueries({ queryKey: getGetDashboardStatsQueryKey() });
@@ -325,14 +347,13 @@ function POSScreenInner() {
         queryClient.invalidateQueries({ queryKey: getGetCustomersQueryKey() });
         setConfirmOpen(false);
         setSaleError(null);
+        setCustomerConfirmVisible(false);
+        setLastSale(data);
+        setPrintFormat(autoSelectFormat(data.itemCount));
+        setPrintError(null);
         setCart(new Map());
         setTab("cart");
-        setCheckoutSuccess(true);
-        Animated.sequence([
-          Animated.timing(successAnim, { toValue: 1, duration: 300, useNativeDriver: true }),
-          Animated.delay(1600),
-          Animated.timing(successAnim, { toValue: 0, duration: 300, useNativeDriver: true }),
-        ]).start(() => setCheckoutSuccess(false));
+        setPrintModalOpen(true);
       },
       onError: (err: Error) => {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
@@ -482,6 +503,51 @@ function POSScreenInner() {
         paidAmount: paid,
       },
     });
+  };
+
+  const getPdfCustomer = () => {
+    if (!selectedCustomer) return null;
+    return {
+      name: selectedCustomer.name,
+      phone: (selectedCustomer as any).phone ?? undefined,
+      address: (selectedCustomer as any).address ?? undefined,
+    };
+  };
+
+  const handlePrint = async () => {
+    if (!lastSale) return;
+    setIsPrinting(true);
+    setPrintError(null);
+    try {
+      const html = buildPrintHtml(lastSale, settings, getPdfCustomer(), printFormat);
+      await printDoc(html);
+    } catch (e) {
+      setPrintError(e instanceof Error ? e.message : "Chop etishda xato yuz berdi");
+    } finally {
+      setIsPrinting(false);
+    }
+  };
+
+  const handleSharePdf = async () => {
+    if (!lastSale) return;
+    setIsPrinting(true);
+    setPrintError(null);
+    try {
+      const html = buildPrintHtml(lastSale, settings, getPdfCustomer(), printFormat);
+      const name = `${settings.storeName}-${FORMAT_LABELS[printFormat].replace(/\s/g, "_")}-${lastSale.id}.pdf`;
+      await sharePdf(html, name);
+    } catch (e) {
+      setPrintError(e instanceof Error ? e.message : "Ulashishda xato yuz berdi");
+    } finally {
+      setIsPrinting(false);
+    }
+  };
+
+  const closePrintModal = () => {
+    setPrintModalOpen(false);
+    setLastSale(null);
+    setPrintError(null);
+    setSelectedCustomer(null);
   };
 
   const filteredProducts = (products ?? []).filter((p) => {
@@ -732,25 +798,142 @@ function POSScreenInner() {
         </View>
       </Modal>
 
-      {/* Success overlay */}
-      {checkoutSuccess && (
-        <Animated.View
-          style={[
-            styles.successOverlay,
-            { opacity: successAnim, transform: [{ scale: successAnim }] },
-          ]}
-        >
-          <View style={[styles.successCard, { backgroundColor: colors.card }]}>
-            <MaterialIcons name="check-circle" size={60} color={colors.success} />
-            <Text style={[styles.successTitle, { color: colors.foreground }]}>
-              Sotuv amalga oshdi!
-            </Text>
-            <Text style={[styles.successSub, { color: colors.mutedForeground }]}>
-              Ombor yangilandi
+      {/* ── Print / Share Modal ── */}
+      <Modal
+        visible={printModalOpen}
+        transparent
+        animationType="slide"
+        statusBarTranslucent
+        onRequestClose={closePrintModal}
+      >
+        <TouchableOpacity style={styles.confirmBackdrop} activeOpacity={1} onPress={closePrintModal} />
+        <View style={[styles.printSheet, { backgroundColor: colors.card }]}>
+          <View style={[styles.confirmHandle, { backgroundColor: colors.border }]} />
+
+          {/* Success banner */}
+          <View style={[styles.printSuccessBanner, { backgroundColor: colors.success + "18" }]}>
+            <View style={[styles.printSuccessIcon, { backgroundColor: colors.success + "22" }]}>
+              <MaterialIcons name="check-circle" size={28} color={colors.success} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.printSuccessTitle, { color: colors.foreground }]}>
+                Sotuv amalga oshdi!
+              </Text>
+              {lastSale && (
+                <Text style={[styles.printSuccessSub, { color: colors.mutedForeground }]}>
+                  {lastSale.itemCount} dona · {lastSale.totalAmount.toLocaleString("uz-UZ")} UZS
+                  {lastSale.customerName ? ` · ${lastSale.customerName}` : ""}
+                </Text>
+              )}
+            </View>
+          </View>
+
+          <Text style={[styles.printSectionLabel, { color: colors.mutedForeground }]}>
+            Hujjat formatini tanlang
+          </Text>
+
+          {/* Format selector */}
+          <View style={styles.printFormatRow}>
+            {(["a4", "a5", "thermal"] as PrintFormat[]).map((fmt) => {
+              const active = printFormat === fmt;
+              return (
+                <TouchableOpacity
+                  key={fmt}
+                  style={[
+                    styles.printFormatCard,
+                    {
+                      backgroundColor: active ? colors.primary + "14" : colors.muted,
+                      borderColor: active ? colors.primary : colors.border,
+                      borderWidth: active ? 2 : 1,
+                    },
+                  ]}
+                  onPress={() => { setPrintFormat(fmt); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }}
+                  activeOpacity={0.8}
+                >
+                  <MaterialIcons
+                    name={FORMAT_ICON[fmt] as any}
+                    size={22}
+                    color={active ? colors.primary : colors.mutedForeground}
+                  />
+                  <Text style={[styles.printFormatLabel, { color: active ? colors.primary : colors.foreground }]}>
+                    {FORMAT_LABELS[fmt]}
+                  </Text>
+                  <Text style={[styles.printFormatDesc, { color: colors.mutedForeground }]}>
+                    {FORMAT_DESC[fmt]}
+                  </Text>
+                  {active && (
+                    <View style={[styles.printFormatCheck, { backgroundColor: colors.primary }]}>
+                      <MaterialIcons name="check" size={10} color="#fff" />
+                    </View>
+                  )}
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+
+          {/* Auto-select hint */}
+          <View style={[styles.printHintBox, { backgroundColor: colors.muted, borderColor: colors.border }]}>
+            <MaterialIcons name="auto-awesome" size={14} color={colors.primary} />
+            <Text style={[styles.printHintText, { color: colors.mutedForeground }]}>
+              {lastSale && lastSale.itemCount <= 5
+                ? "A5 avtomatik tanlandi (≤5 mahsulot)"
+                : "A4 avtomatik tanlandi (>5 mahsulot)"}
+              {" · "}Termal POS printer uchun 80mm ni tanlang
             </Text>
           </View>
-        </Animated.View>
-      )}
+
+          {/* Error */}
+          {printError && (
+            <View style={[styles.errorBanner, { backgroundColor: "#FEE2E2", borderColor: "#F87171" }]}>
+              <MaterialIcons name="error-outline" size={14} color="#DC2626" />
+              <Text style={[styles.errorBannerText, { flex: 1 }]}>{printError}</Text>
+            </View>
+          )}
+
+          {/* Action buttons */}
+          <View style={styles.printActionRow}>
+            <TouchableOpacity
+              style={[styles.printBtn, { backgroundColor: colors.primary, flex: 1 }]}
+              onPress={handlePrint}
+              disabled={isPrinting}
+              activeOpacity={0.87}
+            >
+              {isPrinting ? (
+                <ActivityIndicator size="small" color="#fff" />
+              ) : (
+                <>
+                  <MaterialIcons name="print" size={18} color="#fff" />
+                  <Text style={styles.printBtnText}>Chop etish</Text>
+                </>
+              )}
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.printBtn, { backgroundColor: "#7C3AED", flex: 1 }]}
+              onPress={handleSharePdf}
+              disabled={isPrinting}
+              activeOpacity={0.87}
+            >
+              {isPrinting ? (
+                <ActivityIndicator size="small" color="#fff" />
+              ) : (
+                <>
+                  <MaterialIcons name="share" size={18} color="#fff" />
+                  <Text style={styles.printBtnText}>PDF ulashish</Text>
+                </>
+              )}
+            </TouchableOpacity>
+          </View>
+
+          <TouchableOpacity
+            style={[styles.printCloseBtn, { backgroundColor: colors.muted, borderColor: colors.border }]}
+            onPress={closePrintModal}
+            activeOpacity={0.8}
+          >
+            <Text style={[styles.printCloseBtnText, { color: colors.mutedForeground }]}>Yopish</Text>
+          </TouchableOpacity>
+        </View>
+      </Modal>
 
       {/* Customer picker modal */}
       <Modal
@@ -2050,6 +2233,123 @@ const styles = StyleSheet.create({
     fontSize: 10,
     color: "#DC2626",
     textAlign: "right",
+  },
+  // ── Print modal ──────────────────────────────────────────────────────────────
+  printSheet: {
+    position: "absolute",
+    bottom: 0,
+    left: 0,
+    right: 0,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    padding: 20,
+    paddingBottom: 32,
+    gap: 14,
+  },
+  printSuccessBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    borderRadius: 14,
+    padding: 14,
+  },
+  printSuccessIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 14,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  printSuccessTitle: {
+    fontFamily: "Inter_700Bold",
+    fontSize: 16,
+    marginBottom: 2,
+  },
+  printSuccessSub: {
+    fontFamily: "Inter_400Regular",
+    fontSize: 12,
+    lineHeight: 17,
+  },
+  printSectionLabel: {
+    fontFamily: "Inter_600SemiBold",
+    fontSize: 11,
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+  },
+  printFormatRow: {
+    flexDirection: "row",
+    gap: 10,
+  },
+  printFormatCard: {
+    flex: 1,
+    borderRadius: 12,
+    padding: 12,
+    alignItems: "center",
+    gap: 4,
+    position: "relative",
+  },
+  printFormatLabel: {
+    fontFamily: "Inter_700Bold",
+    fontSize: 11,
+    textAlign: "center",
+  },
+  printFormatDesc: {
+    fontFamily: "Inter_400Regular",
+    fontSize: 9,
+    textAlign: "center",
+    lineHeight: 13,
+  },
+  printFormatCheck: {
+    position: "absolute",
+    top: 6,
+    right: 6,
+    width: 16,
+    height: 16,
+    borderRadius: 8,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  printHintBox: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 7,
+    borderRadius: 10,
+    borderWidth: 1,
+    padding: 10,
+  },
+  printHintText: {
+    fontFamily: "Inter_400Regular",
+    fontSize: 11,
+    flex: 1,
+    lineHeight: 16,
+  },
+  printActionRow: {
+    flexDirection: "row",
+    gap: 10,
+  },
+  printBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    borderRadius: 14,
+    height: 50,
+  },
+  printBtnText: {
+    fontFamily: "Inter_700Bold",
+    fontSize: 14,
+    color: "#fff",
+  },
+  printCloseBtn: {
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: 12,
+    borderWidth: 1,
+    height: 44,
+  },
+  printCloseBtnText: {
+    fontFamily: "Inter_600SemiBold",
+    fontSize: 14,
   },
 });
 
