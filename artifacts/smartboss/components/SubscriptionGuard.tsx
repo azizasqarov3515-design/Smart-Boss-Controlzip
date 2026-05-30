@@ -13,7 +13,7 @@ function formatDate(d: Date | null): string {
 }
 
 export function SubscriptionGuard({ children }: SubscriptionGuardProps) {
-  const { subscriptionExpired, subscriptionDaysLeft, subscriptionEnd, subscriptionActive, isAuthenticated, role, logout, blocked, deleteAccount } = useAuth();
+  const { subscriptionPlan, subscriptionExpired, subscriptionDaysLeft, subscriptionEnd, subscriptionActive, isAuthenticated, role, logout, blocked, deleteAccount } = useAuth();
   const [deleting, setDeleting] = useState(false);
 
   if (!isAuthenticated) return <>{children}</>;
