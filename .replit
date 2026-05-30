@@ -66,8 +66,11 @@ externalPort = 3002
 [userenv]
 
 [userenv.shared]
-ADMIN_USERNAME = "admin"
-ADMIN_PASSWORD = "smartboss_admin_2024"
+"Admin Password" = "Admin"
+
+[userenv.development]
+
+[userenv.production]
 
 [nix]
 channel = "stable-25_05"
