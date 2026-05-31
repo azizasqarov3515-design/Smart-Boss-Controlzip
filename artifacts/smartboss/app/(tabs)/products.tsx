@@ -506,7 +506,7 @@ function ProductsScreenInner() {
               onPress={() => { Haptics.selectionAsync(); setUnitFilter(ut.key); }}
               activeOpacity={0.75}
             >
-              <Text style={{ fontSize: 18 }}>{ut.icon}</Text>
+              <Text style={{ fontSize: 22 }}>{ut.icon}</Text>
               <Text style={[
                 styles.unitTabText,
                 { color: isActive ? "#fff" : colors.foreground },
@@ -735,10 +735,10 @@ function ProductsScreenInner() {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  unitTabsScroll: { flexGrow: 0, maxHeight: 65 },
+  unitTabsScroll: { flexGrow: 0, maxHeight: 72 },
   unitTabsContainer: {
     flexDirection: "row",
-    gap: 10,
+    gap: 12,
     paddingHorizontal: 16,
     paddingVertical: 10,
     alignItems: "center",
@@ -747,12 +747,12 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
-    paddingHorizontal: 22,
-    paddingVertical: 12,
+    paddingHorizontal: 26,
+    paddingVertical: 16,
     borderRadius: 100,
     borderWidth: 1.5,
   },
-  unitTabText: { fontFamily: "Inter_600SemiBold", fontSize: 15 },
+  unitTabText: { fontFamily: "Inter_600SemiBold", fontSize: 17 },
   topBar: { flexDirection: "row", alignItems: "center", gap: 10 },
   searchWrap: {
     flex: 1,
