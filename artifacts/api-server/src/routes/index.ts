@@ -14,6 +14,7 @@ import adminRouter from "./admin";
 import uploadRouter from "./upload";
 import productImageRouter from "./product-image";
 import imageSearchRouter from "./image-search";
+import seedRouter from "./seed";
 import { requireAuth } from "../lib/auth";
 
 const router: IRouter = Router();
@@ -26,6 +27,7 @@ router.use(adminRouter);
 
 // Public routes — before requireAuth
 router.use(productImageRouter);
+router.use(seedRouter);
 
 router.use(requireAuth);
 
