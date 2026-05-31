@@ -22,6 +22,7 @@ import * as Print from "expo-print";
 import React, { useState } from "react";
 import {
   ActivityIndicator,
+  Image,
   KeyboardAvoidingView,
   Modal,
   Platform,
@@ -153,6 +154,7 @@ export default function CustomerDetailScreen() {
   const [editNote, setEditNote] = useState("");
   const [editError, setEditError] = useState<string | null>(null);
   const [pdfLoading, setPdfLoading] = useState(false);
+  const [isImageModalOpen, setIsImageModalOpen] = useState(false);
 
   const { data: customer, isLoading: loadingCustomer, refetch } = useGetCustomer(customerId);
 
@@ -338,6 +340,41 @@ export default function CustomerDetailScreen() {
         <TouchableOpacity onPress={() => router.back()} style={styles.backBtn} activeOpacity={0.7}>
           <MaterialIcons name="arrow-back" size={24} color={colors.foreground} />
         </TouchableOpacity>
+
+        {/* Circular Detail Avatar (Instagram Style) */}
+        <TouchableOpacity
+          onPress={() => customer.imageUrl && setIsImageModalOpen(true)}
+          disabled={!customer.imageUrl}
+          activeOpacity={0.8}
+          style={[
+            styles.detailAvatarWrap,
+            {
+              borderColor: customer.imageUrl ? colors.primary : "transparent",
+              borderWidth: customer.imageUrl ? 1.5 : 0,
+            },
+          ]}
+        >
+          <View
+            style={[
+              styles.detailAvatar,
+              {
+                backgroundColor: colors.primary + "18",
+                width: customer.imageUrl ? 40 : 44,
+                height: customer.imageUrl ? 40 : 44,
+                borderRadius: customer.imageUrl ? 20 : 22,
+              },
+            ]}
+          >
+            {customer.imageUrl ? (
+              <Image source={{ uri: customer.imageUrl }} style={[styles.detailAvatarImage, { borderRadius: 20 }]} />
+            ) : (
+              <Text style={[styles.detailAvatarText, { color: colors.primary }]}>
+                {customer.name.charAt(0).toUpperCase()}
+              </Text>
+            )}
+          </View>
+        </TouchableOpacity>
+
         <View style={styles.headerCenter}>
           <Text style={[styles.headerName, { color: colors.foreground }]} numberOfLines={1}>
             {customer.name}
@@ -818,6 +855,38 @@ export default function CustomerDetailScreen() {
           </View>
         </View>
       </Modal>
+
+      {/* Enlarge Image Modal */}
+      <Modal
+        visible={isImageModalOpen}
+        transparent
+        animationType="fade"
+        statusBarTranslucent
+        onRequestClose={() => setIsImageModalOpen(false)}
+      >
+        <TouchableOpacity
+          style={styles.imageModalBackdrop}
+          activeOpacity={1}
+          onPress={() => setIsImageModalOpen(false)}
+        >
+          <View style={[styles.imageModalContent, { backgroundColor: colors.card, borderColor: colors.border }]}>
+            {customer.imageUrl && (
+              <Image
+                source={{ uri: customer.imageUrl }}
+                style={styles.enlargedImage}
+                resizeMode="cover"
+              />
+            )}
+            <TouchableOpacity
+              style={[styles.closeImageBtn, { backgroundColor: colors.muted }]}
+              onPress={() => setIsImageModalOpen(false)}
+              activeOpacity={0.8}
+            >
+              <MaterialIcons name="close" size={20} color={colors.foreground} />
+            </TouchableOpacity>
+          </View>
+        </TouchableOpacity>
+      </Modal>
     </View>
   );
 }
@@ -1009,4 +1078,61 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   deleteConfirmText: { fontFamily: "Inter_700Bold", fontSize: 15, color: "#fff" },
+  detailAvatarWrap: {
+    width: 46,
+    height: 46,
+    borderRadius: 23,
+    borderWidth: 1.5,
+    padding: 1.5,
+    justifyContent: "center",
+    alignItems: "center",
+    marginRight: 12,
+  },
+  detailAvatar: {
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  detailAvatarImage: {
+    width: "100%",
+    height: "100%",
+  },
+  detailAvatarText: {
+    fontFamily: "Inter_700Bold",
+    fontSize: 18,
+  },
+  imageModalBackdrop: {
+    flex: 1,
+    backgroundColor: "rgba(0, 0, 0, 0.8)",
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 24,
+  },
+  imageModalContent: {
+    width: "100%",
+    aspectRatio: 1,
+    borderRadius: 20,
+    borderWidth: 1,
+    overflow: "hidden",
+    position: "relative",
+    elevation: 10,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4.65,
+  },
+  enlargedImage: {
+    width: "100%",
+    height: "100%",
+  },
+  closeImageBtn: {
+    position: "absolute",
+    top: 12,
+    right: 12,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: "center",
+    justifyContent: "center",
+    elevation: 3,
+  },
 });
