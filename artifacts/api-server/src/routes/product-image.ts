@@ -16,7 +16,7 @@ router.get("/product-image/:uuid", async (req, res) => {
   }
 
   const bucketId = process.env.DEFAULT_OBJECT_STORAGE_BUCKET_ID;
-  if (!bucketId) {
+  if (!bucketId || bucketId === "undefined" || bucketId === "null" || bucketId === "sozlanmagan" || bucketId.trim() === "") {
     const localUploadsDir = path.join(process.cwd(), "uploads");
     const localPath = path.join(localUploadsDir, `${uuid}.jpg`);
     if (fs.existsSync(localPath)) {

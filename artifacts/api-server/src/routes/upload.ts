@@ -19,7 +19,7 @@ router.post("/upload/product-image", requireAuth, upload.single("image"), async 
     const uuid = randomUUID();
     const bucketId = process.env.DEFAULT_OBJECT_STORAGE_BUCKET_ID;
     
-    if (!bucketId) {
+    if (!bucketId || bucketId === "undefined" || bucketId === "null" || bucketId === "sozlanmagan" || bucketId.trim() === "") {
       const localUploadsDir = path.join(process.cwd(), "uploads");
       if (!fs.existsSync(localUploadsDir)) {
         fs.mkdirSync(localUploadsDir, { recursive: true });
