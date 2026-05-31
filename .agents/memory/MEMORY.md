@@ -1,0 +1,1 @@
+- [Image upload depends on object storage](image-upload-object-storage.md) — smartboss product/customer image upload needs the GCS bucket provisioned; "Object storage sozlanmagan" means it isn't.
