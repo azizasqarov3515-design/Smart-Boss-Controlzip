@@ -12,6 +12,5 @@ export interface CreateProduct {
   costPrice: number;
   salePrice: number;
   quantity: number;
-  unit?: 'dona' | 'kg' | 'm';
   barcode?: string | null;
 }

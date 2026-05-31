@@ -24,6 +24,11 @@ const customerInputSchema = z.object({
     .trim()
     .nullish()
     .transform((v) => v ?? null),
+  imageUrl: z
+    .string()
+    .trim()
+    .nullish()
+    .transform((v) => v ?? null),
 });
 
 const debtPaymentInputSchema = z.object({
@@ -47,6 +52,7 @@ function mapCustomer(c: typeof customersTable.$inferSelect) {
     debtLimit: parseFloat(c.debtLimit),
     totalDebt: parseFloat(c.totalDebt),
     note: c.note ?? null,
+    imageUrl: c.imageUrl ?? null,
     createdAt: c.createdAt.toISOString(),
   };
 }
@@ -82,6 +88,7 @@ router.post("/customers", async (req, res) => {
         address: body.address,
         debtLimit: body.debtLimit,
         note: body.note,
+        imageUrl: body.imageUrl,
       })
       .returning();
     res.status(201).json(mapCustomer(customer));
@@ -132,6 +139,7 @@ router.put("/customers/:id", async (req, res) => {
         address: body.address,
         debtLimit: body.debtLimit,
         note: body.note,
+        imageUrl: body.imageUrl,
       })
       .where(condition)
       .returning();

@@ -9,6 +9,7 @@ export const customersTable = pgTable("customers", {
   debtLimit: numeric("debt_limit", { precision: 14, scale: 2 }).notNull().default("0"),
   totalDebt: numeric("total_debt", { precision: 14, scale: 2 }).notNull().default("0"),
   note: text("note"),
+  imageUrl: text("image_url"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 

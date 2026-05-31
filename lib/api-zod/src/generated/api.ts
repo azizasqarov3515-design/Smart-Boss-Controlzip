@@ -189,6 +189,7 @@ export const GetCustomersResponseItem = zod.object({
   debtLimit: zod.number(),
   totalDebt: zod.number(),
   note: zod.string().nullish(),
+  imageUrl: zod.string().nullish(),
   createdAt: zod.string(),
 });
 export const GetCustomersResponse = zod.array(GetCustomersResponseItem);
@@ -202,6 +203,7 @@ export const CreateCustomerBody = zod.object({
   address: zod.string().nullish(),
   debtLimit: zod.number().optional(),
   note: zod.string().nullish(),
+  imageUrl: zod.string().nullish(),
 });
 
 /**
@@ -219,6 +221,7 @@ export const GetCustomerResponse = zod.object({
   debtLimit: zod.number(),
   totalDebt: zod.number(),
   note: zod.string().nullish(),
+  imageUrl: zod.string().nullish(),
   createdAt: zod.string(),
 });
 
@@ -235,6 +238,7 @@ export const UpdateCustomerBody = zod.object({
   address: zod.string().nullish(),
   debtLimit: zod.number().optional(),
   note: zod.string().nullish(),
+  imageUrl: zod.string().nullish(),
 });
 
 export const UpdateCustomerResponse = zod.object({
@@ -245,6 +249,7 @@ export const UpdateCustomerResponse = zod.object({
   debtLimit: zod.number(),
   totalDebt: zod.number(),
   note: zod.string().nullish(),
+  imageUrl: zod.string().nullish(),
   createdAt: zod.string(),
 });
 
@@ -301,6 +306,7 @@ export const GetCustomerStatementResponse = zod.object({
     debtLimit: zod.number(),
     totalDebt: zod.number(),
     note: zod.string().nullish(),
+    imageUrl: zod.string().nullish(),
     createdAt: zod.string(),
   }),
   sales: zod.array(

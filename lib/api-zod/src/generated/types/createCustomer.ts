@@ -12,4 +12,5 @@ export interface CreateCustomer {
   address?: string | null;
   debtLimit?: number;
   note?: string | null;
+  imageUrl?: string | null;
 }

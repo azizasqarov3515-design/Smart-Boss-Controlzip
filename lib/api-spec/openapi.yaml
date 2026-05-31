@@ -828,6 +828,9 @@ components:
         note:
           type: string
           nullable: true
+        imageUrl:
+          type: string
+          nullable: true
         createdAt:
           type: string
       required: [id, name, phone, debtLimit, totalDebt, createdAt]
@@ -844,6 +847,9 @@ components:
         debtLimit:
           type: number
         note:
+          type: string
+          nullable: true
+        imageUrl:
           type: string
           nullable: true
       required: [name, phone]

@@ -13,7 +13,9 @@ import { useRouter } from "expo-router";
 import React, { useState, useCallback } from "react";
 import {
   ActivityIndicator,
+  Alert,
   FlatList,
+  Image,
   KeyboardAvoidingView,
   Modal,
   Platform,
@@ -25,6 +27,8 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import * as ImagePicker from "expo-image-picker";
+import { manipulateAsync, SaveFormat } from "expo-image-manipulator";
 import { MaterialIcons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useColors } from "@/hooks/useColors";
@@ -34,6 +38,41 @@ import { useAuth } from "@/contexts/AuthContext";
 
 function formatMoney(n: number) {
   return n.toLocaleString("uz-UZ") + " UZS";
+}
+
+function formatCustomerPhone(text: string): string {
+  const digits = text.replace(/\D/g, "");
+  let raw = digits;
+  
+  if (digits.length > 0 && !digits.startsWith("998")) {
+    if (digits.startsWith("9")) {
+      if (digits.startsWith("99")) {
+        // typing 998...
+      } else {
+        // typing just 9
+      }
+    } else {
+      raw = "998" + digits;
+    }
+  }
+  
+  const maxDigits = raw.slice(0, 12);
+  let formatted = "";
+  
+  if (maxDigits.length > 0) {
+    if (maxDigits.length <= 3) {
+      formatted = maxDigits;
+    } else if (maxDigits.length <= 5) {
+      formatted = `${maxDigits.slice(0, 3)} ${maxDigits.slice(3)}`;
+    } else if (maxDigits.length <= 8) {
+      formatted = `${maxDigits.slice(0, 3)} ${maxDigits.slice(3, 5)} ${maxDigits.slice(5)}`;
+    } else if (maxDigits.length <= 10) {
+      formatted = `${maxDigits.slice(0, 3)} ${maxDigits.slice(3, 5)} ${maxDigits.slice(5, 8)} ${maxDigits.slice(8)}`;
+    } else {
+      formatted = `${maxDigits.slice(0, 3)} ${maxDigits.slice(3, 5)} ${maxDigits.slice(5, 8)} ${maxDigits.slice(8, 10)} ${maxDigits.slice(10, 12)}`;
+    }
+  }
+  return formatted;
 }
 
 function getDebtStatus(customer: Customer): "ok" | "warning" | "over" {
@@ -62,10 +101,30 @@ function CustomerCard({
       onPress={onPress}
       activeOpacity={0.8}
     >
-      <View style={[styles.cardAvatar, { backgroundColor: colors.primary + "20" }]}>
-        <Text style={[styles.cardAvatarText, { color: colors.primary }]}>
-          {customer.name.charAt(0).toUpperCase()}
-        </Text>
+      <View style={[
+        styles.instagramAvatarWrap,
+        {
+          borderColor: customer.imageUrl ? colors.primary : "transparent",
+          borderWidth: customer.imageUrl ? 1.5 : 0
+        }
+      ]}>
+        <View style={[
+          styles.cardAvatar,
+          {
+            backgroundColor: colors.primary + "18",
+            width: customer.imageUrl ? 40 : 44,
+            height: customer.imageUrl ? 40 : 44,
+            borderRadius: customer.imageUrl ? 20 : 22
+          }
+        ]}>
+          {customer.imageUrl ? (
+            <Image source={{ uri: customer.imageUrl }} style={[styles.instagramAvatar, { borderRadius: 20 }]} />
+          ) : (
+            <Text style={[styles.cardAvatarText, { color: colors.primary }]}>
+              {customer.name.charAt(0).toUpperCase()}
+            </Text>
+          )}
+        </View>
       </View>
 
       <View style={styles.cardInfo}>
@@ -138,9 +197,12 @@ function CustomersScreenInner() {
   const [formAddress, setFormAddress] = useState("");
   const [formLimit, setFormLimit] = useState("");
   const [formNote, setFormNote] = useState("");
+  const [formImage, setFormImage] = useState<string | null>(null);
+  const [imageUploading, setImageUploading] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
 
   const { data: customers, isLoading, refetch, isRefetching } = useGetCustomers();
+  const { token } = useAuth();
 
   const { mutate: createCustomer, isPending: creating } = useCreateCustomer({
     mutation: {
@@ -163,13 +225,153 @@ function CustomersScreenInner() {
     setFormAddress("");
     setFormLimit("");
     setFormNote("");
+    setFormImage(null);
     setFormError(null);
+  };
+
+  const pickImage = async (source: "camera" | "gallery") => {
+    try {
+      let result: ImagePicker.ImagePickerResult;
+
+      if (source === "camera") {
+        const pickerPerm = await ImagePicker.requestCameraPermissionsAsync();
+        if (pickerPerm.status !== "granted") {
+          Alert.alert(
+            "Kamera ruxsati yo'q",
+            "Sozlamalar → Ilovalar → SMARTBOSScontrol → Ruxsatlar bo'limida kamera ruxsatini yoqing.",
+            [{ text: "OK" }]
+          );
+          return;
+        }
+
+        try {
+          result = await ImagePicker.launchCameraAsync({
+            mediaTypes: "images",
+            quality: 0.7,
+            allowsEditing: true,
+            aspect: [1, 1],
+            exif: false,
+          });
+        } catch (camErr) {
+          Alert.alert(
+            "Kamera mavjud emas",
+            "Qurilmangizda kamera ishlamadi. Galereya orqali rasm tanlaysizmi?",
+            [
+              { text: "Galereya", onPress: () => pickImage("gallery") },
+              { text: "Bekor qilish", style: "cancel" },
+            ]
+          );
+          return;
+        }
+      } else {
+        const libraryPerm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+        if (libraryPerm.status !== "granted") {
+          Alert.alert(
+            "Galereya ruxsati yo'q",
+            "Sozlamalar → Ilovalar → SMARTBOSScontrol → Ruxsatlar bo'limida galereya ruxsatini yoqing.",
+            [{ text: "OK" }]
+          );
+          return;
+        }
+
+        result = await ImagePicker.launchImageLibraryAsync({
+          mediaTypes: "images",
+          quality: 0.7,
+          allowsEditing: true,
+          aspect: [1, 1],
+          exif: false,
+        });
+      }
+
+      if (result.canceled || !result.assets?.[0]?.uri) {
+        return;
+      }
+
+      const rawUri = result.assets[0].uri;
+      setImageUploading(true);
+      setFormError(null);
+
+      try {
+        const compressed = await manipulateAsync(
+          rawUri,
+          [{ resize: { width: 500 } }],
+          { compress: 0.65, format: SaveFormat.JPEG }
+        );
+        const uri = compressed.uri;
+
+        const API_BASE = process.env.EXPO_PUBLIC_DOMAIN
+          ? `https://${process.env.EXPO_PUBLIC_DOMAIN}`
+          : "";
+
+        if (!API_BASE) {
+          throw new Error("API_BASE is empty. EXPO_PUBLIC_DOMAIN env var is missing.");
+        }
+
+        const formData = new FormData();
+        formData.append("image", {
+          uri,
+          name: `customer_${Date.now()}.jpg`,
+          type: "image/jpeg",
+        } as unknown as Blob);
+
+        const headers: Record<string, string> = {};
+        if (token) {
+          headers["Authorization"] = `Bearer ${token}`;
+        }
+
+        const uploadUrl = `${API_BASE}/api/upload/product-image`;
+        const uploadRes = await fetch(uploadUrl, {
+          method: "POST",
+          headers,
+          body: formData,
+        });
+
+        const responseText = await uploadRes.text();
+        if (!uploadRes.ok) {
+          throw new Error(`Server xatosi: ${responseText}`);
+        }
+
+        const data = JSON.parse(responseText);
+        setFormImage(data.url);
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      } catch (uploadErr) {
+        const msg = uploadErr instanceof Error ? uploadErr.message : String(uploadErr);
+        setFormError(`Rasm yuklashda xatolik: ${msg}`);
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      } finally {
+        setImageUploading(false);
+      }
+    } catch (err) {
+      Alert.alert("Xato", "Rasm tanlashda muammo yuz berdi.");
+    }
+  };
+
+  const showImagePicker = () => {
+    if (Platform.OS === "web") {
+      pickImage("gallery");
+      return;
+    }
+    Alert.alert(
+      "Mijoz rasmi",
+      "Rasm olish manbasini tanlang",
+      [
+        { text: "📷 Kamera orqali", onPress: () => pickImage("camera") },
+        { text: "🖼️ Galereyadan", onPress: () => pickImage("gallery") },
+        { text: "Bekor qilish", style: "cancel" },
+      ],
+      { cancelable: true }
+    );
   };
 
   const handleAdd = () => {
     setFormError(null);
     if (!formName.trim()) { setFormError("Ism kiritilishi shart"); return; }
     if (!formPhone.trim()) { setFormError("Telefon kiritilishi shart"); return; }
+    const cleanPhone = formPhone.replace(/\s/g, "");
+    if (cleanPhone.length !== 12 || !cleanPhone.startsWith("998")) {
+      setFormError("Telefon raqami noto'g'ri (998xx xxx xx xx shaklida bo'lishi shart)");
+      return;
+    }
     const limit = formLimit ? parseFloat(formLimit.replace(/\s/g, "")) : 0;
     const body: CreateCustomer = {
       name: formName.trim(),
@@ -177,7 +379,8 @@ function CustomersScreenInner() {
       address: formAddress.trim() || undefined,
       debtLimit: isNaN(limit) ? 0 : limit,
       note: formNote.trim() || undefined,
-    };
+      imageUrl: formImage || undefined,
+    } as any;
     createCustomer({ data: body });
   };
 
@@ -325,6 +528,42 @@ function CustomersScreenInner() {
             </View>
 
             <ScrollView showsVerticalScrollIndicator={false}>
+              {/* Profile Image Picker */}
+              <View style={styles.photoPickerWrap}>
+                <TouchableOpacity
+                  style={[styles.photoPicker, { borderColor: colors.primary }]}
+                  onPress={showImagePicker}
+                  activeOpacity={0.8}
+                  disabled={imageUploading}
+                >
+                  {formImage ? (
+                    <Image source={{ uri: formImage }} style={styles.photoPickerImage} />
+                  ) : (
+                    <View style={[styles.photoPickerPlaceholder, { backgroundColor: colors.muted }]}>
+                      {imageUploading ? (
+                        <ActivityIndicator size="small" color={colors.primary} />
+                      ) : (
+                        <>
+                          <MaterialIcons name="photo-camera" size={26} color={colors.primary} />
+                          <Text style={[styles.photoPickerText, { color: colors.mutedForeground }]}>
+                            Rasmga olish
+                          </Text>
+                        </>
+                      )}
+                    </View>
+                  )}
+                  {formImage && !imageUploading && (
+                    <TouchableOpacity
+                      style={[styles.removePhotoBtn, { backgroundColor: colors.destructive }]}
+                      onPress={() => setFormImage(null)}
+                      activeOpacity={0.8}
+                    >
+                      <MaterialIcons name="close" size={14} color="#fff" />
+                    </TouchableOpacity>
+                  )}
+                </TouchableOpacity>
+              </View>
+
               <Text style={[styles.label, { color: colors.mutedForeground }]}>To'liq ism *</Text>
               <TextInput
                 style={[styles.input, { backgroundColor: colors.muted, borderColor: colors.border, color: colors.foreground }]}
@@ -337,10 +576,11 @@ function CustomersScreenInner() {
               <Text style={[styles.label, { color: colors.mutedForeground }]}>Telefon raqami *</Text>
               <TextInput
                 style={[styles.input, { backgroundColor: colors.muted, borderColor: colors.border, color: colors.foreground }]}
-                placeholder="+998 90 000 00 00"
+                placeholder="998xx xxx xx xx"
                 placeholderTextColor={colors.mutedForeground}
                 value={formPhone}
-                onChangeText={setFormPhone}
+                onChangeText={(v) => setFormPhone(formatCustomerPhone(v))}
+                maxLength={15}
                 keyboardType="phone-pad"
               />
 
@@ -467,13 +707,73 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   cardAvatar: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
     alignItems: "center",
     justifyContent: "center",
   },
   cardAvatarText: { fontFamily: "Inter_700Bold", fontSize: 18 },
+  instagramAvatarWrap: {
+    width: 46,
+    height: 46,
+    borderRadius: 23,
+    borderWidth: 1.5,
+    padding: 1.5,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  instagramAvatar: {
+    width: "100%",
+    height: "100%",
+  },
+  photoPickerWrap: {
+    alignItems: "center",
+    marginBottom: 20,
+  },
+  photoPicker: {
+    width: 96,
+    height: 96,
+    borderRadius: 48,
+    borderWidth: 1.5,
+    borderStyle: "dashed",
+    padding: 2,
+    justifyContent: "center",
+    alignItems: "center",
+    position: "relative",
+  },
+  photoPickerPlaceholder: {
+    width: "100%",
+    height: "100%",
+    borderRadius: 46,
+    justifyContent: "center",
+    alignItems: "center",
+    gap: 4,
+  },
+  photoPickerText: {
+    fontFamily: "Inter_500Medium",
+    fontSize: 10,
+    textAlign: "center",
+  },
+  photoPickerImage: {
+    width: "100%",
+    height: "100%",
+    borderRadius: 46,
+  },
+  removePhotoBtn: {
+    position: "absolute",
+    right: -2,
+    bottom: -2,
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 2,
+    borderColor: "#fff",
+    elevation: 3,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.2,
+    shadowRadius: 1.41,
+  },
   cardInfo: { flex: 1, gap: 3 },
   cardName: { fontFamily: "Inter_600SemiBold", fontSize: 15 },
   cardPhoneRow: { flexDirection: "row", alignItems: "center", gap: 4 },

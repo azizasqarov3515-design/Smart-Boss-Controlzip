@@ -9,8 +9,6 @@ export interface HealthStatus {
   status: string;
 }
 
-export type ProductUnit = 'dona' | 'kg' | 'm';
-
 export interface Product {
   id: number;
   name: string;
@@ -18,10 +16,7 @@ export interface Product {
   costPrice: number;
   salePrice: number;
   quantity: number;
-  unit: ProductUnit;
-  thickness?: number | null;
   barcode?: string | null;
-  imageUrl?: string | null;
   createdAt: string;
 }
 
@@ -31,10 +26,7 @@ export interface CreateProduct {
   costPrice: number;
   salePrice: number;
   quantity: number;
-  unit?: ProductUnit;
-  thickness?: number | null;
   barcode?: string | null;
-  imageUrl?: string | null;
 }
 
 export interface DashboardStats {
@@ -90,8 +82,6 @@ export interface DeleteRequest {
   saleIds: number[];
   productIds?: number[] | null;
   productNames?: string[] | null;
-  customerIds?: number[] | null;
-  customerNames?: string[] | null;
   workerId?: number | null;
   workerName: string;
   status: string;
@@ -109,17 +99,6 @@ export interface CreateProductDeleteRequest {
   productNames: string[];
 }
 
-export interface CreateCustomerDeleteRequest {
-  /** @minItems 1 */
-  customerIds: number[];
-  customerNames: string[];
-}
-
-export type CreateCustomerDeleteRequest201 = {
-  id?: number;
-  status?: string;
-};
-
 export interface SaleItem {
   id: number;
   productId?: number | null;
@@ -127,7 +106,6 @@ export interface SaleItem {
   brand: string;
   unitPrice: number;
   quantity: number;
-  unit: string;
   totalPrice: number;
 }
 
@@ -181,6 +159,7 @@ export interface Customer {
   debtLimit: number;
   totalDebt: number;
   note?: string | null;
+  imageUrl?: string | null;
   createdAt: string;
 }
 
@@ -190,6 +169,7 @@ export interface CreateCustomer {
   address?: string | null;
   debtLimit?: number;
   note?: string | null;
+  imageUrl?: string | null;
 }
 
 export interface DebtPayment {

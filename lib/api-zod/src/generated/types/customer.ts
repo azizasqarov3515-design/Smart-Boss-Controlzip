@@ -14,5 +14,6 @@ export interface Customer {
   debtLimit: number;
   totalDebt: number;
   note?: string | null;
+  imageUrl?: string | null;
   createdAt: string;
 }
