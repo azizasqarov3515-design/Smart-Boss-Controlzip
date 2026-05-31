@@ -1,4 +1,5 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
@@ -44,6 +45,18 @@ export default function LoginScreen() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  useEffect(() => {
+    AsyncStorage.getItem("smartboss_saved_creds").then((val) => {
+      if (val) {
+        try {
+          const { l, p } = JSON.parse(val);
+          if (l) setLoginCode(l);
+          if (p) setPassword(p);
+        } catch (e) {}
+      }
+    });
+  }, []);
+
   // Forgot modal state
   const [forgotModal, setForgotModal] = useState(false);
   const [forgotPhone, setForgotPhone] = useState("+998 ");
@@ -60,6 +73,7 @@ export default function LoginScreen() {
     setError(null);
     try {
       await login(loginCode.trim().toUpperCase(), password.trim());
+      AsyncStorage.setItem("smartboss_saved_creds", JSON.stringify({ l: loginCode.trim().toUpperCase(), p: password.trim() })).catch(() => {});
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : "Login amalga oshmadi");
     } finally {
