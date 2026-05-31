@@ -222,6 +222,60 @@ function CustomersScreenInner() {
     setFormError(null);
   };
 
+  const [seeding, setSeeding] = useState(false);
+
+  const handleSeedCustomers = async () => {
+    setSeeding(true);
+    try {
+      const isLocalIp = process.env.EXPO_PUBLIC_DOMAIN && (
+        process.env.EXPO_PUBLIC_DOMAIN.startsWith("192.168.") ||
+        process.env.EXPO_PUBLIC_DOMAIN.startsWith("10.") ||
+        process.env.EXPO_PUBLIC_DOMAIN.startsWith("localhost") ||
+        process.env.EXPO_PUBLIC_DOMAIN.startsWith("127.0.0.1")
+      );
+      const scheme = isLocalIp ? "http" : "https";
+      const API_BASE = process.env.EXPO_PUBLIC_DOMAIN
+        ? `${scheme}://${process.env.EXPO_PUBLIC_DOMAIN}`
+        : "";
+
+      if (!API_BASE) {
+        throw new Error("EXPO_PUBLIC_DOMAIN env var topilmadi");
+      }
+
+      const headers: Record<string, string> = {};
+      if (token) {
+        headers["Authorization"] = `Bearer ${token}`;
+      }
+
+      const response = await fetch(`${API_BASE}/api/customers/seed-test`, {
+        method: "GET",
+        headers,
+      });
+
+      if (!response.ok) {
+        const text = await response.text();
+        throw new Error(`Server xatosi: ${text}`);
+      }
+
+      const data = await response.json();
+      Alert.alert(
+        "Muvaffaqiyatli!",
+        "15 ta premium test mijozlari muvaffaqiyatli yaratildi/yangilandi!",
+        [{ text: "Ajoyib" }]
+      );
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      queryClient.invalidateQueries({ queryKey: getGetCustomersQueryKey() });
+      queryClient.invalidateQueries({ queryKey: getGetDashboardStatsQueryKey() });
+      setAddOpen(false);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      Alert.alert("Xatolik", `Mijozlarni yaratishda muammo yuz berdi: ${msg}`);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+    } finally {
+      setSeeding(false);
+    }
+  };
+
   const pickImage = async (source: "camera" | "gallery") => {
     try {
       let result: ImagePicker.ImagePickerResult;
@@ -467,6 +521,38 @@ function CustomersScreenInner() {
           <Text style={[styles.emptySubtitle, { color: colors.mutedForeground }]}>
             {search ? "Boshqa so'z kiriting" : "+ tugmasi bilan mijoz qo'shing"}
           </Text>
+          {!search && (
+            <TouchableOpacity
+              style={[
+                {
+                  backgroundColor: colors.primary + "12",
+                  borderColor: colors.primary,
+                  borderWidth: 1,
+                  marginTop: 16,
+                  borderRadius: 12,
+                  paddingVertical: 10,
+                  paddingHorizontal: 16,
+                  flexDirection: "row",
+                  alignItems: "center",
+                  gap: 8,
+                },
+              ]}
+              onPress={handleSeedCustomers}
+              disabled={seeding}
+              activeOpacity={0.8}
+            >
+              {seeding ? (
+                <ActivityIndicator size="small" color={colors.primary} />
+              ) : (
+                <>
+                  <MaterialIcons name="auto-awesome" size={16} color={colors.primary} />
+                  <Text style={{ color: colors.primary, fontWeight: "600", fontSize: 13 }}>
+                    Test uchun 15 ta mijoz qo'shish
+                  </Text>
+                </>
+              )}
+            </TouchableOpacity>
+          )}
         </ScrollView>
       ) : (
         <FlatList
@@ -638,6 +724,37 @@ function CustomersScreenInner() {
                   )}
                 </TouchableOpacity>
               </View>
+
+              <TouchableOpacity
+                style={[
+                  {
+                    marginTop: 24,
+                    borderColor: colors.border,
+                    borderWidth: 1,
+                    borderRadius: 12,
+                    paddingVertical: 12,
+                    alignItems: "center",
+                    justifyContent: "center",
+                    flexDirection: "row",
+                    gap: 8,
+                    backgroundColor: colors.muted + "40",
+                  },
+                ]}
+                onPress={handleSeedCustomers}
+                disabled={seeding}
+                activeOpacity={0.8}
+              >
+                {seeding ? (
+                  <ActivityIndicator size="small" color={colors.primary} />
+                ) : (
+                  <>
+                    <MaterialIcons name="auto-awesome" size={16} color={colors.primary} />
+                    <Text style={{ color: colors.primary, fontWeight: "600", fontSize: 13 }}>
+                      Tizimga 15 ta test mijozini yuklash
+                    </Text>
+                  </>
+                )}
+              </TouchableOpacity>
             </ScrollView>
           </View>
         </KeyboardAvoidingView>
