@@ -7,20 +7,20 @@
     "development": {
       "developmentClient": true,
       "distribution": "internal",
-      "pnpmVersion": "11.4.0",
+      "pnpm": "11.4.0",
       "android": {
         "buildType": "apk"
       }
     },
     "preview": {
       "distribution": "internal",
-      "pnpmVersion": "11.4.0",
+      "pnpm": "11.4.0",
       "android": {
         "buildType": "apk"
       }
     },
     "production": {
-      "pnpmVersion": "11.4.0",
+      "pnpm": "11.4.0",
       "android": {
         "buildType": "app-bundle"
       }
