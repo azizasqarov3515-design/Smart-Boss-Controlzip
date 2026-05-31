@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+  <meta charset="UTF-8">
+  <title>Hujjatlar Dizayni (Preview)</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+    body {
+      background-color: #e2e8f0;
+      padding: 40px;
+      display: flex;
+      flex-direction: column;
+      gap: 40px;
+      align-items: center;
+      font-family: 'Inter', Arial, sans-serif;
+    }
+    .sheet {
+      background: #fff;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+      width: 700px; /* A5 landscape approx */
+      padding: 14px 18px;
+      color: #0D1117;
+      position: relative;
+    }
+    .sheet.thermal {
+      width: 80mm;
+      padding: 5px;
+    }
+    
+    /* NEW CSS RULES FOR PRINT EXACTNESS AND SIZE */
+    @media print {
+      * {
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+      }
+    }
+    
+    .base-font { font-size: 12px; }
+    .top { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:10px; }
+    .store-name { font-size:16px; font-weight:700; color:#1565C0; }
+    .store-sub { font-size:10px; color:#6B7280; margin-top:2px; }
+    .doc-num { font-size:13px; font-weight:700; text-align:right; }
+    .doc-meta { font-size:10px; color:#6B7280; text-align:right; margin-top:2px; }
+    hr.div { border:none; border-top:2px solid #1565C0; margin:7px 0; }
+    .info-grid { display:grid; grid-template-columns:1fr 1fr; gap:6px; margin-bottom:9px; }
+    .info-box { background:#F8FAFC; border-radius:5px; padding:6px 8px; }
+    .info-label { font-size:10px; font-weight:600; color:#9CA3AF; text-transform:uppercase; letter-spacing:0.4px; margin-bottom:2px; }
+    .info-val { font-size:12px; font-weight:600; color:#0D1117; }
+    table { width:100%; border-collapse:collapse; font-size:12px; }
+    thead tr { background:#1565C0; }
+    thead th { color:#fff; padding:5px 7px; text-align:left; font-size:10px; font-weight:600; text-transform:uppercase; }
+    thead th.r { text-align:right; }
+    tbody tr:nth-child(even) { background:#F8FAFC; }
+    tbody td { padding:5px 7px; border-bottom:1px solid #F1F5F9; vertical-align:middle; }
+    .brand { display:block; font-size:10px; color:#6B7280; }
+    td.c { text-align:center; }
+    td.r { text-align:right; }
+    td.bold { font-weight:600; color:#1565C0; }
+    .totals { margin-top:7px; display:flex; flex-direction:column; align-items:flex-end; }
+    .grand-row { background:#1565C0; color:#fff; border-radius:6px; padding:6px 12px; margin-top:4px; display:flex; justify-content:space-between; align-items:center; min-width:260px; }
+    .grand-label { font-size:13px; font-weight:700; }
+    .grand-val { font-size:14px; font-weight:700; }
+    .footer { margin-top:10px; display:flex; justify-content:space-between; align-items:flex-end; border-top:1px dashed #CBD5E1; padding-top:7px; }
+    .sign-box { flex:1; }
+    .sign-label { font-size:11px; color:#6B7280; margin-bottom:14px; }
+    .sign-line { border-bottom:1px solid #D1D5DB; }
+    .sign-name { font-size:10px; color:#9CA3AF; margin-top:2px; }
+    .thanks { text-align:center; font-size:12px; font-weight:700; color:#1565C0; }
+    
+    /* Thermal Specific */
+    .th-center { text-align:center; }
+    .th-title { font-size:14px; font-weight:700; margin-bottom:2px; }
+    .th-sub { font-size:11px; margin-bottom:8px; }
+    .th-row { display:flex; justify-content:space-between; font-size:11px; margin-bottom:3px; }
+    .th-line { border-bottom:1px dashed #000; margin:5px 0; }
+    .th-table { width:100%; font-size:11px; text-align:left; border-collapse:collapse; }
+    .th-table th { border-bottom:1px solid #000; padding-bottom:3px; }
+    .th-table td { padding:4px 0; vertical-align:top; }
+    .th-table .r { text-align:right; }
+    
+    .sheet-title {
+      position: absolute;
+      top: -30px;
+      left: 0;
+      font-size: 18px;
+      font-weight: bold;
+      color: #333;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- 1. XISOB-FAKTURA -->
+  <div class="sheet base-font">
+    <div class="sheet-title">1. Xisob-Faktura (Kattalashtirilgan matn va aniq ranglar)</div>
+    <div class="top">
+      <div>
+        <div class="store-name">SMARTBOSS</div>
+        <div class="store-sub">Android mobil aksessuarlar do'koni</div>
+        <div class="store-sub"><strong>Sotuvchi: Asadbek</strong></div>
+      </div>
+      <div>
+        <div class="doc-num">FAKTURA № INV-00005</div>
+        <div class="doc-meta">01.06.2026 · 14:30</div>
+      </div>
+    </div>
+    <hr class="div"/>
+    <div class="info-grid">
+      <div class="info-box">
+        <div class="info-label">Xaridor</div>
+        <div class="info-val">Aliyev Vali</div>
+        <div style="font-size:10px;color:#6B7280">📞 +998 90 123 45 67</div>
+      </div>
+      <div class="info-box">
+        <div class="info-label">To'lov turi</div>
+        <div class="info-val">Plastik karta orqali</div>
+      </div>
+      <div class="info-box">
+        <div class="info-label">Mahsulotlar soni</div>
+        <div class="info-val">2 dona (2 xil)</div>
+      </div>
+      <div class="info-box">
+        <div class="info-label">Holat</div>
+        <div class="info-val" style="color:#DC2626">⚠ Qisman nasiya</div>
+      </div>
+    </div>
+    <table>
+      <thead>
+        <tr>
+          <th style="width:26px">#</th>
+          <th>Mahsulot</th>
+          <th style="width:46px" class="r">Dona</th>
+          <th style="width:110px" class="r">Birlik narxi</th>
+          <th style="width:120px" class="r">Jami</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>1</td>
+          <td><strong>P-90</strong><br/><span class="brand">Pinleyou</span></td>
+          <td class="r">1 dona</td>
+          <td class="r">1,000,000 UZS</td>
+          <td class="r bold">1,000,000 UZS</td>
+        </tr>
+        <tr>
+          <td>2</td>
+          <td><strong>U51</strong><br/><span class="brand">U51</span></td>
+          <td class="r">1 dona</td>
+          <td class="r">1,000,000 UZS</td>
+          <td class="r bold">1,000,000 UZS</td>
+        </tr>
+      </tbody>
+    </table>
+    
+    <div class="totals">
+      <div style="width:260px">
+        <div style="display:flex; justify-content:space-between; margin-bottom:4px; font-size:12px">
+          <span style="color:#6B7280">Mahsulotlar soni:</span>
+          <strong>2 dona</strong>
+        </div>
+        <div class="grand-row">
+          <span class="grand-label">UMUMIY SUMMA:</span>
+          <span class="grand-val">2,000,000 UZS</span>
+        </div>
+        <div style="display:flex; justify-content:space-between; margin-top:6px; font-size:13px; font-weight:700; color:#059669">
+          <span>To'langan:</span>
+          <span>500,000 UZS</span>
+        </div>
+        <div style="display:flex; justify-content:space-between; margin-top:4px; font-size:13px; font-weight:700; color:#DC2626">
+          <span>Qarz summasi:</span>
+          <span>1,500,000 UZS</span>
+        </div>
+      </div>
+    </div>
+    
+    <div class="footer">
+      <div class="sign-box" style="margin-right:20px">
+        <div class="sign-label">Sotuvchi: Asadbek</div>
+        <div class="sign-line"></div>
+        <div class="sign-name">F.I.Sh / Imzo</div>
+      </div>
+      <div class="sign-box">
+        <div class="sign-label">Haridor ismi: Aliyev Vali</div>
+        <div class="sign-line"></div>
+        <div class="sign-name">F.I.Sh / Imzo</div>
+      </div>
+    </div>
+    <div style="margin-top:15px">
+      <div class="thanks">Xaridingiz uchun tashakkur!</div>
+      <div style="text-align:center;font-size:10px;color:#9CA3AF;margin-top:2px">SMARTBOSS · Android mobil aksessuarlar do'koni</div>
+    </div>
+  </div>
+
+  <!-- 2. YUK XATI -->
+  <div class="sheet base-font">
+    <div class="sheet-title">2. Yuk xati (Kattalashtirilgan matn va aniq ranglar)</div>
+    <div class="top">
+      <div>
+        <div class="store-name">SMARTBOSS</div>
+        <div class="store-sub">Android mobil aksessuarlar do'koni</div>
+        <div class="store-sub"><strong>Sotuvchi: Asadbek</strong></div>
+      </div>
+      <div>
+        <div class="doc-num">YUK XATI № WB-00005</div>
+        <div class="doc-meta">01.06.2026 · 14:30</div>
+      </div>
+    </div>
+    <hr class="div"/>
+    
+    <div style="display:flex; gap:10px; margin-bottom:10px;">
+      <div style="flex:1; background:#F8FAFC; border:1px solid #E2E8F0; border-radius:6px; padding:8px 10px;">
+        <div class="info-label">Jo'natuvchi (Sotuvchi)</div>
+        <div style="font-size:13px; font-weight:700; color:#0D1117">SMARTBOSS</div>
+      </div>
+      <div style="flex:1; background:#F8FAFC; border:1px solid #E2E8F0; border-radius:6px; padding:8px 10px;">
+        <div class="info-label">Qabul qiluvchi (Xaridor)</div>
+        <div style="font-size:13px; font-weight:700; color:#0D1117">Aliyev Vali</div>
+        <div style="font-size:10px; color:#6B7280; margin-top:2px;">📞 +998 90 123 45 67</div>
+        <div style="font-size:10px; color:#6B7280; margin-top:2px;">Manzil: _________________</div>
+      </div>
+    </div>
+
+    <table>
+      <thead>
+        <tr>
+          <th style="width:26px">#</th>
+          <th>Mahsulot nomi va brendi</th>
+          <th style="width:50px" class="r">Miqdori</th>
+          <th style="width:110px" class="r">Birlik narxi</th>
+          <th style="width:120px" class="r">Jami qiymati</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>1</td>
+          <td><strong>P-90</strong><br/><span class="brand">Pinleyou</span></td>
+          <td class="r">1 dona</td>
+          <td class="r">1,000,000 UZS</td>
+          <td class="r bold">1,000,000 UZS</td>
+        </tr>
+        <tr>
+          <td>2</td>
+          <td><strong>U51</strong><br/><span class="brand">U51</span></td>
+          <td class="r">1 dona</td>
+          <td class="r">1,000,000 UZS</td>
+          <td class="r bold">1,000,000 UZS</td>
+        </tr>
+      </tbody>
+    </table>
+    
+    <div class="totals">
+      <div style="width:100%; max-width:300px">
+        <div style="display:flex; justify-content:space-between; margin-bottom:4px; font-size:12px">
+          <span style="color:#6B7280">Jami mahsulot turi:</span>
+          <strong>2 xil</strong>
+        </div>
+        <div style="display:flex; justify-content:space-between; margin-bottom:6px; font-size:12px">
+          <span style="color:#6B7280">Jami dona:</span>
+          <strong>2 dona</strong>
+        </div>
+        <div class="grand-row">
+          <span class="grand-label">UMUMIY SUMMA:</span>
+          <span class="grand-val">2,000,000 UZS</span>
+        </div>
+        <div style="display:flex; justify-content:space-between; margin-top:6px; font-size:13px; font-weight:700; color:#059669">
+          <span>To'langan:</span>
+          <span>500,000 UZS</span>
+        </div>
+        <div style="display:flex; justify-content:space-between; margin-top:4px; font-size:13px; font-weight:700; color:#DC2626">
+          <span>Qarz summasi:</span>
+          <span>1,500,000 UZS</span>
+        </div>
+      </div>
+    </div>
+    
+    <div class="footer">
+      <div class="sign-box" style="margin-right:20px">
+        <div class="sign-label">Jo'natuvchi: _______________________</div>
+        <div class="sign-line"></div>
+        <div class="sign-name">F.I.Sh / Imzo / Muhr</div>
+      </div>
+      <div class="sign-box">
+        <div class="sign-label">Haridor ismi: Aliyev Vali</div>
+        <div class="sign-line"></div>
+        <div class="sign-name">F.I.Sh / Imzo / Sana</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 3. THERMAL CHEK -->
+  <div class="sheet thermal" style="font-family: monospace;">
+    <div class="sheet-title">3. Terminal cheki</div>
+    <div class="th-center">
+      <div class="th-title">SMARTBOSS</div>
+      <div class="th-sub">Sotuvchi: Asadbek</div>
+    </div>
+    <div class="th-line"></div>
+    <div class="th-row">
+      <span>Sana:</span>
+      <span>01.06.2026 14:30</span>
+    </div>
+    <div class="th-row">
+      <span>Chek:</span>
+      <span>#00005</span>
+    </div>
+    <div class="th-row">
+      <span>Haridor:</span>
+      <span>Aliyev Vali</span>
+    </div>
+    <div class="th-line"></div>
+    <table class="th-table">
+      <thead>
+        <tr>
+          <th>Nomi</th>
+          <th class="r">Soni</th>
+          <th class="r">Narxi</th>
+          <th class="r">Jami</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>P-90</td>
+          <td class="r">1</td>
+          <td class="r">1,000,000</td>
+          <td class="r">1,000,000</td>
+        </tr>
+        <tr>
+          <td>U51</td>
+          <td class="r">1</td>
+          <td class="r">1,000,000</td>
+          <td class="r">1,000,000</td>
+        </tr>
+      </tbody>
+    </table>
+    <div class="th-line"></div>
+    <div class="th-row" style="font-size:13px; font-weight:bold;">
+      <span>JAMI:</span>
+      <span>2,000,000 UZS</span>
+    </div>
+    <div class="th-row">
+      <span>To'lov turi:</span>
+      <span>Karta (Qisman nasiya)</span>
+    </div>
+    <div class="th-row" style="font-weight:bold; margin-top:3px;">
+      <span>To'landi:</span>
+      <span>500,000 UZS</span>
+    </div>
+    <div class="th-row" style="font-weight:bold; margin-top:3px;">
+      <span>Qarz:</span>
+      <span>1,500,000 UZS</span>
+    </div>
+    <div class="th-line"></div>
+    <div class="th-center" style="margin-top:5px;">
+      Xaridingiz uchun rahmat!
+    </div>
+  </div>
+
+</body>
+</html>
