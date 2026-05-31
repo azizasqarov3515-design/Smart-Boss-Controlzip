@@ -8,6 +8,9 @@
       "developmentClient": true,
       "distribution": "internal",
       "pnpm": "9.15.4",
+      "env": {
+        "NPM_CONFIG_FROZEN_LOCKFILE": "false"
+      },
       "android": {
         "buildType": "apk"
       }
@@ -15,12 +18,18 @@
     "preview": {
       "distribution": "internal",
       "pnpm": "9.15.4",
+      "env": {
+        "NPM_CONFIG_FROZEN_LOCKFILE": "false"
+      },
       "android": {
         "buildType": "apk"
       }
     },
     "production": {
       "pnpm": "9.15.4",
+      "env": {
+        "NPM_CONFIG_FROZEN_LOCKFILE": "false"
+      },
       "android": {
         "buildType": "app-bundle"
       }
