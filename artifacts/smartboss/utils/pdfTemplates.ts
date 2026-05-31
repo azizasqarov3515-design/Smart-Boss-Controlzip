@@ -514,7 +514,7 @@ export function buildA5InvoiceHtml(
     <div class="info-box">
       <div class="info-label">Holat</div>
       <div class="info-val" style="${debtAmt > 0 ? 'color:#DC2626' : 'color:#059669'}">
-        ${debtAmt > 0 ? '⚠ Qarz' : '✓ To\\'langan'}
+        ${debtAmt > 0 ? "⚠ Qarz" : "✓ To'langan"}
       </div>
     </div>
   </div>
