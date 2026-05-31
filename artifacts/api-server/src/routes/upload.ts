@@ -3,6 +3,8 @@ import multer from "multer";
 import { randomUUID } from "crypto";
 import { objectStorageClient } from "../lib/objectStorage";
 import { requireAuth } from "../lib/auth";
+import fs from "fs";
+import path from "path";
 
 const router = Router();
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
@@ -14,14 +16,26 @@ router.post("/upload/product-image", requireAuth, upload.single("image"), async 
       return;
     }
 
+    const uuid = randomUUID();
     const bucketId = process.env.DEFAULT_OBJECT_STORAGE_BUCKET_ID;
+    
     if (!bucketId) {
-      req.log.error("DEFAULT_OBJECT_STORAGE_BUCKET_ID env var yo'q");
-      res.status(500).json({ error: "Object storage sozlanmagan" });
+      const localUploadsDir = path.join(process.cwd(), "uploads");
+      if (!fs.existsSync(localUploadsDir)) {
+        fs.mkdirSync(localUploadsDir, { recursive: true });
+      }
+      const localPath = path.join(localUploadsDir, `${uuid}.jpg`);
+      await fs.promises.writeFile(localPath, req.file.buffer);
+
+      const host = req.headers.host ?? "";
+      const protocol = req.headers["x-forwarded-proto"] ?? "https";
+      const imageUrl = `${protocol}://${host}/api/product-image/${uuid}`;
+
+      req.log.info({ imageUrl, localPath }, "Local diskka saqlandi");
+      res.json({ url: imageUrl });
       return;
     }
 
-    const uuid = randomUUID();
     const objectName = `product-images/${uuid}.jpg`;
 
     req.log.info({ bucketId, objectName, size: req.file.size }, "Rasm yuklash boshlandi");

@@ -41,37 +41,30 @@ function formatMoney(n: number) {
 }
 
 function formatCustomerPhone(text: string): string {
-  const digits = text.replace(/\D/g, "");
-  let raw = digits;
+  if (text.length < 4) {
+    return "998 ";
+  }
+
+  const mainDigits = text.slice(4).replace(/\D/g, "");
+  const code = mainDigits.slice(0, 2);
+  const part1 = mainDigits.slice(2, 5);
+  const part2 = mainDigits.slice(5, 7);
+  const part3 = mainDigits.slice(7, 9);
   
-  if (digits.length > 0 && !digits.startsWith("998")) {
-    if (digits.startsWith("9")) {
-      if (digits.startsWith("99")) {
-        // typing 998...
-      } else {
-        // typing just 9
-      }
-    } else {
-      raw = "998" + digits;
-    }
+  let formatted = "998 ";
+  if (code.length > 0) {
+    formatted += code;
+  }
+  if (part1.length > 0) {
+    formatted += " " + part1;
+  }
+  if (part2.length > 0) {
+    formatted += " " + part2;
+  }
+  if (part3.length > 0) {
+    formatted += " " + part3;
   }
   
-  const maxDigits = raw.slice(0, 12);
-  let formatted = "";
-  
-  if (maxDigits.length > 0) {
-    if (maxDigits.length <= 3) {
-      formatted = maxDigits;
-    } else if (maxDigits.length <= 5) {
-      formatted = `${maxDigits.slice(0, 3)} ${maxDigits.slice(3)}`;
-    } else if (maxDigits.length <= 8) {
-      formatted = `${maxDigits.slice(0, 3)} ${maxDigits.slice(3, 5)} ${maxDigits.slice(5)}`;
-    } else if (maxDigits.length <= 10) {
-      formatted = `${maxDigits.slice(0, 3)} ${maxDigits.slice(3, 5)} ${maxDigits.slice(5, 8)} ${maxDigits.slice(8)}`;
-    } else {
-      formatted = `${maxDigits.slice(0, 3)} ${maxDigits.slice(3, 5)} ${maxDigits.slice(5, 8)} ${maxDigits.slice(8, 10)} ${maxDigits.slice(10, 12)}`;
-    }
-  }
   return formatted;
 }
 
@@ -193,7 +186,7 @@ function CustomersScreenInner() {
   const [search, setSearch] = useState("");
   const [addOpen, setAddOpen] = useState(false);
   const [formName, setFormName] = useState("");
-  const [formPhone, setFormPhone] = useState("");
+  const [formPhone, setFormPhone] = useState("998 ");
   const [formAddress, setFormAddress] = useState("");
   const [formLimit, setFormLimit] = useState("");
   const [formNote, setFormNote] = useState("");
@@ -221,7 +214,7 @@ function CustomersScreenInner() {
 
   const resetForm = () => {
     setFormName("");
-    setFormPhone("");
+    setFormPhone("998 ");
     setFormAddress("");
     setFormLimit("");
     setFormNote("");
@@ -580,7 +573,7 @@ function CustomersScreenInner() {
                 placeholderTextColor={colors.mutedForeground}
                 value={formPhone}
                 onChangeText={(v) => setFormPhone(formatCustomerPhone(v))}
-                maxLength={15}
+                maxLength={16}
                 keyboardType="phone-pad"
               />
 

@@ -1,5 +1,7 @@
 import { Router } from "express";
 import { objectStorageClient } from "../lib/objectStorage";
+import fs from "fs";
+import path from "path";
 
 const router = Router();
 
@@ -15,6 +17,14 @@ router.get("/product-image/:uuid", async (req, res) => {
 
   const bucketId = process.env.DEFAULT_OBJECT_STORAGE_BUCKET_ID;
   if (!bucketId) {
+    const localUploadsDir = path.join(process.cwd(), "uploads");
+    const localPath = path.join(localUploadsDir, `${uuid}.jpg`);
+    if (fs.existsSync(localPath)) {
+      res.setHeader("Content-Type", "image/jpeg");
+      res.setHeader("Cache-Control", "public, max-age=31536000");
+      fs.createReadStream(localPath).pipe(res);
+      return;
+    }
     res.status(500).json({ error: "Object storage sozlanmagan" });
     return;
   }
