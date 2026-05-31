@@ -82,6 +82,8 @@ export interface DeleteRequest {
   saleIds: number[];
   productIds?: number[] | null;
   productNames?: string[] | null;
+  customerIds?: number[] | null;
+  customerNames?: string[] | null;
   workerId?: number | null;
   workerName: string;
   status: string;
@@ -97,6 +99,12 @@ export interface CreateProductDeleteRequest {
   /** @minItems 1 */
   productIds: number[];
   productNames: string[];
+}
+
+export interface CreateCustomerDeleteRequest {
+  /** @minItems 1 */
+  customerIds: number[];
+  customerNames: string[];
 }
 
 export interface SaleItem {
@@ -230,6 +238,11 @@ export type CreateDeleteRequest201 = {
 };
 
 export type CreateProductDeleteRequest201 = {
+  id: number;
+  status: string;
+};
+
+export type CreateCustomerDeleteRequest201 = {
   id: number;
   status: string;
 };

@@ -21,6 +21,8 @@ import type {
   BulkDeleteSales,
   BulkDeleteSales200,
   CreateCustomer,
+  CreateCustomerDeleteRequest,
+  CreateCustomerDeleteRequest201,
   CreateDebtPayment,
   CreateDeleteRequest,
   CreateDeleteRequest201,
@@ -2202,6 +2204,172 @@ export const useCreateProductDeleteRequest = <
 > => {
   return useMutation(getCreateProductDeleteRequestMutationOptions(options));
 };
+
+/**
+ * @summary Create a customer delete request (worker)
+ */
+export const getCreateCustomerDeleteRequestUrl = () => {
+  return `/api/delete-requests/customer`;
+};
+
+export const createCustomerDeleteRequest = async (
+  createCustomerDeleteRequest: CreateCustomerDeleteRequest,
+  options?: RequestInit,
+): Promise<CreateCustomerDeleteRequest201> => {
+  return customFetch<CreateCustomerDeleteRequest201>(
+    getCreateCustomerDeleteRequestUrl(),
+    {
+      ...options,
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...options?.headers },
+      body: JSON.stringify(createCustomerDeleteRequest),
+    },
+  );
+};
+
+export const getCreateCustomerDeleteRequestMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createCustomerDeleteRequest>>,
+    TError,
+    { data: BodyType<CreateCustomerDeleteRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof createCustomerDeleteRequest>>,
+  TError,
+  { data: BodyType<CreateCustomerDeleteRequest> },
+  TContext
+> => {
+  const mutationKey = ["createCustomerDeleteRequest"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof createCustomerDeleteRequest>>,
+    { data: BodyType<CreateCustomerDeleteRequest> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return createCustomerDeleteRequest(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CreateCustomerDeleteRequestMutationResult = NonNullable<
+  Awaited<ReturnType<typeof createCustomerDeleteRequest>>
+>;
+export type CreateCustomerDeleteRequestMutationBody =
+  BodyType<CreateCustomerDeleteRequest>;
+export type CreateCustomerDeleteRequestMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Create a customer delete request (worker)
+ */
+export const useCreateCustomerDeleteRequest = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createCustomerDeleteRequest>>,
+    TError,
+    { data: BodyType<CreateCustomerDeleteRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof createCustomerDeleteRequest>>,
+  TError,
+  { data: BodyType<CreateCustomerDeleteRequest> },
+  TContext
+> => {
+  return useMutation(getCreateCustomerDeleteRequestMutationOptions(options));
+};
+
+/**
+ * @summary Get the current worker's own delete requests
+ */
+export const getGetWorkerDeleteRequestsUrl = () => {
+  return `/api/delete-requests/worker`;
+};
+
+export const getWorkerDeleteRequests = async (
+  options?: RequestInit,
+): Promise<DeleteRequest[]> => {
+  return customFetch<DeleteRequest[]>(getGetWorkerDeleteRequestsUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetWorkerDeleteRequestsQueryKey = () => {
+  return [`/api/delete-requests/worker`] as const;
+};
+
+export const getGetWorkerDeleteRequestsQueryOptions = <
+  TData = Awaited<ReturnType<typeof getWorkerDeleteRequests>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getWorkerDeleteRequests>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getGetWorkerDeleteRequestsQueryKey();
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getWorkerDeleteRequests>>
+  > = ({ signal }) => getWorkerDeleteRequests({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getWorkerDeleteRequests>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetWorkerDeleteRequestsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getWorkerDeleteRequests>>
+>;
+export type GetWorkerDeleteRequestsQueryError = ErrorType<unknown>;
+
+/**
+ * @summary Get the current worker's own delete requests
+ */
+
+export function useGetWorkerDeleteRequests<
+  TData = Awaited<ReturnType<typeof getWorkerDeleteRequests>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getWorkerDeleteRequests>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetWorkerDeleteRequestsQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
 
 /**
  * @summary Approve delete request (manager)

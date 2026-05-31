@@ -10,6 +10,8 @@ export * from "./approveDeleteRequest200";
 export * from "./bulkDeleteSales";
 export * from "./bulkDeleteSales200";
 export * from "./createCustomer";
+export * from "./createCustomerDeleteRequest";
+export * from "./createCustomerDeleteRequest201";
 export * from "./createDebtPayment";
 export * from "./createDeleteRequest";
 export * from "./createDeleteRequest201";

@@ -395,6 +395,8 @@ export const GetDeleteRequestsResponseItem = zod.object({
   saleIds: zod.array(zod.number()),
   productIds: zod.array(zod.number()).nullish(),
   productNames: zod.array(zod.string()).nullish(),
+  customerIds: zod.array(zod.number()).nullish(),
+  customerNames: zod.array(zod.string()).nullish(),
   workerId: zod.number().nullish(),
   workerName: zod.string(),
   status: zod.string(),
@@ -420,6 +422,35 @@ export const CreateProductDeleteRequestBody = zod.object({
   productIds: zod.array(zod.number()).min(1),
   productNames: zod.array(zod.string()),
 });
+
+/**
+ * @summary Create a customer delete request (worker)
+ */
+
+export const CreateCustomerDeleteRequestBody = zod.object({
+  customerIds: zod.array(zod.number()).min(1),
+  customerNames: zod.array(zod.string()),
+});
+
+/**
+ * @summary Get the current worker's own delete requests
+ */
+export const GetWorkerDeleteRequestsResponseItem = zod.object({
+  id: zod.number(),
+  type: zod.string(),
+  saleIds: zod.array(zod.number()),
+  productIds: zod.array(zod.number()).nullish(),
+  productNames: zod.array(zod.string()).nullish(),
+  customerIds: zod.array(zod.number()).nullish(),
+  customerNames: zod.array(zod.string()).nullish(),
+  workerId: zod.number().nullish(),
+  workerName: zod.string(),
+  status: zod.string(),
+  createdAt: zod.string(),
+});
+export const GetWorkerDeleteRequestsResponse = zod.array(
+  GetWorkerDeleteRequestsResponseItem,
+);
 
 /**
  * @summary Approve delete request (manager)

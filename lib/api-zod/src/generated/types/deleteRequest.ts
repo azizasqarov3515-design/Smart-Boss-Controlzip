@@ -12,6 +12,8 @@ export interface DeleteRequest {
   saleIds: number[];
   productIds?: number[] | null;
   productNames?: string[] | null;
+  customerIds?: number[] | null;
+  customerNames?: string[] | null;
   workerId?: number | null;
   workerName: string;
   status: string;

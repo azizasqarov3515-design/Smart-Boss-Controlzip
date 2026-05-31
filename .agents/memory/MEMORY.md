@@ -1,2 +1,3 @@
 - [Image upload depends on object storage](image-upload-object-storage.md) — smartboss product/customer image upload needs the GCS bucket provisioned; "Object storage sozlanmagan" means it isn't.
 - [Drizzle schema must be pushed](drizzle-schema-push.md) — "column ... does not exist" 500s mean lib/db schema changed in code but not pushed; run `pnpm --filter @workspace/db run push`.
+- [API spec is source of truth for client hooks](api-spec-codegen.md) — adding a server route alone won't create a React hook; add the op to lib/api-spec/openapi.yaml + run codegen, else app crashes "useX is not a function".

@@ -491,6 +491,44 @@ paths:
                   status:
                     type: string
                 required: [id, status]
+  /delete-requests/customer:
+    post:
+      operationId: createCustomerDeleteRequest
+      tags: [deleteRequests]
+      summary: Create a customer delete request (worker)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateCustomerDeleteRequest"
+      responses:
+        "201":
+          description: Customer delete request created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: integer
+                  status:
+                    type: string
+                required: [id, status]
+  /delete-requests/worker:
+    get:
+      operationId: getWorkerDeleteRequests
+      tags: [deleteRequests]
+      summary: Get the current worker's own delete requests
+      responses:
+        "200":
+          description: List of the worker's delete requests
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/DeleteRequest"
   /delete-requests/{id}/approve:
     post:
       operationId: approveDeleteRequest
@@ -684,6 +722,16 @@ components:
           items:
             type: string
           nullable: true
+        customerIds:
+          type: array
+          items:
+            type: integer
+          nullable: true
+        customerNames:
+          type: array
+          items:
+            type: string
+          nullable: true
         workerId:
           type: integer
           nullable: true
@@ -716,6 +764,19 @@ components:
           items:
             type: string
       required: [productIds, productNames]
+    CreateCustomerDeleteRequest:
+      type: object
+      properties:
+        customerIds:
+          type: array
+          items:
+            type: integer
+          minItems: 1
+        customerNames:
+          type: array
+          items:
+            type: string
+      required: [customerIds, customerNames]
     SaleItem:
       type: object
       properties:
