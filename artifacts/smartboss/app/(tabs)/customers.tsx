@@ -509,7 +509,8 @@ function CustomersScreenInner() {
           onPress={() => !creating && setAddOpen(false)}
         />
         <KeyboardAvoidingView
-          behavior={Platform.OS === "ios" ? "padding" : "height"}
+          behavior={Platform.OS === "ios" ? "padding" : undefined}
+          keyboardVerticalOffset={Platform.OS === "ios" ? 10 : 0}
           style={styles.modalSheetWrap}
         >
           <View style={[styles.modalSheet, { backgroundColor: colors.card }]}>
@@ -520,7 +521,7 @@ function CustomersScreenInner() {
               <Text style={[styles.modalTitle, { color: colors.foreground }]}>Yangi mijoz</Text>
             </View>
 
-            <ScrollView showsVerticalScrollIndicator={false}>
+            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 220 }}>
               {/* Profile Image Picker */}
               <View style={styles.photoPickerWrap}>
                 <TouchableOpacity

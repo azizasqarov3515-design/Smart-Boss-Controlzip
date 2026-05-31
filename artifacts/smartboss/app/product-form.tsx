@@ -635,11 +635,12 @@ function ProductFormScreenInner() {
       <KeyboardAvoidingView
         style={{ flex: 1, backgroundColor: colors.background }}
         behavior={Platform.OS === "ios" ? "padding" : undefined}
+        keyboardVerticalOffset={Platform.OS === "ios" ? 88 : 0}
       >
         <ScrollView
           contentContainerStyle={[
             styles.content,
-            { paddingBottom: insets.bottom + 40, paddingTop: isWeb ? 24 : 16 },
+            { paddingBottom: insets.bottom + 220, paddingTop: isWeb ? 24 : 16 },
           ]}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
