@@ -812,20 +812,22 @@ function POSScreenInner() {
           )}
 
           {/* Cart summary */}
-          <View style={[styles.confirmSummaryBox, { backgroundColor: colors.muted, borderColor: colors.border }]}>
-            {cartItems.map((item) => (
-              <View key={item.product.id} style={styles.confirmItemRow}>
-                <Text style={[styles.confirmItemName, { color: colors.foreground }]} numberOfLines={1}>
-                  {item.product.name}
-                </Text>
-                <Text style={[styles.confirmItemQty, { color: colors.mutedForeground }]}>
-                  {item.quantity} {item.product.unit} × {item.product.salePrice.toLocaleString()}
-                </Text>
-                <Text style={[styles.confirmItemTotal, { color: colors.primary }]}>
-                  {(Math.round(item.product.salePrice * item.quantity * 100) / 100).toLocaleString()}
-                </Text>
-              </View>
-            ))}
+          <View style={[styles.confirmSummaryBox, { backgroundColor: colors.muted, borderColor: colors.border, overflow: "hidden" }]}>
+            <ScrollView nestedScrollEnabled bounces={false}>
+              {cartItems.map((item) => (
+                <View key={item.product.id} style={styles.confirmItemRow}>
+                  <Text style={[styles.confirmItemName, { color: colors.foreground }]} numberOfLines={1}>
+                    {item.product.name}
+                  </Text>
+                  <Text style={[styles.confirmItemQty, { color: colors.mutedForeground }]}>
+                    {item.quantity} {item.product.unit} × {item.product.salePrice.toLocaleString()}
+                  </Text>
+                  <Text style={[styles.confirmItemTotal, { color: colors.primary }]}>
+                    {(Math.round(item.product.salePrice * item.quantity * 100) / 100).toLocaleString()}
+                  </Text>
+                </View>
+              ))}
+            </ScrollView>
           </View>
 
           {/* Total */}
