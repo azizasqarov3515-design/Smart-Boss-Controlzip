@@ -9,7 +9,7 @@
       "distribution": "internal",
       "pnpm": "10.26.1",
       "env": {
-        "NPM_CONFIG_FROZEN_LOCKFILE": "false"
+        "EXPO_PUBLIC_DOMAIN": "eca057ea-9bcf-492e-986b-70ee0a2e3c0f-00-pfoumhn387t5.pike.replit.dev"
       },
       "android": {
         "buildType": "apk"
@@ -19,7 +19,7 @@
       "distribution": "internal",
       "pnpm": "10.26.1",
       "env": {
-        "NPM_CONFIG_FROZEN_LOCKFILE": "false"
+        "EXPO_PUBLIC_DOMAIN": "eca057ea-9bcf-492e-986b-70ee0a2e3c0f-00-pfoumhn387t5.pike.replit.dev"
       },
       "android": {
         "buildType": "apk"
@@ -28,7 +28,7 @@
     "production": {
       "pnpm": "10.26.1",
       "env": {
-        "NPM_CONFIG_FROZEN_LOCKFILE": "false"
+        "EXPO_PUBLIC_DOMAIN": "eca057ea-9bcf-492e-986b-70ee0a2e3c0f-00-pfoumhn387t5.pike.replit.dev"
       },
       "android": {
         "buildType": "app-bundle"

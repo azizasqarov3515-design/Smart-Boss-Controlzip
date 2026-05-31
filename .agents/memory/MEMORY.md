@@ -1,3 +1,5 @@
 - [Image upload depends on object storage](image-upload-object-storage.md) — smartboss product/customer image upload needs the GCS bucket provisioned; "Object storage sozlanmagan" means it isn't.
 - [Drizzle schema must be pushed](drizzle-schema-push.md) — "column ... does not exist" 500s mean lib/db schema changed in code but not pushed; run `pnpm --filter @workspace/db run push`.
 - [API spec is source of truth for client hooks](api-spec-codegen.md) — adding a server route alone won't create a React hook; add the op to lib/api-spec/openapi.yaml + run codegen, else app crashes "useX is not a function".
+- [Post-merge script must be env-only](post-merge-script-scope.md) — scripts/post-merge.sh = install + db push ONLY; never `pnpm run build`/typecheck (repo-wide typecheck has pre-existing errors, apps run via esbuild/Metro/Vite without it).
+- [EXPO_PUBLIC_DOMAIN in EAS builds](expo-public-env-standalone-build.md) — standalone APK login "JSON Parse error" = EXPO_PUBLIC_DOMAIN not embedded; set it in eas.json per-profile env (dev domain=free but workspace must run; *.replit.app=always-on but paid).
