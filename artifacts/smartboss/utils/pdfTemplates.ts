@@ -34,13 +34,34 @@ function fmtMoney(n: number): string {
   return n.toLocaleString("uz-UZ") + " UZS";
 }
 
+function getPayStr(sale: SaleWithItems): string {
+  if (sale.paymentType === "card") return "Plastik karta orqali";
+  if (sale.paymentType === "transfer") return "Pul o'tkazmasi";
+  return "Naqd to'lov";
+}
+
+function getHolatHtml(sale: SaleWithItems): string {
+  const debt = sale.debtAmount ?? 0;
+  if (debt > 0) {
+    const text = sale.paymentType === "card" ? "⚠ Qisman nasiya" : "⚠ Qisman qarz";
+    return `<span class="status-chip" style="background:#FEE2E2;color:#991B1B">${text}</span>`;
+  }
+  return `<span class="status-chip">✓ To'langan</span>`;
+}
+
+function getHolatText(sale: SaleWithItems): string {
+  const debt = sale.debtAmount ?? 0;
+  if (debt > 0) return sale.paymentType === "card" ? "⚠ Qisman nasiya" : "⚠ Qarz";
+  return "✓ To'langan";
+}
+
 function baseStyles(): string {
   return `
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body {
       font-family: 'Inter', Arial, sans-serif;
-      font-size: 11px;
+      font-size: 12px;
       color: ${DARK};
       background: #fff;
       padding: 14px 18px;
@@ -49,22 +70,22 @@ function baseStyles(): string {
     }
     .header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px; }
     .store-name { font-size: 18px; font-weight: 700; color: ${PRIMARY}; letter-spacing: -0.5px; }
-    .store-sub { font-size: 10px; color: #6B7280; margin-top: 2px; }
+    .store-sub { font-size: 11px; color: #6B7280; margin-top: 2px; }
     .doc-title-block { text-align: right; }
-    .doc-title { font-size: 15px; font-weight: 700; color: ${DARK}; }
-    .doc-num { font-size: 10px; color: #6B7280; margin-top: 2px; }
+    .doc-title { font-size: 16px; font-weight: 700; color: ${DARK}; }
+    .doc-num { font-size: 11px; color: #6B7280; margin-top: 2px; }
     .divider { border: none; border-top: 2px solid ${PRIMARY}; margin: 7px 0; }
     .divider-thin { border: none; border-top: 1px solid #E5E7EB; margin: 5px 0; }
     .meta-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; margin-bottom: 10px; }
     .meta-box { background: #F8FAFC; border-radius: 7px; padding: 6px 9px; border: 1px solid #E5E7EB; }
-    .meta-label { font-size: 8px; font-weight: 600; color: #9CA3AF; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 3px; }
-    .meta-val { font-size: 11px; font-weight: 600; color: ${DARK}; }
-    .meta-sub { font-size: 9px; color: #6B7280; margin-top: 2px; }
+    .meta-label { font-size: 9px; font-weight: 600; color: #9CA3AF; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 3px; }
+    .meta-val { font-size: 12px; font-weight: 600; color: ${DARK}; }
+    .meta-sub { font-size: 10px; color: #6B7280; margin-top: 2px; }
     table { width: 100%; border-collapse: collapse; margin-top: 4px; }
     thead tr { background: ${PRIMARY}; }
     thead th {
       color: #fff;
-      font-size: 9px;
+      font-size: 10px;
       font-weight: 600;
       text-align: left;
       padding: 6px 8px;
@@ -75,29 +96,29 @@ function baseStyles(): string {
     thead th:last-child { text-align: right; }
     tbody tr:nth-child(even) { background: #F8FAFC; }
     tbody tr:nth-child(odd) { background: #fff; }
-    tbody td { padding: 5px 8px; font-size: 11px; vertical-align: middle; border: 1px solid #E5E7EB; }
+    tbody td { padding: 5px 8px; font-size: 12px; vertical-align: middle; border: 1px solid #E5E7EB; }
     tbody td:last-child { text-align: right; font-weight: 600; color: ${PRIMARY}; }
     .qty-cell { text-align: center !important; color: #374151 !important; font-weight: 500 !important; }
     .price-cell { text-align: right !important; color: #374151 !important; }
     .total-section { margin-top: 8px; }
     .total-row { display: flex; justify-content: space-between; align-items: center; padding: 3px 0; }
     .total-row.grand { background: ${PRIMARY}; color: #fff; border-radius: 8px; padding: 9px 14px; margin-top: 5px; }
-    .total-label { font-size: 11px; }
-    .total-val { font-size: 12px; font-weight: 700; }
-    .total-row.grand .total-label, .total-row.grand .total-val { color: #fff; font-size: 13px; }
+    .total-label { font-size: 12px; }
+    .total-val { font-size: 13px; font-weight: 700; }
+    .total-row.grand .total-label, .total-row.grand .total-val { color: #fff; font-size: 14px; }
     .footer {
       margin-top: 16px;
       text-align: center;
       padding: 9px 0 0;
       border-top: 1.5px dashed #CBD5E1;
     }
-    .footer-thanks { font-size: 12px; font-weight: 700; color: ${PRIMARY}; letter-spacing: 0.2px; }
-    .footer-sub { font-size: 9px; color: #9CA3AF; margin-top: 3px; }
+    .footer-thanks { font-size: 13px; font-weight: 700; color: ${PRIMARY}; letter-spacing: 0.2px; }
+    .footer-sub { font-size: 10px; color: #9CA3AF; margin-top: 3px; }
     .badge {
       display: inline-block;
       background: #EEF2FF;
       color: ${PRIMARY};
-      font-size: 9px;
+      font-size: 10px;
       font-weight: 600;
       padding: 1px 5px;
       border-radius: 4px;
@@ -105,20 +126,24 @@ function baseStyles(): string {
     }
     .sign-row { display: flex; justify-content: space-between; margin-top: 14px; gap: 20px; }
     .sign-box { flex: 1; }
-    .sign-label { font-size: 10px; color: #6B7280; margin-bottom: 16px; }
+    .sign-label { font-size: 11px; color: #6B7280; margin-bottom: 16px; }
     .sign-line { border-bottom: 1.5px solid #D1D5DB; padding-top: 2px; }
-    .sign-name { font-size: 9px; color: #9CA3AF; margin-top: 3px; }
+    .sign-name { font-size: 10px; color: #9CA3AF; margin-top: 3px; }
     .waybill-info { background: #EFF6FF; border: 1.5px solid #BFDBFE; border-radius: 7px; padding: 9px 11px; margin-bottom: 10px; }
-    .waybill-row { display: flex; justify-content: space-between; padding: 3px 0; font-size: 10px; }
+    .waybill-row { display: flex; justify-content: space-between; padding: 3px 0; font-size: 11px; }
     .waybill-key { color: #6B7280; font-weight: 500; }
     .waybill-val { color: ${DARK}; font-weight: 600; }
-    .status-chip { display: inline-block; background: #D1FAE5; color: #065F46; border-radius: 5px; padding: 2px 7px; font-size: 9px; font-weight: 600; }
+    .status-chip { display: inline-block; background: #D1FAE5; color: #065F46; border-radius: 5px; padding: 2px 7px; font-size: 10px; font-weight: 600; }
     .customer-box { background: #F0F9FF; border: 1.5px solid #BAE6FD; border-radius: 7px; padding: 7px 10px; margin-bottom: 9px; }
-    .customer-title { font-size: 9px; font-weight: 600; color: #0369A1; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 5px; }
-    .customer-row { display: flex; gap: 6px; font-size: 10px; padding: 1px 0; }
+    .customer-title { font-size: 10px; font-weight: 600; color: #0369A1; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 5px; }
+    .customer-row { display: flex; gap: 6px; font-size: 11px; padding: 1px 0; }
     .customer-key { color: #6B7280; min-width: 65px; }
     .customer-val { color: ${DARK}; font-weight: 600; }
     @media print {
+      * {
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+      }
       body { padding: 10px; }
       .no-print { display: none !important; }
     }
@@ -219,18 +244,16 @@ export function buildInvoiceHtml(
       <div class="meta-val">INV-${String(sale.id).padStart(5, "0")}</div>
     </div>
     <div class="meta-box">
-      <div class="meta-label">Sana</div>
-      <div class="meta-val">${fmtDate(sale.createdAt)}</div>
+      <div class="meta-label">To'lov turi</div>
+      <div class="meta-val">${getPayStr(sale)}</div>
     </div>
     <div class="meta-box">
-      <div class="meta-label">Mahsulotlar soni</div>
-      <div class="meta-val">${sale.itemCount} dona</div>
+      <div class="meta-label">Sana va vaqt</div>
+      <div class="meta-val">${fmtDate(sale.createdAt)} ${fmtTime(sale.createdAt)}</div>
     </div>
     <div class="meta-box">
       <div class="meta-label">Holat</div>
-      <div class="meta-val">
-        ${debtAmt > 0 ? `<span class="status-chip" style="background:#FEE2E2;color:#991B1B">Qisman to'langan (Qarz)</span>` : `<span class="status-chip">To'langan</span>`}
-      </div>
+      <div class="meta-val">${getHolatHtml(sale)}</div>
     </div>
   </div>
 
@@ -328,9 +351,9 @@ export function buildReceiptHtml(
     body { max-width: 420px; padding: 14px 18px; }
     .receipt-header { text-align: center; margin-bottom: 12px; }
     .receipt-logo { font-size: 18px; font-weight: 700; color: ${PRIMARY}; }
-    .receipt-sub { font-size: 10px; color: #6B7280; margin-top: 2px; }
-    .receipt-title { font-size: 12px; font-weight: 700; margin-top: 8px; letter-spacing: 2px; color: ${DARK}; }
-    .receipt-meta { display: flex; justify-content: space-between; font-size: 11px; margin: 8px 0; color: #374151; }
+    .receipt-sub { font-size: 11px; color: #6B7280; margin-top: 2px; }
+    .receipt-title { font-size: 13px; font-weight: 700; margin-top: 8px; letter-spacing: 2px; color: ${DARK}; }
+    .receipt-meta { display: flex; justify-content: space-between; font-size: 12px; margin: 8px 0; color: #374151; }
     .receipt-meta span { color: #6B7280; margin-right: 4px; }
     .dashed { border-top: 1.5px dashed #CBD5E1; margin: 7px 0; }
   </style>
@@ -350,7 +373,7 @@ export function buildReceiptHtml(
   </div>
   <div class="receipt-meta">
     <div><span>Vaqt:</span> ${fmtTime(sale.createdAt)}</div>
-    <div><span>Dona:</span> ${sale.itemCount}</div>
+    <div><span>To'lov turi:</span> ${getPayStr(sale)}</div>
   </div>
 
   ${customer && (customer.name || customer.phone) ? `
@@ -398,12 +421,12 @@ export function buildReceiptHtml(
 
   <div class="sign-row" style="margin-top:14px">
     <div class="sign-box">
-      <div class="sign-label" style="font-size:10px;color:#6B7280;margin-bottom:16px">Sotuvchi: ${sellerLabel(seller)}</div>
+      <div class="sign-label" style="font-size:11px;color:#6B7280;margin-bottom:16px">Sotuvchi: ${sellerLabel(seller)}</div>
       <div class="sign-line"></div>
       <div class="sign-name">F.I.Sh / Imzo</div>
     </div>
     <div class="sign-box">
-      <div class="sign-label" style="font-size:10px;color:#6B7280;margin-bottom:16px">Haridor ismi: ${customer?.name ?? "_______________________________"}</div>
+      <div class="sign-label" style="font-size:11px;color:#6B7280;margin-bottom:16px">Haridor ismi: ${customer?.name ?? "_______________________________"}</div>
       <div class="sign-line"></div>
       <div class="sign-name">F.I.Sh / Imzo</div>
     </div>
@@ -440,8 +463,6 @@ export function buildA5InvoiceHtml(
   const paidAmt = sale.paidAmount ?? sale.totalAmount;
   const debtAmt = sale.debtAmount ?? 0;
 
-  const payLabel: Record<string, string> = { cash: "Naqd to'lov", card: "Karta orqali", debt: "Qarz (nasiya)" };
-
   return `<!DOCTYPE html>
 <html lang="uz">
 <head>
@@ -450,37 +471,43 @@ export function buildA5InvoiceHtml(
   <style>
     @page { size: A5 landscape; margin: 10mm 12mm; }
     * { margin:0; padding:0; box-sizing:border-box; }
-    body { font-family: Arial, sans-serif; font-size: 11px; color: #0D1117; background:#fff; }
+    @media print {
+      * {
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+      }
+    }
+    body { font-family: Arial, sans-serif; font-size: 12px; color: #0D1117; background:#fff; }
     .top { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:10px; }
-    .store-name { font-size:15px; font-weight:700; color:${PRIMARY}; }
-    .store-sub { font-size:9px; color:#6B7280; margin-top:2px; }
-    .doc-num { font-size:12px; font-weight:700; text-align:right; }
-    .doc-meta { font-size:9px; color:#6B7280; text-align:right; margin-top:2px; }
+    .store-name { font-size:16px; font-weight:700; color:${PRIMARY}; }
+    .store-sub { font-size:10px; color:#6B7280; margin-top:2px; }
+    .doc-num { font-size:13px; font-weight:700; text-align:right; }
+    .doc-meta { font-size:10px; color:#6B7280; text-align:right; margin-top:2px; }
     hr.div { border:none; border-top:2px solid ${PRIMARY}; margin:7px 0; }
     .info-grid { display:grid; grid-template-columns:1fr 1fr; gap:6px; margin-bottom:9px; }
     .info-box { background:#F8FAFC; border-radius:5px; padding:6px 8px; }
-    .info-label { font-size:8px; font-weight:600; color:#9CA3AF; text-transform:uppercase; letter-spacing:0.4px; margin-bottom:2px; }
-    .info-val { font-size:10px; font-weight:600; color:#0D1117; }
-    table { width:100%; border-collapse:collapse; font-size:10px; }
+    .info-label { font-size:9px; font-weight:600; color:#9CA3AF; text-transform:uppercase; letter-spacing:0.4px; margin-bottom:2px; }
+    .info-val { font-size:11px; font-weight:600; color:#0D1117; }
+    table { width:100%; border-collapse:collapse; font-size:11px; }
     thead tr { background:${PRIMARY}; }
-    thead th { color:#fff; padding:5px 7px; text-align:left; font-size:9px; font-weight:600; text-transform:uppercase; }
+    thead th { color:#fff; padding:5px 7px; text-align:left; font-size:10px; font-weight:600; text-transform:uppercase; }
     thead th.r { text-align:right; }
     tbody tr:nth-child(even) { background:#F8FAFC; }
     tbody td { padding:5px 7px; border-bottom:1px solid #F1F5F9; vertical-align:middle; }
-    .brand { display:block; font-size:9px; color:#6B7280; }
+    .brand { display:block; font-size:10px; color:#6B7280; }
     td.c { text-align:center; }
     td.r { text-align:right; }
     td.bold { font-weight:600; color:${PRIMARY}; }
     .totals { margin-top:7px; display:flex; flex-direction:column; align-items:flex-end; }
     .grand-row { background:${PRIMARY}; color:#fff; border-radius:6px; padding:6px 12px; margin-top:4px; display:flex; justify-content:space-between; align-items:center; min-width:260px; }
-    .grand-label { font-size:11px; font-weight:700; }
-    .grand-val { font-size:12px; font-weight:700; }
+    .grand-label { font-size:12px; font-weight:700; }
+    .grand-val { font-size:13px; font-weight:700; }
     .footer { margin-top:10px; display:flex; justify-content:space-between; align-items:flex-end; border-top:1px dashed #CBD5E1; padding-top:7px; }
     .sign-box { flex:1; }
-    .sign-label { font-size:9px; color:#6B7280; margin-bottom:14px; }
+    .sign-label { font-size:10px; color:#6B7280; margin-bottom:14px; }
     .sign-line { border-bottom:1px solid #D1D5DB; }
-    .sign-name { font-size:8px; color:#9CA3AF; margin-top:2px; }
-    .thanks { text-align:center; font-size:10px; font-weight:700; color:${PRIMARY}; }
+    .sign-name { font-size:9px; color:#9CA3AF; margin-top:2px; }
+    .thanks { text-align:center; font-size:11px; font-weight:700; color:${PRIMARY}; }
   </style>
 </head>
 <body>
@@ -501,11 +528,11 @@ export function buildA5InvoiceHtml(
     <div class="info-box">
       <div class="info-label">Xaridor</div>
       <div class="info-val">${customer?.name ?? "——"}</div>
-      ${customer?.phone ? `<div style="font-size:9px;color:#6B7280">📞 ${customer.phone}</div>` : ""}
+      ${customer?.phone ? `<div style="font-size:10px;color:#6B7280">📞 ${customer.phone}</div>` : ""}
     </div>
     <div class="info-box">
       <div class="info-label">To'lov turi</div>
-      <div class="info-val">${payLabel[sale.paymentType ?? "cash"] ?? "Naqd to'lov"}</div>
+      <div class="info-val">${getPayStr(sale)}</div>
     </div>
     <div class="info-box">
       <div class="info-label">Mahsulotlar soni</div>
@@ -514,7 +541,7 @@ export function buildA5InvoiceHtml(
     <div class="info-box">
       <div class="info-label">Holat</div>
       <div class="info-val" style="${debtAmt > 0 ? 'color:#DC2626' : 'color:#059669'}">
-        ${debtAmt > 0 ? "⚠ Qarz" : "✓ To'langan"}
+        ${getHolatText(sale)}
       </div>
     </div>
   </div>
@@ -531,19 +558,19 @@ export function buildA5InvoiceHtml(
     <tbody>${rows}</tbody>
   </table>
   <div class="totals">
-    ${sale.note ? `<div style="font-size:10px;color:#6B7280;margin-bottom:3px">Izoh: ${sale.note}</div>` : ""}
+    ${sale.note ? `<div style="font-size:11px;color:#6B7280;margin-bottom:3px">Izoh: ${sale.note}</div>` : ""}
     <div class="grand-row">
       <span class="grand-label">UMUMIY SUMMA</span>
       <span class="grand-val">${fmtMoney(sale.totalAmount)}</span>
     </div>
     ${debtAmt > 0 ? `
     <div style="display:flex;justify-content:space-between;min-width:260px;margin-top:6px;padding:2px 4px">
-      <span style="font-size:11px;color:#059669;font-weight:600">To'langan:</span>
-      <span style="font-size:12px;color:#059669;font-weight:600">${fmtMoney(paidAmt)}</span>
+      <span style="font-size:12px;color:#059669;font-weight:600">To'langan:</span>
+      <span style="font-size:13px;color:#059669;font-weight:600">${fmtMoney(paidAmt)}</span>
     </div>
     <div style="display:flex;justify-content:space-between;min-width:260px;margin-top:2px;padding:2px 4px">
-      <span style="font-size:11px;color:#DC2626;font-weight:700">Qarz summasi:</span>
-      <span style="font-size:12px;color:#DC2626;font-weight:700">${fmtMoney(debtAmt)}</span>
+      <span style="font-size:12px;color:#DC2626;font-weight:700">Qarz summasi:</span>
+      <span style="font-size:13px;color:#DC2626;font-weight:700">${fmtMoney(debtAmt)}</span>
     </div>
     ` : ""}
   </div>
@@ -584,7 +611,6 @@ export function buildThermalHtml(
     )
     .join("");
 
-  const payLabel: Record<string, string> = { cash: "NAQD", card: "KARTA", debt: "QARZ" };
   const paidAmt = sale.paidAmount ?? sale.totalAmount;
   const debtAmt = sale.debtAmount ?? 0;
 
@@ -598,28 +624,34 @@ export function buildThermalHtml(
     * { margin:0; padding:0; box-sizing:border-box; }
     body {
       font-family: 'Courier New', Courier, monospace;
-      font-size: 11px;
+      font-size: 12px;
       color: #000;
       background: #fff;
       width: 74mm;
       max-width: 74mm;
     }
+    @media print {
+      * {
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+      }
+    }
     .center { text-align:center; }
-    .logo { font-size:14px; font-weight:bold; letter-spacing:1px; }
-    .sub { font-size:9px; color:#333; margin-top:2px; }
+    .logo { font-size:15px; font-weight:bold; letter-spacing:1px; }
+    .sub { font-size:10px; color:#333; margin-top:2px; }
     .dash { border:none; border-top:1px dashed #000; margin:5px 0; }
-    .title { font-size:11px; font-weight:bold; letter-spacing:3px; margin:5px 0 2px; }
-    .row { display:flex; justify-content:space-between; font-size:9px; margin:2px 0; }
+    .title { font-size:12px; font-weight:bold; letter-spacing:3px; margin:5px 0 2px; }
+    .row { display:flex; justify-content:space-between; font-size:10px; margin:2px 0; }
     .lbl { color:#555; }
     .item { margin:3px 0; }
-    .item-name { font-size:10px; font-weight:bold; word-break:break-word; }
-    .brand { font-weight:normal; font-size:9px; color:#555; }
-    .item-row { display:flex; justify-content:space-between; font-size:10px; padding-left:6px; margin-top:1px; }
+    .item-name { font-size:11px; font-weight:bold; word-break:break-word; }
+    .brand { font-weight:normal; font-size:10px; color:#555; }
+    .item-row { display:flex; justify-content:space-between; font-size:11px; padding-left:6px; margin-top:1px; }
     .item-total { font-weight:bold; }
-    .t-row { display:flex; justify-content:space-between; font-size:10px; padding:1px 0; }
-    .grand { font-size:13px; font-weight:bold; border-top:2px solid #000; padding-top:3px; margin-top:3px; }
-    .thanks { font-size:11px; font-weight:bold; text-align:center; margin-top:6px; }
-    .footer { text-align:center; font-size:9px; color:#555; margin-top:3px; }
+    .t-row { display:flex; justify-content:space-between; font-size:11px; padding:1px 0; }
+    .grand { font-size:14px; font-weight:bold; border-top:2px solid #000; padding-top:3px; margin-top:3px; }
+    .thanks { font-size:12px; font-weight:bold; text-align:center; margin-top:6px; }
+    .footer { text-align:center; font-size:10px; color:#555; margin-top:3px; }
   </style>
 </head>
 <body>
@@ -634,7 +666,7 @@ export function buildThermalHtml(
   <div class="row"><span class="lbl">Chek №:</span><span>RCP-${String(sale.id).padStart(5, "0")}</span></div>
   <div class="row"><span class="lbl">Sana:</span><span>${fmtDate(sale.createdAt)}</span></div>
   <div class="row"><span class="lbl">Vaqt:</span><span>${fmtTime(sale.createdAt)}</span></div>
-  <div class="row"><span class="lbl">To'lov:</span><span>${payLabel[sale.paymentType ?? "cash"] ?? "NAQD"}</span></div>
+  <div class="row"><span class="lbl">To'lov:</span><span>${getPayStr(sale)}</span></div>
   ${customer?.name ? `
   <hr class="dash"/>
   <div class="row"><span class="lbl">Xaridor:</span><span>${customer.name}</span></div>
@@ -651,7 +683,7 @@ export function buildThermalHtml(
   </div>
   ${debtAmt > 0 ? `
   <div class="t-row"><span style="color:#059669;font-weight:bold">To'langan:</span><span style="color:#059669;font-weight:bold">${paidAmt.toLocaleString("uz-UZ")} UZS</span></div>
-  <div class="t-row"><span style="color:#DC2626;font-weight:bold;font-size:11px">Qarz summasi:</span><span style="color:#DC2626;font-weight:bold;font-size:11px">${debtAmt.toLocaleString("uz-UZ")} UZS</span></div>
+  <div class="t-row"><span style="color:#DC2626;font-weight:bold;font-size:12px">Qarz summasi:</span><span style="color:#DC2626;font-weight:bold;font-size:12px">${debtAmt.toLocaleString("uz-UZ")} UZS</span></div>
   ` : ""}
   <hr class="dash"/>
   <div class="thanks">Xaridingiz uchun tashakkur!</div>
@@ -678,7 +710,7 @@ export function buildWaybillHtml(
         <td>${i + 1}</td>
         <td>
           <strong>${item.productName}</strong><br/>
-          <span style="color:#6B7280;font-size:10px">${item.brand}</span>
+          <span style="color:#6B7280;font-size:11px">${item.brand}</span>
         </td>
         <td class="qty-cell">${item.quantity} ${item.unit ?? ""}</td>
         <td class="price-cell">${fmtMoney(item.unitPrice)}</td>
@@ -730,9 +762,13 @@ export function buildWaybillHtml(
       <span class="waybill-val">${sale.itemCount} dona</span>
     </div>
     <div class="waybill-row">
+      <span class="waybill-key">To'lov turi:</span>
+      <span class="waybill-val">${getPayStr(sale)}</span>
+    </div>
+    <div class="waybill-row">
       <span class="waybill-key">Holat:</span>
       <span class="waybill-val">
-        ${debtAmt > 0 ? `<span class="status-chip" style="background:#FEE2E2;color:#991B1B">Qisman qarz</span>` : `<span class="status-chip">Topshirildi / To'langan</span>`}
+        ${getHolatHtml(sale)}
       </span>
     </div>
   </div>
