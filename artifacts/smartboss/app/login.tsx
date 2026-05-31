@@ -148,6 +148,9 @@ export default function LoginScreen() {
                 autoCorrect={false}
                 maxLength={8}
                 returnKeyType="next"
+                textContentType="username"
+                autoComplete="username"
+                importantForAutofill="yes"
               />
             </View>
           </View>
@@ -169,6 +172,9 @@ export default function LoginScreen() {
                 maxLength={6}
                 returnKeyType="done"
                 onSubmitEditing={handleLogin}
+                textContentType="password"
+                autoComplete="password"
+                importantForAutofill="yes"
               />
               <TouchableOpacity onPress={() => setShowPassword((v) => !v)} activeOpacity={0.7} style={styles.eyeBtn}>
                 <MaterialIcons name={showPassword ? "visibility-off" : "visibility"} size={20} color={colors.mutedForeground} />
