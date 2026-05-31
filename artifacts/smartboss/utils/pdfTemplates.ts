@@ -147,14 +147,14 @@ function customerBlock(customer?: PdfCustomer | null): string {
     return `
     <div class="customer-box">
       <div class="customer-title">📋 Xaridor ma'lumotlari</div>
-      <div class="customer-row"><span class="customer-key">Ism:</span><span class="customer-val" style="color:#D1D5DB;font-weight:400">________________________</span></div>
+      <div class="customer-row"><span class="customer-key">Haridor ismi:</span><span class="customer-val" style="color:#D1D5DB;font-weight:400;letter-spacing:1px">_______________________________</span></div>
       <div class="customer-row"><span class="customer-key">Telefon:</span><span class="customer-val" style="color:#D1D5DB;font-weight:400">__________________</span></div>
     </div>`;
   }
   return `
     <div class="customer-box">
       <div class="customer-title">📋 Xaridor ma'lumotlari</div>
-      ${customer.name ? `<div class="customer-row"><span class="customer-key">Ism:</span><span class="customer-val">${customer.name}</span></div>` : ""}
+      <div class="customer-row"><span class="customer-key">Haridor ismi:</span><span class="customer-val">${customer.name ?? "_______________________________"}</span></div>
       ${customer.phone ? `<div class="customer-row"><span class="customer-key">Telefon:</span><span class="customer-val">${customer.phone}</span></div>` : ""}
       ${customer.address ? `<div class="customer-row"><span class="customer-key">Manzil:</span><span class="customer-val">${customer.address}</span></div>` : ""}
     </div>`;
@@ -167,6 +167,9 @@ export function buildInvoiceHtml(
   customer?: PdfCustomer | null,
   seller?: PdfSeller | null
 ): string {
+  const paidAmt = sale.paidAmount ?? sale.totalAmount;
+  const debtAmt = sale.debtAmount ?? 0;
+
   const rows = sale.items
     .map(
       (item, i) => `
@@ -225,7 +228,9 @@ export function buildInvoiceHtml(
     </div>
     <div class="meta-box">
       <div class="meta-label">Holat</div>
-      <div class="meta-val"><span class="status-chip">To'langan</span></div>
+      <div class="meta-val">
+        ${debtAmt > 0 ? `<span class="status-chip" style="background:#FEE2E2;color:#991B1B">Qisman to'langan (Qarz)</span>` : `<span class="status-chip">To'langan</span>`}
+      </div>
     </div>
   </div>
 
@@ -250,9 +255,19 @@ export function buildInvoiceHtml(
     </div>
     ${sale.note ? `<div class="total-row"><span class="total-label" style="color:#6B7280">Izoh:</span><span class="total-val" style="color:#374151">${sale.note}</span></div>` : ""}
     <div class="total-row grand">
-      <span class="total-label">JAMI TO'LOV:</span>
+      <span class="total-label">UMUMIY SUMMA:</span>
       <span class="total-val">${fmtMoney(sale.totalAmount)}</span>
     </div>
+    ${debtAmt > 0 ? `
+    <div class="total-row" style="margin-top:6px">
+      <span class="total-label" style="color:#059669;font-weight:600">To'langan:</span>
+      <span class="total-val" style="color:#059669">${fmtMoney(paidAmt)}</span>
+    </div>
+    <div class="total-row">
+      <span class="total-label" style="color:#DC2626;font-weight:700">Qarz summasi:</span>
+      <span class="total-val" style="color:#DC2626;font-weight:700">${fmtMoney(debtAmt)}</span>
+    </div>
+    ` : ""}
   </div>
 
   <div class="sign-row">
@@ -262,7 +277,7 @@ export function buildInvoiceHtml(
       <div class="sign-name">F.I.Sh / Imzo</div>
     </div>
     <div class="sign-box">
-      <div class="sign-label">Xaridor: ${customer?.name ?? "________________________"}</div>
+      <div class="sign-label">Haridor ismi: ${customer?.name ?? "_______________________________"}</div>
       <div class="sign-line"></div>
       <div class="sign-name">F.I.Sh / Imzo</div>
     </div>
@@ -283,6 +298,9 @@ export function buildReceiptHtml(
   customer?: PdfCustomer | null,
   seller?: PdfSeller | null
 ): string {
+  const paidAmt = sale.paidAmount ?? sale.totalAmount;
+  const debtAmt = sale.debtAmount ?? 0;
+
   const rows = sale.items
     .map(
       (item, i) => `
@@ -363,9 +381,19 @@ export function buildReceiptHtml(
   <div class="total-section">
     ${sale.note ? `<div class="total-row"><span class="total-label" style="color:#6B7280;font-size:12px">Izoh:</span><span style="font-size:12px;color:#374151">${sale.note}</span></div>` : ""}
     <div class="total-row grand" style="margin-top:12px">
-      <span class="total-label">JAMI:</span>
+      <span class="total-label">UMUMIY SUMMA:</span>
       <span class="total-val">${fmtMoney(sale.totalAmount)}</span>
     </div>
+    ${debtAmt > 0 ? `
+    <div class="total-row" style="margin-top:8px">
+      <span class="total-label" style="color:#059669;font-weight:600">To'langan:</span>
+      <span class="total-val" style="color:#059669">${fmtMoney(paidAmt)}</span>
+    </div>
+    <div class="total-row">
+      <span class="total-label" style="color:#DC2626;font-weight:700">Qarz summasi:</span>
+      <span class="total-val" style="color:#DC2626;font-weight:700">${fmtMoney(debtAmt)}</span>
+    </div>
+    ` : ""}
   </div>
 
   <div class="sign-row" style="margin-top:14px">
@@ -375,7 +403,7 @@ export function buildReceiptHtml(
       <div class="sign-name">F.I.Sh / Imzo</div>
     </div>
     <div class="sign-box">
-      <div class="sign-label" style="font-size:10px;color:#6B7280;margin-bottom:16px">Xaridor: ${customer?.name ?? "________________________"}</div>
+      <div class="sign-label" style="font-size:10px;color:#6B7280;margin-bottom:16px">Haridor ismi: ${customer?.name ?? "_______________________________"}</div>
       <div class="sign-line"></div>
       <div class="sign-name">F.I.Sh / Imzo</div>
     </div>
@@ -408,6 +436,9 @@ export function buildA5InvoiceHtml(
       </tr>`
     )
     .join("");
+
+  const paidAmt = sale.paidAmount ?? sale.totalAmount;
+  const debtAmt = sale.debtAmount ?? 0;
 
   const payLabel: Record<string, string> = { cash: "Naqd to'lov", card: "Karta orqali", debt: "Qarz (nasiya)" };
 
@@ -482,7 +513,9 @@ export function buildA5InvoiceHtml(
     </div>
     <div class="info-box">
       <div class="info-label">Holat</div>
-      <div class="info-val" style="color:#059669">✓ To'langan</div>
+      <div class="info-val" style="${debtAmt > 0 ? 'color:#DC2626' : 'color:#059669'}">
+        ${debtAmt > 0 ? '⚠ Qarz' : '✓ To\\'langan'}
+      </div>
     </div>
   </div>
   <table>
@@ -500,9 +533,19 @@ export function buildA5InvoiceHtml(
   <div class="totals">
     ${sale.note ? `<div style="font-size:10px;color:#6B7280;margin-bottom:3px">Izoh: ${sale.note}</div>` : ""}
     <div class="grand-row">
-      <span class="grand-label">JAMI TO'LOV</span>
+      <span class="grand-label">UMUMIY SUMMA</span>
       <span class="grand-val">${fmtMoney(sale.totalAmount)}</span>
     </div>
+    ${debtAmt > 0 ? `
+    <div style="display:flex;justify-content:space-between;min-width:260px;margin-top:6px;padding:2px 4px">
+      <span style="font-size:11px;color:#059669;font-weight:600">To'langan:</span>
+      <span style="font-size:12px;color:#059669;font-weight:600">${fmtMoney(paidAmt)}</span>
+    </div>
+    <div style="display:flex;justify-content:space-between;min-width:260px;margin-top:2px;padding:2px 4px">
+      <span style="font-size:11px;color:#DC2626;font-weight:700">Qarz summasi:</span>
+      <span style="font-size:12px;color:#DC2626;font-weight:700">${fmtMoney(debtAmt)}</span>
+    </div>
+    ` : ""}
   </div>
   <div class="footer">
     <div class="sign-box" style="max-width:44%">
@@ -512,7 +555,7 @@ export function buildA5InvoiceHtml(
     </div>
     <div class="thanks">Xaridingiz uchun<br/>tashakkur!</div>
     <div class="sign-box" style="max-width:44%;text-align:right">
-      <div class="sign-label" style="text-align:right">Xaridor: ${customer?.name ?? "________________________"}</div>
+      <div class="sign-label" style="text-align:right">Haridor ismi: ${customer?.name ?? "_______________________________"}</div>
       <div class="sign-line"></div>
       <div class="sign-name" style="text-align:right">F.I.Sh / Imzo</div>
     </div>
@@ -607,8 +650,8 @@ export function buildThermalHtml(
     <span>${sale.totalAmount.toLocaleString("uz-UZ")} UZS</span>
   </div>
   ${debtAmt > 0 ? `
-  <div class="t-row"><span>To'langan:</span><span>${paidAmt.toLocaleString("uz-UZ")} UZS</span></div>
-  <div class="t-row"><span>Qarz:</span><span>${debtAmt.toLocaleString("uz-UZ")} UZS</span></div>
+  <div class="t-row"><span style="color:#059669;font-weight:bold">To'langan:</span><span style="color:#059669;font-weight:bold">${paidAmt.toLocaleString("uz-UZ")} UZS</span></div>
+  <div class="t-row"><span style="color:#DC2626;font-weight:bold;font-size:11px">Qarz summasi:</span><span style="color:#DC2626;font-weight:bold;font-size:11px">${debtAmt.toLocaleString("uz-UZ")} UZS</span></div>
   ` : ""}
   <hr class="dash"/>
   <div class="thanks">Xaridingiz uchun tashakkur!</div>
@@ -625,6 +668,9 @@ export function buildWaybillHtml(
   customer?: PdfCustomer | null,
   seller?: PdfSeller | null
 ): string {
+  const paidAmt = sale.paidAmount ?? sale.totalAmount;
+  const debtAmt = sale.debtAmount ?? 0;
+
   const rows = sale.items
     .map(
       (item, i) => `
@@ -685,7 +731,9 @@ export function buildWaybillHtml(
     </div>
     <div class="waybill-row">
       <span class="waybill-key">Holat:</span>
-      <span class="waybill-val"><span class="status-chip">Topshirildi</span></span>
+      <span class="waybill-val">
+        ${debtAmt > 0 ? `<span class="status-chip" style="background:#FEE2E2;color:#991B1B">Qisman qarz</span>` : `<span class="status-chip">Topshirildi / To'langan</span>`}
+      </span>
     </div>
   </div>
 
@@ -701,7 +749,7 @@ export function buildWaybillHtml(
     </div>
     <div class="meta-box">
       <div class="meta-label">Qabul qiluvchi (Xaridor)</div>
-      <div class="meta-val">${customer?.name ?? "________________________"}</div>
+      <div class="meta-val">${customer?.name ?? "_______________________________"}</div>
       ${customer?.phone ? `<div class="meta-sub">📞 ${customer.phone}</div>` : `<div class="meta-sub" style="color:#D1D5DB">Tel: ___________________</div>`}
       ${customer?.address ? `<div class="meta-sub">📍 ${customer.address}</div>` : `<div class="meta-sub" style="color:#D1D5DB">Manzil: ________________</div>`}
     </div>
@@ -732,9 +780,19 @@ export function buildWaybillHtml(
     </div>
     ${sale.note ? `<div class="total-row"><span class="total-label" style="color:#6B7280">Izoh:</span><span class="total-val" style="color:#374151">${sale.note}</span></div>` : ""}
     <div class="total-row grand">
-      <span class="total-label">UMUMIY QIYMAT:</span>
+      <span class="total-label">UMUMIY SUMMA:</span>
       <span class="total-val">${fmtMoney(sale.totalAmount)}</span>
     </div>
+    ${debtAmt > 0 ? `
+    <div class="total-row" style="margin-top:6px">
+      <span class="total-label" style="color:#059669;font-weight:600">To'langan:</span>
+      <span class="total-val" style="color:#059669">${fmtMoney(paidAmt)}</span>
+    </div>
+    <div class="total-row">
+      <span class="total-label" style="color:#DC2626;font-weight:700">Qarz summasi:</span>
+      <span class="total-val" style="color:#DC2626;font-weight:700">${fmtMoney(debtAmt)}</span>
+    </div>
+    ` : ""}
   </div>
 
   <div class="sign-row">
@@ -744,7 +802,7 @@ export function buildWaybillHtml(
       <div class="sign-name">F.I.Sh / Imzo / Muhr</div>
     </div>
     <div class="sign-box">
-      <div class="sign-label">Qabul qiluvchi: ${customer?.name ?? "________________________"}</div>
+      <div class="sign-label">Haridor ismi: ${customer?.name ?? "_______________________________"}</div>
       <div class="sign-line"></div>
       <div class="sign-name">F.I.Sh / Imzo / Sana</div>
     </div>
