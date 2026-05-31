@@ -1,1 +1,2 @@
 - [Image upload depends on object storage](image-upload-object-storage.md) — smartboss product/customer image upload needs the GCS bucket provisioned; "Object storage sozlanmagan" means it isn't.
+- [Drizzle schema must be pushed](drizzle-schema-push.md) — "column ... does not exist" 500s mean lib/db schema changed in code but not pushed; run `pnpm --filter @workspace/db run push`.
