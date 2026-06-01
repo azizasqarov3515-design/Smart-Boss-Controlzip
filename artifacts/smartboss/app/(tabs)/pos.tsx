@@ -2,6 +2,7 @@ import {
   useGetProducts,
   useCreateSale,
   useGetCustomers,
+  useCreateCustomer,
   getGetProductsQueryKey,
   getGetDashboardStatsQueryKey,
   getGetSalesQueryKey,
@@ -306,6 +307,9 @@ function POSScreenInner() {
   const [partialPayment, setPartialPayment] = useState("");
   const [customerPickerOpen, setCustomerPickerOpen] = useState(false);
   const [customerSearch, setCustomerSearch] = useState("");
+  const [customerMode, setCustomerMode] = useState<"list" | "create">("list");
+  const [newCustomerName, setNewCustomerName] = useState("");
+  const [newCustomerPhone, setNewCustomerPhone] = useState("");
   const [customerConfirmVisible, setCustomerConfirmVisible] = useState(false);
   const [unitFilter, setUnitFilter] = useState<"all" | "dona" | "kg" | "m">("all");
   const [qtyPromptProduct, setQtyPromptProduct] = useState<Product | null>(null);
@@ -335,6 +339,17 @@ function POSScreenInner() {
 
   const { data: products, isLoading: productsLoading, refetch: refetchProducts, isRefetching: productsRefetching } = useGetProducts();
   const { data: customers, refetch: refetchCustomers, isLoading: customersLoading } = useGetCustomers();
+
+  const { mutate: createCustomer, isPending: creatingCustomer } = useCreateCustomer({
+    onSuccess: (data) => {
+      setSelectedCustomer(data);
+      closeCustomerPicker();
+      refetchCustomers();
+    },
+    onError: () => {
+      Alert.alert("Xato", "Mijozni saqlashda xato yuz berdi");
+    },
+  });
 
   useEffect(() => {
     if (customerPickerOpen) {
@@ -493,6 +508,9 @@ function POSScreenInner() {
   // Closes the customer picker and re-opens the checkout modal
   const closeCustomerPicker = useCallback(() => {
     setCustomerPickerOpen(false);
+    setCustomerMode("list");
+    setNewCustomerName("");
+    setNewCustomerPhone("");
     setTimeout(() => setConfirmOpen(true), 300);
   }, []);
 
@@ -1134,23 +1152,40 @@ function POSScreenInner() {
         statusBarTranslucent
         onRequestClose={closeCustomerPicker}
       >
-        <TouchableOpacity
-          style={styles.confirmBackdrop}
-          activeOpacity={1}
-          onPress={closeCustomerPicker}
-        />
         <KeyboardAvoidingView
-          behavior={Platform.OS === "ios" ? "padding" : "height"}
-          style={{ position: "absolute", bottom: 0, left: 0, right: 0 }}
+          behavior={Platform.OS === "ios" ? "padding" : undefined}
+          style={{ flex: 1, justifyContent: "flex-end" }}
         >
-          <View style={[styles.confirmSheet, { backgroundColor: colors.card, maxHeight: "80%" }]}>
+          <TouchableOpacity
+            style={[styles.confirmBackdrop, { position: "absolute", top: 0, bottom: 0, left: 0, right: 0 }]}
+            activeOpacity={1}
+            onPress={closeCustomerPicker}
+          />
+          <View style={[styles.confirmSheet, { backgroundColor: colors.card, maxHeight: "80%", position: "relative" }]}>
             <View style={[styles.confirmHandle, { backgroundColor: colors.border }]} />
             <View style={[styles.confirmHeader, { marginBottom: 12 }]}>
               <MaterialIcons name="people" size={24} color={colors.primary} />
-              <Text style={[styles.confirmTitle, { color: colors.foreground }]}>Mijoz tanlang</Text>
+              <Text style={[styles.confirmTitle, { color: colors.foreground }]}>Mijoz tanlash</Text>
             </View>
 
-            {/* Search */}
+            <View style={{ flexDirection: "row", marginBottom: 16, backgroundColor: colors.muted, borderRadius: 8, padding: 4 }}>
+              <TouchableOpacity
+                style={{ flex: 1, paddingVertical: 8, alignItems: "center", borderRadius: 6, backgroundColor: customerMode === "list" ? colors.card : "transparent", shadowColor: customerMode === "list" ? "#000" : "transparent", shadowOpacity: customerMode === "list" ? 0.1 : 0, shadowRadius: 2, shadowOffset: { width: 0, height: 1 } }}
+                onPress={() => setCustomerMode("list")}
+              >
+                <Text style={{ fontFamily: customerMode === "list" ? "Inter_600SemiBold" : "Inter_500Medium", color: customerMode === "list" ? colors.foreground : colors.mutedForeground, fontSize: 13 }}>Mavjud mijozlar</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={{ flex: 1, paddingVertical: 8, alignItems: "center", borderRadius: 6, backgroundColor: customerMode === "create" ? colors.card : "transparent", shadowColor: customerMode === "create" ? "#000" : "transparent", shadowOpacity: customerMode === "create" ? 0.1 : 0, shadowRadius: 2, shadowOffset: { width: 0, height: 1 } }}
+                onPress={() => setCustomerMode("create")}
+              >
+                <Text style={{ fontFamily: customerMode === "create" ? "Inter_600SemiBold" : "Inter_500Medium", color: customerMode === "create" ? colors.foreground : colors.mutedForeground, fontSize: 13 }}>Yangi mijoz</Text>
+              </TouchableOpacity>
+            </View>
+
+            {customerMode === "list" ? (
+              <>
+                {/* Search */}
             <View style={[styles.pickerSearch, { backgroundColor: colors.muted, borderColor: colors.border }]}>
               <MaterialIcons name="search" size={16} color={colors.mutedForeground} />
               <TextInput
@@ -1229,6 +1264,54 @@ function POSScreenInner() {
                 </View>
               )}
             </ScrollView>
+              </>
+            ) : (
+              <View style={{ paddingTop: 10 }}>
+                <Text style={{ fontFamily: "Inter_500Medium", fontSize: 13, color: colors.mutedForeground, marginBottom: 6 }}>
+                  Ism (majburiy)
+                </Text>
+                <TextInput
+                  style={[styles.qtyPromptInput, { color: colors.foreground, borderColor: colors.border, backgroundColor: colors.muted, marginBottom: 16 }]}
+                  placeholder="Mijoz ismi"
+                  placeholderTextColor={colors.mutedForeground}
+                  value={newCustomerName}
+                  onChangeText={setNewCustomerName}
+                  autoFocus
+                />
+                <Text style={{ fontFamily: "Inter_500Medium", fontSize: 13, color: colors.mutedForeground, marginBottom: 6 }}>
+                  Telefon (majburiy emas)
+                </Text>
+                <TextInput
+                  style={[styles.qtyPromptInput, { color: colors.foreground, borderColor: colors.border, backgroundColor: colors.muted, marginBottom: 24 }]}
+                  placeholder="+998"
+                  placeholderTextColor={colors.mutedForeground}
+                  value={newCustomerPhone}
+                  onChangeText={setNewCustomerPhone}
+                  keyboardType="phone-pad"
+                />
+                <TouchableOpacity
+                  style={[styles.qtyPromptConfirm, { backgroundColor: colors.primary, width: "100%", justifyContent: "center" }]}
+                  activeOpacity={0.8}
+                  disabled={!newCustomerName.trim() || creatingCustomer}
+                  onPress={() => {
+                    createCustomer({
+                      name: newCustomerName.trim(),
+                      phone: newCustomerPhone.trim(),
+                      debtLimit: 0
+                    });
+                  }}
+                >
+                  {creatingCustomer ? (
+                    <ActivityIndicator size="small" color="#fff" />
+                  ) : (
+                    <>
+                      <MaterialIcons name="person-add" size={18} color="#fff" />
+                      <Text style={styles.qtyPromptConfirmText}>Mijozni saqlash va tanlash</Text>
+                    </>
+                  )}
+                </TouchableOpacity>
+              </View>
+            )}
           </View>
         </KeyboardAvoidingView>
       </Modal>
