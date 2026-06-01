@@ -21,7 +21,9 @@ import {
   Text,
   TouchableOpacity,
   View,
+  Dimensions,
 } from "react-native";
+import { LineChart } from "react-native-chart-kit";
 import { MaterialIcons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useColors } from "@/hooks/useColors";
@@ -297,6 +299,53 @@ export default function DashboardScreen() {
             />
           </View>
 
+          <View style={[styles.chartContainer, { backgroundColor: colors.card, borderColor: colors.border }]}>
+            <Text style={[styles.chartTitle, { color: "rgba(255, 255, 255, 0.9)" }]}>Haftalik savdo tendensiyasi</Text>
+            <LineChart
+              data={{
+                labels: ["Du", "Se", "Cho", "Pay", "Ju", "Sha", "Yak"],
+                datasets: [
+                  {
+                    data: [10, 24, 50, 37, 72, 52, 66]
+                  }
+                ]
+              }}
+              width={Dimensions.get("window").width - 32} // padding adjustment
+              height={220}
+              yAxisLabel=""
+              yAxisSuffix="m"
+              yLabelsOffset={8}
+              withInnerLines={true}
+              withOuterLines={false}
+              chartConfig={{
+                backgroundColor: "transparent",
+                backgroundGradientFrom: "#111827",
+                backgroundGradientFromOpacity: 0,
+                backgroundGradientTo: "#111827",
+                backgroundGradientToOpacity: 0,
+                decimalPlaces: 0,
+                color: (opacity = 1) => `rgba(249, 115, 22, ${opacity})`,
+                labelColor: (opacity = 1) => `rgba(255, 255, 255, 0.4)`,
+                strokeWidth: 3,
+                propsForDots: {
+                  r: "4",
+                  strokeWidth: "2",
+                  stroke: "#f97316",
+                  fill: "#111827"
+                },
+                propsForBackgroundLines: {
+                  stroke: "rgba(255, 255, 255, 0.05)"
+                }
+              }}
+              bezier
+              style={{
+                marginVertical: 10,
+                borderRadius: 16,
+                paddingRight: 40,
+              }}
+            />
+          </View>
+
           <Text style={[styles.sectionTitle, { color: colors.foreground, marginTop: 18 }]}>Ombor holati</Text>
           <View style={styles.statsGrid}>
             <StatCard label="Mahsulot turi" value={String(stats?.totalProducts ?? 0)} icon="inventory-2" variant="primary" />
@@ -420,6 +469,24 @@ export default function DashboardScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   content: { paddingHorizontal: 16 },
+  chartContainer: {
+    marginTop: 18,
+    borderRadius: 20,
+    borderWidth: 1,
+    paddingVertical: 18,
+    paddingHorizontal: 0,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.3,
+    shadowRadius: 12,
+    elevation: 4,
+  },
+  chartTitle: {
+    fontFamily: "Inter_600SemiBold",
+    fontSize: 15,
+    marginLeft: 18,
+    marginBottom: 4,
+  },
   header: {
     alignItems: "center",
     justifyContent: "center",
