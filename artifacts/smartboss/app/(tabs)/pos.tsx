@@ -310,6 +310,7 @@ function POSScreenInner() {
   const [unitFilter, setUnitFilter] = useState<"all" | "dona" | "kg" | "m">("all");
   const [qtyPromptProduct, setQtyPromptProduct] = useState<Product | null>(null);
   const [qtyPromptValue, setQtyPromptValue] = useState("");
+  const [qtyPromptSumma, setQtyPromptSumma] = useState("");
 
   // Print modal state
   const [lastSale, setLastSale] = useState<SaleWithItems | null>(null);
@@ -576,7 +577,66 @@ function POSScreenInner() {
     addToCart(qtyPromptProduct, qty);
     setQtyPromptProduct(null);
     setQtyPromptValue("");
+    setQtyPromptSumma("");
   }, [qtyPromptProduct, qtyPromptValue, addToCart]);
+
+  const formatSumma = (val: string) => {
+    if (!val) return "";
+    return val.replace(/\B(?=(\d{3})+(?!\d))/g, " ");
+  };
+
+  const handleQtyPromptChange = (val: string) => {
+    if (!qtyPromptProduct) return;
+    const unit = qtyPromptProduct.unit;
+    const suffix = unit === "kg" ? "kg" : "m";
+    if (val === suffix || val === "") {
+      setQtyPromptValue("");
+      setQtyPromptSumma("");
+      return;
+    }
+    
+    let numPart = val.replace(/[^0-9.,]/g, "");
+    if (qtyPromptValue && numPart === qtyPromptValue && val.length < (qtyPromptValue + suffix).length) {
+      numPart = numPart.slice(0, -1);
+    }
+    
+    setQtyPromptValue(numPart);
+    
+    const qty = parseFloat(numPart.replace(",", "."));
+    if (!isNaN(qty) && qty > 0) {
+      const sum = Math.round(qty * qtyPromptProduct.salePrice);
+      setQtyPromptSumma(sum.toString());
+    } else {
+      setQtyPromptSumma("");
+    }
+  };
+
+  const handleQtyPromptSummaChange = (val: string) => {
+    if (!qtyPromptProduct) return;
+    const suffix = " UZS";
+    if (val === suffix || val === "") {
+      setQtyPromptSumma("");
+      setQtyPromptValue("");
+      return;
+    }
+    
+    let numPart = val.replace(/\D/g, "");
+    const formattedLength = (formatSumma(qtyPromptSumma) + suffix).length;
+    if (qtyPromptSumma && numPart === qtyPromptSumma && val.length < formattedLength) {
+      numPart = numPart.slice(0, -1);
+    }
+    
+    setQtyPromptSumma(numPart);
+    
+    const sum = parseFloat(numPart);
+    if (!isNaN(sum) && sum > 0 && qtyPromptProduct.salePrice > 0) {
+      const rawQty = sum / qtyPromptProduct.salePrice;
+      const roundedQty = Math.round(rawQty * 1000) / 1000;
+      setQtyPromptValue(roundedQty.toString());
+    } else {
+      setQtyPromptValue("");
+    }
+  };
 
   const filteredProducts = (products ?? []).filter((p) => {
     if (unitFilter !== "all" && p.unit !== unitFilter) return false;
@@ -604,12 +664,20 @@ function POSScreenInner() {
         transparent
         animationType="fade"
         statusBarTranslucent
-        onRequestClose={() => setQtyPromptProduct(null)}
+        onRequestClose={() => {
+          setQtyPromptProduct(null);
+          setQtyPromptValue("");
+          setQtyPromptSumma("");
+        }}
       >
         <TouchableOpacity
           style={styles.confirmBackdrop}
           activeOpacity={1}
-          onPress={() => setQtyPromptProduct(null)}
+          onPress={() => {
+            setQtyPromptProduct(null);
+            setQtyPromptValue("");
+            setQtyPromptSumma("");
+          }}
         />
         <View style={[styles.qtyPromptSheet, { backgroundColor: colors.card }]}>
           <View style={[styles.confirmHandle, { backgroundColor: colors.border }]} />
@@ -617,22 +685,47 @@ function POSScreenInner() {
             {qtyPromptProduct?.name}
           </Text>
           <Text style={[styles.qtyPromptSub, { color: colors.mutedForeground }]}>
-            Miqdorni kiriting ({qtyPromptProduct?.unit === "kg" ? "kilogramm" : "metr"})
+            Sotuv narxi: {qtyPromptProduct?.salePrice.toLocaleString()} UZS / {qtyPromptProduct?.unit}
           </Text>
-          <TextInput
-            style={[styles.qtyPromptInput, { color: colors.foreground, borderColor: colors.primary, backgroundColor: colors.muted }]}
-            value={qtyPromptValue}
-            onChangeText={setQtyPromptValue}
-            keyboardType="decimal-pad"
-            placeholder="Masalan: 1.5"
-            placeholderTextColor={colors.mutedForeground}
-            autoFocus
-            selectTextOnFocus
-          />
+          <View style={{ gap: 12, marginVertical: 16 }}>
+            <View>
+              <Text style={{ fontSize: 13, color: colors.mutedForeground, marginBottom: 6, fontFamily: "Inter_500Medium" }}>
+                Miqdor ({qtyPromptProduct?.unit === "kg" ? "kilogramm" : "metr"})
+              </Text>
+              <TextInput
+                style={[styles.qtyPromptInput, { color: colors.foreground, borderColor: colors.primary, backgroundColor: colors.muted }]}
+                value={qtyPromptValue ? `${qtyPromptValue}${qtyPromptProduct?.unit === "kg" ? "kg" : "m"}` : ""}
+                onChangeText={handleQtyPromptChange}
+                keyboardType="decimal-pad"
+                placeholder={`Masalan: 1.5${qtyPromptProduct?.unit === "kg" ? "kg" : "m"}`}
+                placeholderTextColor={colors.mutedForeground}
+                autoFocus
+                selectTextOnFocus
+              />
+            </View>
+            <View>
+              <Text style={{ fontSize: 13, color: colors.mutedForeground, marginBottom: 6, fontFamily: "Inter_500Medium" }}>
+                Summa (so'm)
+              </Text>
+              <TextInput
+                style={[styles.qtyPromptInput, { color: colors.foreground, borderColor: colors.border, backgroundColor: colors.muted }]}
+                value={qtyPromptSumma ? `${formatSumma(qtyPromptSumma)} UZS` : ""}
+                onChangeText={handleQtyPromptSummaChange}
+                keyboardType="numeric"
+                placeholder="Masalan: 15 000 UZS"
+                placeholderTextColor={colors.mutedForeground}
+                selectTextOnFocus
+              />
+            </View>
+          </View>
           <View style={styles.qtyPromptBtns}>
             <TouchableOpacity
               style={[styles.qtyPromptCancel, { backgroundColor: colors.muted, borderColor: colors.border }]}
-              onPress={() => setQtyPromptProduct(null)}
+              onPress={() => {
+                setQtyPromptProduct(null);
+                setQtyPromptValue("");
+                setQtyPromptSumma("");
+              }}
               activeOpacity={0.8}
             >
               <Text style={[styles.qtyPromptCancelText, { color: colors.mutedForeground }]}>Bekor</Text>
@@ -1398,6 +1491,7 @@ function POSScreenInner() {
                       if ((p.unit === "kg" || p.unit === "m") && p.quantity > 0) {
                         setQtyPromptProduct(p);
                         setQtyPromptValue("1");
+                        setQtyPromptSumma(p.salePrice.toString());
                       } else {
                         addToCart(p);
                       }
