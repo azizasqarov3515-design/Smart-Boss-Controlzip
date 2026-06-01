@@ -1317,9 +1317,11 @@ function POSScreenInner() {
                       return;
                     }
                     createCustomer({
-                      name: newCustomerName.trim(),
-                      phone: cleanPhone,
-                      debtLimit: 0
+                      data: {
+                        name: newCustomerName.trim(),
+                        phone: cleanPhone,
+                        debtLimit: 0
+                      }
                     });
                   }}
                 >
