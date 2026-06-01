@@ -613,14 +613,14 @@ function POSScreenInner() {
         />
         <View style={[styles.qtyPromptSheet, { backgroundColor: colors.card }]}>
           <View style={[styles.confirmHandle, { backgroundColor: colors.border }]} />
-          <Text style={[styles.qtyPromptTitle, { color: colors.cardForeground }]} numberOfLines={1}>
+          <Text style={[styles.qtyPromptTitle, { color: colors.foreground }]} numberOfLines={1}>
             {qtyPromptProduct?.name}
           </Text>
           <Text style={[styles.qtyPromptSub, { color: colors.mutedForeground }]}>
             Miqdorni kiriting ({qtyPromptProduct?.unit === "kg" ? "kilogramm" : "metr"})
           </Text>
           <TextInput
-            style={[styles.qtyPromptInput, { color: colors.cardForeground, borderColor: colors.primary, backgroundColor: colors.muted }]}
+            style={[styles.qtyPromptInput, { color: colors.foreground, borderColor: colors.primary, backgroundColor: colors.muted }]}
             value={qtyPromptValue}
             onChangeText={setQtyPromptValue}
             keyboardType="decimal-pad"
@@ -667,7 +667,7 @@ function POSScreenInner() {
 
           <View style={styles.confirmHeader}>
             <MaterialIcons name="shopping-cart-checkout" size={28} color={colors.primary} />
-            <Text style={[styles.confirmTitle, { color: colors.cardForeground }]}>
+            <Text style={[styles.confirmTitle, { color: colors.foreground }]}>
               Sotishni tasdiqlash
             </Text>
           </View>
@@ -702,7 +702,7 @@ function POSScreenInner() {
                 </Text>
               </View>
               <View style={{ flex: 1 }}>
-                <Text style={[styles.customerBadgeName, { color: colors.cardForeground }]}>
+                <Text style={[styles.customerBadgeName, { color: colors.foreground }]}>
                   {selectedCustomer.name}
                 </Text>
                 {selectedCustomer.totalDebt > 0 && (
@@ -757,7 +757,7 @@ function POSScreenInner() {
             <View style={[styles.customerConfirmBox, { backgroundColor: colors.secondary, borderColor: colors.primary + "55" }]}>
               <View style={styles.customerConfirmTop}>
                 <MaterialIcons name="person-add" size={18} color={colors.primary} />
-                <Text style={[styles.customerConfirmText, { color: colors.cardForeground }]}>
+                <Text style={[styles.customerConfirmText, { color: colors.foreground }]}>
                   Mijoz mijozlar ro'yxatiga qo'shilsinmi?
                 </Text>
               </View>
@@ -790,7 +790,7 @@ function POSScreenInner() {
                 <View style={{ flex: 1 }}>
                   <Text style={styles.partialPayLabel}>Hozir to'lanadigan summa (ixtiyoriy)</Text>
                   <TextInput
-                    style={[styles.partialPayInput, { backgroundColor: colors.card, borderColor: colors.border, color: colors.cardForeground }]}
+                    style={[styles.partialPayInput, { backgroundColor: colors.card, borderColor: colors.border, color: colors.foreground }]}
                     placeholder="0 — to'liq qarzga yoziladi"
                     placeholderTextColor={colors.mutedForeground}
                     value={partialPayment}
@@ -816,7 +816,7 @@ function POSScreenInner() {
             <ScrollView nestedScrollEnabled bounces={false}>
               {cartItems.map((item) => (
                 <View key={item.product.id} style={styles.confirmItemRow}>
-                  <Text style={[styles.confirmItemName, { color: colors.cardForeground }]} numberOfLines={1}>
+                  <Text style={[styles.confirmItemName, { color: colors.foreground }]} numberOfLines={1}>
                     {item.product.name}
                   </Text>
                   <Text style={[styles.confirmItemQty, { color: colors.mutedForeground }]}>
@@ -835,7 +835,7 @@ function POSScreenInner() {
             <Text style={[styles.confirmTotalLabel, { color: colors.mutedForeground }]}>
               Jami ({cartItems.length} ta mahsulot):
             </Text>
-            <Text style={[styles.confirmTotalVal, { color: colors.cardForeground }]}>
+            <Text style={[styles.confirmTotalVal, { color: colors.foreground }]}>
               {formatMoney(total)}
             </Text>
           </View>
@@ -898,7 +898,7 @@ function POSScreenInner() {
               <MaterialIcons name="check-circle" size={28} color={colors.success} />
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={[styles.printSuccessTitle, { color: colors.cardForeground }]}>
+              <Text style={[styles.printSuccessTitle, { color: colors.foreground }]}>
                 Sotuv amalga oshdi!
               </Text>
               {lastSale && (
@@ -937,7 +937,7 @@ function POSScreenInner() {
                     size={22}
                     color={active ? colors.primary : colors.mutedForeground}
                   />
-                  <Text style={[styles.printFormatLabel, { color: active ? colors.primary : colors.cardForeground }]}>
+                  <Text style={[styles.printFormatLabel, { color: active ? colors.primary : colors.foreground }]}>
                     {FORMAT_LABELS[fmt]}
                   </Text>
                   <Text style={[styles.printFormatDesc, { color: colors.mutedForeground }]}>
@@ -1038,14 +1038,14 @@ function POSScreenInner() {
             <View style={[styles.confirmHandle, { backgroundColor: colors.border }]} />
             <View style={[styles.confirmHeader, { marginBottom: 12 }]}>
               <MaterialIcons name="people" size={24} color={colors.primary} />
-              <Text style={[styles.confirmTitle, { color: colors.cardForeground }]}>Mijoz tanlang</Text>
+              <Text style={[styles.confirmTitle, { color: colors.foreground }]}>Mijoz tanlang</Text>
             </View>
 
             {/* Search */}
             <View style={[styles.pickerSearch, { backgroundColor: colors.muted, borderColor: colors.border }]}>
               <MaterialIcons name="search" size={16} color={colors.mutedForeground} />
               <TextInput
-                style={[styles.pickerSearchInput, { color: colors.cardForeground }]}
+                style={[styles.pickerSearchInput, { color: colors.foreground }]}
                 placeholder="Ism yoki telefon..."
                 placeholderTextColor={colors.mutedForeground}
                 value={customerSearch}
@@ -1095,7 +1095,7 @@ function POSScreenInner() {
                         </Text>
                       </View>
                       <View style={{ flex: 1 }}>
-                        <Text style={[styles.pickerName, { color: colors.cardForeground }]}>{c.name}</Text>
+                        <Text style={[styles.pickerName, { color: colors.foreground }]}>{c.name}</Text>
                         <Text style={[styles.pickerPhone, { color: colors.mutedForeground }]}>{c.phone}</Text>
                       </View>
                       {c.totalDebt > 0 && (
@@ -1194,7 +1194,7 @@ function POSScreenInner() {
           {cartItems.length === 0 ? (
             <View style={styles.emptyCart}>
               <MaterialIcons name="shopping-cart" size={64} color={colors.border} />
-              <Text style={[styles.emptyTitle, { color: colors.text }]}>Savat bo'sh</Text>
+              <Text style={[styles.emptyTitle, { color: colors.foreground }]}>Savat bo'sh</Text>
               <Text style={[styles.emptySub, { color: colors.mutedForeground }]}>
                 Mahsulotlar bo'limidan yoki barkod orqali qo'shing
               </Text>
@@ -1251,7 +1251,7 @@ function POSScreenInner() {
                   <Text style={[styles.checkoutLabel, { color: colors.mutedForeground }]}>
                     Jami ({cartItems.length} ta):
                   </Text>
-                  <Text style={[styles.checkoutTotal, { color: colors.cardForeground }]}>
+                  <Text style={[styles.checkoutTotal, { color: colors.foreground }]}>
                     {formatMoney(total)}
                   </Text>
                 </View>
@@ -1302,7 +1302,7 @@ function POSScreenInner() {
               <TextInput
                 style={[
                   styles.searchInput,
-                  { color: colors.cardForeground, fontFamily: "Inter_400Regular" },
+                  { color: colors.foreground, fontFamily: "Inter_400Regular" },
                 ]}
                 placeholder="Nom, brend, barcode, ID..."
                 placeholderTextColor={colors.mutedForeground}
@@ -1351,7 +1351,7 @@ function POSScreenInner() {
                   <Text
                     style={[
                       styles.unitTabText,
-                      { color: isActive ? "#fff" : colors.cardForeground },
+                      { color: isActive ? "#fff" : colors.foreground },
                       isActive && styles.unitTabTextActive,
                     ]}
                   >
@@ -1429,7 +1429,7 @@ function POSScreenInner() {
                               color:
                                 p.quantity === 0
                                   ? colors.mutedForeground
-                                  : colors.cardForeground,
+                                  : colors.foreground,
                             },
                           ]}
                           numberOfLines={1}
@@ -1548,7 +1548,7 @@ function CartCard({
             </Text>
           </View>
           <View style={styles.cartNameBlock}>
-            <Text style={[styles.cartName, { color: colors.cardForeground }]} numberOfLines={1}>
+            <Text style={[styles.cartName, { color: colors.foreground }]} numberOfLines={1}>
               {item.product.name}
             </Text>
             <Text style={[styles.cartBrand, { color: colors.mutedForeground }]}>
@@ -1568,7 +1568,7 @@ function CartCard({
         <View style={styles.qtyControls}>
           {isFloat ? (
             <TextInput
-              style={[styles.qtyDecimalInput, { color: colors.cardForeground, borderColor: colors.border, backgroundColor: colors.muted }]}
+              style={[styles.qtyDecimalInput, { color: colors.foreground, borderColor: colors.border, backgroundColor: colors.muted }]}
               value={String(item.quantity)}
               onChangeText={(v) => {
                 const parsed = parseFloat(v.replace(",", "."));
@@ -1584,9 +1584,9 @@ function CartCard({
                 style={[styles.qtyBtn, { backgroundColor: colors.muted, borderColor: colors.border }]}
                 onPress={() => onQty(item.product.id, item.quantity - 1)}
               >
-                <MaterialIcons name="remove" size={16} color={colors.cardForeground} />
+                <MaterialIcons name="remove" size={16} color={colors.foreground} />
               </TouchableOpacity>
-              <Text style={[styles.qtyText, { color: colors.cardForeground }]}>{item.quantity}</Text>
+              <Text style={[styles.qtyText, { color: colors.foreground }]}>{item.quantity}</Text>
               <TouchableOpacity
                 style={[styles.qtyBtn, { backgroundColor: colors.primary }]}
                 onPress={() => onQty(item.product.id, item.quantity + 1)}

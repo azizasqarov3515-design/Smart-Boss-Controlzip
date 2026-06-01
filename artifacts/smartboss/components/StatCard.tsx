@@ -31,12 +31,12 @@ export function StatCard({ label, value, icon, iconColor, subtitle, variant = "d
   const iconHex = getIconColor();
   const iconBg = iconHex + "25"; // 15% opacity
 
-  const cardBg = isDark ? "rgba(17, 24, 39, 0.75)" : "#002D5D";
-  const cardBorder = isDark ? "rgba(255, 255, 255, 0.08)" : "transparent";
+  const cardBg = isDark ? "rgba(17, 24, 39, 0.75)" : colors.card;
+  const cardBorder = isDark ? "rgba(255, 255, 255, 0.08)" : colors.border;
   
-  const textColor = isDark ? "#FFFFFF" : "#FFFFFF";
-  const labelColor = isDark ? "rgba(255, 255, 255, 0.7)" : "rgba(255, 255, 255, 0.85)";
-  const subtitleColor = isDark ? "rgba(255, 255, 255, 0.5)" : "rgba(255, 255, 255, 0.7)";
+  const textColor = isDark ? "#FFFFFF" : colors.cardForeground;
+  const labelColor = isDark ? "rgba(255, 255, 255, 0.7)" : colors.mutedForeground;
+  const subtitleColor = isDark ? "rgba(255, 255, 255, 0.5)" : colors.mutedForeground;
 
   return (
     <View style={[styles.card, { backgroundColor: cardBg, borderColor: cardBorder }]}>

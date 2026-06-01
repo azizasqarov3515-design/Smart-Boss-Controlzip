@@ -69,7 +69,7 @@ function SectionCard({
         <View style={[styles.sectionIconWrap, { backgroundColor: colors.primary + "18" }]}>
           <MaterialIcons name={icon} size={18} color={colors.primary} />
         </View>
-        <Text style={[styles.sectionTitle, { color: colors.text }]}>{title}</Text>
+        <Text style={[styles.sectionTitle, { color: colors.foreground }]}>{title}</Text>
         {badge != null && badge > 0 && (
           <View style={[styles.badge, { backgroundColor: "#DC2626" }]}>
             <Text style={styles.badgeText}>{badge}</Text>
@@ -100,7 +100,7 @@ function Field({
     <View style={styles.field}>
       <Text style={[styles.fieldLabel, { color: colors.mutedForeground }]}>{label}</Text>
       <TextInput
-        style={[styles.fieldInput, { backgroundColor: colors.muted, borderColor: colors.border, color: colors.cardForeground }]}
+        style={[styles.fieldInput, { backgroundColor: colors.muted, borderColor: colors.border, color: colors.foreground }]}
         value={value}
         onChangeText={onChangeText}
         placeholder={placeholder}
@@ -172,7 +172,7 @@ function WorkersSection({ colors }: { colors: ReturnType<typeof useColors> }) {
                   <Text style={[styles.workerAvatarText, { color: "#92400E" }]}>{w.name.charAt(0).toUpperCase()}</Text>
                 </View>
                 <View style={styles.workerInfo}>
-                  <Text style={[styles.workerName, { color: colors.cardForeground }]}>{w.name}</Text>
+                  <Text style={[styles.workerName, { color: colors.foreground }]}>{w.name}</Text>
                   <Text style={[styles.workerPhone, { color: colors.mutedForeground }]}>{w.phone}</Text>
                   <Text style={[styles.workerAddress, { color: colors.mutedForeground }]} numberOfLines={1}>{w.address}</Text>
                 </View>
@@ -243,7 +243,7 @@ function WorkersSection({ colors }: { colors: ReturnType<typeof useColors> }) {
                 </View>
                 <View style={styles.workerInfo}>
                   <View style={styles.workerNameRow}>
-                    <Text style={[styles.workerName, { color: colors.cardForeground }]}>{w.name}</Text>
+                    <Text style={[styles.workerName, { color: colors.foreground }]}>{w.name}</Text>
                     <WorkerStatusBadge status={w.status} colors={colors} />
                   </View>
                   <Text style={[styles.workerPhone, { color: colors.mutedForeground }]}>{w.phone}</Text>
@@ -306,9 +306,9 @@ function WorkersSection({ colors }: { colors: ReturnType<typeof useColors> }) {
             <View style={[styles.confirmIconWrap, { backgroundColor: "#FEE2E2" }]}>
               <MaterialIcons name="delete-forever" size={28} color="#DC2626" />
             </View>
-            <Text style={[styles.confirmTitle, { color: colors.cardForeground }]}>Ishchini o'chirish</Text>
+            <Text style={[styles.confirmTitle, { color: colors.foreground }]}>Ishchini o'chirish</Text>
             <Text style={[styles.confirmMsg, { color: colors.mutedForeground }]}>
-              <Text style={{ fontFamily: "Inter_700Bold", color: colors.cardForeground }}>{removeConfirm?.name}</Text>
+              <Text style={{ fontFamily: "Inter_700Bold", color: colors.foreground }}>{removeConfirm?.name}</Text>
               {" "}ni tizimdan butunlay o'chirasizmi? Bu amalni qaytarib bo'lmaydi.
             </Text>
             <View style={styles.confirmBtns}>
@@ -393,18 +393,18 @@ function DeleteRequestsSection({ colors }: { colors: ReturnType<typeof useColors
             <View style={styles.requestTop}>
               <MaterialIcons name={iconName} size={18} color={iconColor} />
               <View style={{ flex: 1 }}>
-                <Text style={[styles.requestWorker, { color: colors.cardForeground }]}>{r.workerName}</Text>
+                <Text style={[styles.requestWorker, { color: colors.foreground }]}>{r.workerName}</Text>
                 {isProduct ? (
                   <Text style={[styles.requestSub, { color: colors.mutedForeground }]}>
                     Mahsulot o'chirish:{" "}
-                    <Text style={{ fontFamily: "Inter_600SemiBold", color: colors.cardForeground }}>
+                    <Text style={{ fontFamily: "Inter_600SemiBold", color: colors.foreground }}>
                       {productNames?.join(", ") ?? "Mahsulot"}
                     </Text>
                   </Text>
                 ) : isCustomer ? (
                   <Text style={[styles.requestSub, { color: colors.mutedForeground }]}>
                     Mijoz o'chirish:{" "}
-                    <Text style={{ fontFamily: "Inter_600SemiBold", color: colors.cardForeground }}>
+                    <Text style={{ fontFamily: "Inter_600SemiBold", color: colors.foreground }}>
                       {customerNames?.join(", ") ?? "Mijoz"}
                     </Text>
                   </Text>
@@ -528,7 +528,7 @@ function SubscriptionInfoCard({
         </View>
         <View style={{ flex: 1 }}>
           <Text style={[subStyles.headerLabel, { color: colors.mutedForeground }]}>Obuna holati</Text>
-          <Text style={[subStyles.headerTitle, { color: colors.cardForeground }]}>{planLabel}</Text>
+          <Text style={[subStyles.headerTitle, { color: colors.foreground }]}>{planLabel}</Text>
         </View>
         <View style={[subStyles.statusPill, { backgroundColor: active ? accentColor + "22" : "#FEE2E2" }]}>
           <View style={[subStyles.statusDot, { backgroundColor: active ? accentColor : "#DC2626" }]} />
@@ -596,7 +596,7 @@ function SubscriptionInfoCard({
           <View style={subStyles.infoRow}>
             <MaterialIcons name="event" size={15} color={colors.mutedForeground} />
             <Text style={[subStyles.infoRowLabel, { color: colors.mutedForeground }]}>Tugash sanasi</Text>
-            <Text style={[subStyles.infoRowValue, { color: colors.cardForeground }]}>
+            <Text style={[subStyles.infoRowValue, { color: colors.foreground }]}>
               {isUnlimited ? "Belgilanmagan" : fmtDate(endDate)}
             </Text>
           </View>
@@ -808,7 +808,7 @@ export default function SettingsScreen() {
             activeOpacity={0.8}
           >
             <MaterialIcons name={opt.icon} size={22} color={active ? colors.primary : colors.mutedForeground} />
-            <Text style={[styles.themeLabel, { color: active ? colors.primary : colors.cardForeground, fontFamily: active ? "Inter_700Bold" : "Inter_400Regular" }]}>
+            <Text style={[styles.themeLabel, { color: active ? colors.primary : colors.foreground, fontFamily: active ? "Inter_700Bold" : "Inter_400Regular" }]}>
               {opt.label}
             </Text>
             {active && <MaterialIcons name="check-circle" size={18} color={colors.primary} style={{ marginLeft: "auto" }} />}
@@ -918,14 +918,14 @@ export default function SettingsScreen() {
               <View style={[styles.credentialsBox, { backgroundColor: colors.muted, borderColor: colors.border }]}>
                 <View style={styles.credentialsHeaderRow}>
                   <MaterialIcons name="admin-panel-settings" size={16} color={colors.primary} />
-                  <Text style={[styles.credentialsTitle, { color: colors.cardForeground }]}>Kirish ma'lumotlari</Text>
+                  <Text style={[styles.credentialsTitle, { color: colors.foreground }]}>Kirish ma'lumotlari</Text>
                 </View>
                 {managerLogin && (
                   <View style={styles.credentialRow}>
                     <Text style={[styles.credentialLabel, { color: colors.mutedForeground }]}>Login</Text>
                     <View style={[styles.credentialValueWrap, { backgroundColor: colors.background, borderColor: colors.border }]}>
                       <MaterialIcons name="person" size={14} color={colors.primary} />
-                      <Text style={[styles.credentialValue, { color: colors.cardForeground, letterSpacing: showCredLogin ? 0 : 2 }]}>
+                      <Text style={[styles.credentialValue, { color: colors.foreground, letterSpacing: showCredLogin ? 0 : 2 }]}>
                         {showCredLogin ? managerLogin : "•".repeat(managerLogin.length)}
                       </Text>
                       <TouchableOpacity onPress={() => setShowCredLogin(v => !v)} style={{ marginLeft: "auto", padding: 2 }}>
@@ -946,7 +946,7 @@ export default function SettingsScreen() {
                     <Text style={[styles.credentialLabel, { color: colors.mutedForeground }]}>Do'kon ID</Text>
                     <View style={[styles.credentialValueWrap, { backgroundColor: colors.background, borderColor: colors.border }]}>
                       <MaterialIcons name="store" size={14} color={colors.primary} />
-                      <Text style={[styles.credentialValue, { color: colors.cardForeground, letterSpacing: 1 }]}>{managerStoreId}</Text>
+                      <Text style={[styles.credentialValue, { color: colors.foreground, letterSpacing: 1 }]}>{managerStoreId}</Text>
                     </View>
                   </View>
                 )}
@@ -968,7 +968,7 @@ export default function SettingsScreen() {
                   <Text style={[styles.sellerAvatarText, { color: colors.primary }]}>{s.name.charAt(0).toUpperCase()}</Text>
                 </View>
                 <View style={styles.sellerInfo}>
-                  <Text style={[styles.sellerName, { color: colors.cardForeground }]}>{s.name}</Text>
+                  <Text style={[styles.sellerName, { color: colors.foreground }]}>{s.name}</Text>
                   <Text style={[styles.sellerPhone, { color: colors.mutedForeground }]}>{s.phone}</Text>
                 </View>
                 <View style={styles.sellerActions}>
@@ -1025,14 +1025,14 @@ export default function SettingsScreen() {
             <View style={[styles.aboutIconWrap, { backgroundColor: colors.primary + "18" }]}>
               <MaterialIcons name="info-outline" size={20} color={colors.primary} />
             </View>
-            <Text style={[styles.aboutBtnText, { color: colors.cardForeground }]}>Biz haqimizda</Text>
+            <Text style={[styles.aboutBtnText, { color: colors.foreground }]}>Biz haqimizda</Text>
             <MaterialIcons name="chevron-right" size={20} color={colors.mutedForeground} style={{ marginLeft: "auto" }} />
           </TouchableOpacity>
 
           {/* Version info box */}
           <View style={[styles.versionBox, { backgroundColor: colors.card, borderColor: colors.border }]}>
             <Text style={[styles.versionLabel, { color: colors.mutedForeground }]}>Ilova haqida</Text>
-            <Text style={[styles.versionValue, { color: colors.cardForeground }]}>Versiya: 1.0</Text>
+            <Text style={[styles.versionValue, { color: colors.foreground }]}>Versiya: 1.0</Text>
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -1059,7 +1059,7 @@ export default function SettingsScreen() {
           <View style={styles.modalBackdrop}>
             <View style={[styles.modalSheet, { backgroundColor: colors.card }]}>
               <View style={[styles.modalHeader, { borderBottomColor: colors.border }]}>
-                <Text style={[styles.modalTitle, { color: colors.cardForeground }]}>{editingSeller ? "Sotuvchini tahrirlash" : "Yangi sotuvchi"}</Text>
+                <Text style={[styles.modalTitle, { color: colors.foreground }]}>{editingSeller ? "Sotuvchini tahrirlash" : "Yangi sotuvchi"}</Text>
                 <TouchableOpacity onPress={() => setSellerModal(false)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
                   <MaterialIcons name="close" size={22} color={colors.mutedForeground} />
                 </TouchableOpacity>
@@ -1090,9 +1090,9 @@ export default function SettingsScreen() {
             <View style={[styles.confirmIconWrap, { backgroundColor: "#FEE2E2" }]}>
               <MaterialIcons name="person-remove" size={28} color="#DC2626" />
             </View>
-            <Text style={[styles.confirmTitle, { color: colors.cardForeground }]}>Sotuvchini o'chirish</Text>
+            <Text style={[styles.confirmTitle, { color: colors.foreground }]}>Sotuvchini o'chirish</Text>
             <Text style={[styles.confirmMsg, { color: colors.mutedForeground }]}>
-              <Text style={{ fontFamily: "Inter_700Bold", color: colors.cardForeground }}>{deleteSellerConfirm?.name}</Text>
+              <Text style={{ fontFamily: "Inter_700Bold", color: colors.foreground }}>{deleteSellerConfirm?.name}</Text>
               {" "}ni ro'yxatdan o'chirasizmi?
             </Text>
             <View style={styles.confirmBtns}>
@@ -1121,7 +1121,7 @@ export default function SettingsScreen() {
             <View style={[styles.confirmIconWrap, { backgroundColor: "#FEE2E2" }]}>
               <MaterialIcons name="delete-forever" size={32} color="#DC2626" />
             </View>
-            <Text style={[styles.confirmTitle, { color: colors.cardForeground }]}>Profilni yo'q qilish</Text>
+            <Text style={[styles.confirmTitle, { color: colors.foreground }]}>Profilni yo'q qilish</Text>
             <Text style={[styles.confirmMsg, { color: colors.mutedForeground }]}>
               Barcha{" "}
               <Text style={{ fontFamily: "Inter_700Bold", color: "#DC2626" }}>mahsulotlar, sotuvlar, mijozlar va ishchilar</Text>

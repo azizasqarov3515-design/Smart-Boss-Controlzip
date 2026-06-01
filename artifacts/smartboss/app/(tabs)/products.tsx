@@ -117,7 +117,7 @@ function ProductCard({
               <HighlightText
                 text={product.name}
                 query={query}
-                style={[styles.name, { color: colors.cardForeground }]}
+                style={[styles.name, { color: colors.foreground }]}
                 highlightStyle={{ backgroundColor: "#FFF176", color: "#1A1A2E", borderRadius: 2 }}
               />
             </View>
@@ -158,7 +158,7 @@ function ProductCard({
         <View style={styles.cardBottom}>
           <View style={styles.priceGroup}>
             <Text style={[styles.priceLabel, { color: colors.mutedForeground }]}>Tan:</Text>
-            <Text style={[styles.priceVal, { color: colors.cardForeground }]}>
+            <Text style={[styles.priceVal, { color: colors.foreground }]}>
               {product.costPrice.toLocaleString()}
             </Text>
           </View>
@@ -396,7 +396,7 @@ function ProductsScreenInner() {
             color={imageMatchedIds !== null || search ? colors.primary : colors.mutedForeground}
           />
           <TextInput
-            style={[styles.searchInput, { color: colors.cardForeground, fontFamily: "Inter_400Regular" }]}
+            style={[styles.searchInput, { color: colors.foreground, fontFamily: "Inter_400Regular" }]}
             placeholder="Tovar nomi yoki brend..."
             placeholderTextColor={colors.mutedForeground}
             value={search}
@@ -509,7 +509,7 @@ function ProductsScreenInner() {
               <Text style={{ fontSize: 22 }}>{ut.icon}</Text>
               <Text style={[
                 styles.unitTabText,
-                { color: isActive ? "#fff" : colors.cardForeground },
+                { color: isActive ? "#fff" : colors.foreground },
                 isActive && { fontFamily: "Inter_700Bold" },
               ]}>
                 {ut.label}
@@ -527,7 +527,7 @@ function ProductsScreenInner() {
       ) : filtered.length === 0 ? (
         <View style={styles.emptyWrap}>
           <MaterialIcons name={debouncedSearch || imageMatchedIds !== null ? "search-off" : "inventory-2"} size={52} color={colors.border} />
-          <Text style={[styles.emptyTitle, { color: colors.text }]}>
+          <Text style={[styles.emptyTitle, { color: colors.foreground }]}>
             {debouncedSearch || imageMatchedIds !== null ? "Hech narsa topilmadi" : "Mahsulotlar yo'q"}
           </Text>
           <Text style={[styles.emptySub, { color: colors.mutedForeground }]}>
@@ -639,7 +639,7 @@ function ProductsScreenInner() {
                 <View style={[styles.modalIconWrap, { backgroundColor: "#E8F5E9" }]}>
                   <MaterialIcons name="check-circle" size={32} color="#2E7D32" />
                 </View>
-                <Text style={[styles.modalTitle, { color: colors.cardForeground }]}>So'rov yuborildi!</Text>
+                <Text style={[styles.modalTitle, { color: colors.foreground }]}>So'rov yuborildi!</Text>
                 <Text style={[styles.modalMsg, { color: colors.mutedForeground }]}>
                   Rahbar tasdiqlasa, mahsulot o'chiriladi.
                 </Text>
@@ -656,9 +656,9 @@ function ProductsScreenInner() {
                 <View style={[styles.modalIconWrap, { backgroundColor: "#FFF3E0" }]}>
                   <MaterialIcons name="send" size={32} color="#E65100" />
                 </View>
-                <Text style={[styles.modalTitle, { color: colors.cardForeground }]}>O'chirish so'rovi</Text>
+                <Text style={[styles.modalTitle, { color: colors.foreground }]}>O'chirish so'rovi</Text>
                 <Text style={[styles.modalMsg, { color: colors.mutedForeground }]}>
-                  <Text style={{ fontFamily: "Inter_700Bold", color: colors.cardForeground }}>
+                  <Text style={{ fontFamily: "Inter_700Bold", color: colors.foreground }}>
                     "{confirmProduct?.name}"
                   </Text>
                   {" "}mahsulotini o'chirish uchun rahbarga so'rov yuborilsinmi?
@@ -693,9 +693,9 @@ function ProductsScreenInner() {
                 <View style={[styles.modalIconWrap, { backgroundColor: "#FEE2E2" }]}>
                   <MaterialIcons name="delete-forever" size={32} color="#DC2626" />
                 </View>
-                <Text style={[styles.modalTitle, { color: colors.cardForeground }]}>Mahsulotni o'chirish</Text>
+                <Text style={[styles.modalTitle, { color: colors.foreground }]}>Mahsulotni o'chirish</Text>
                 <Text style={[styles.modalMsg, { color: colors.mutedForeground }]}>
-                  <Text style={{ fontFamily: "Inter_700Bold", color: colors.cardForeground }}>
+                  <Text style={{ fontFamily: "Inter_700Bold", color: colors.foreground }}>
                     "{confirmProduct?.name}"
                   </Text>
                   {" "}mahsulotini o'chirasizmi? Bu amalni qaytarib bo'lmaydi.
