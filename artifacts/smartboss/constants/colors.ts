@@ -2,7 +2,7 @@ const colors = {
   light: {
     text: "#1A1A2E",
     tint: "#1565C0",
-    background: "#D6E4FF",
+    background: "#A2EBFF",
     foreground: "#1A1A2E",
     card: "#FFFFFF",
     cardForeground: "#1A1A2E",

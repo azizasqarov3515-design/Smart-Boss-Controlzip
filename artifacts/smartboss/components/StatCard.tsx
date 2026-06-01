@@ -1,7 +1,7 @@
 import React from "react";
 import { StyleSheet, Text, View } from "react-native";
 import { MaterialIcons } from "@expo/vector-icons";
-import { useColors } from "@/hooks/useColors";
+import { useTheme } from "@/contexts/ThemeContext";
 
 type StatCardProps = {
   label: string;
@@ -13,7 +13,7 @@ type StatCardProps = {
 };
 
 export function StatCard({ label, value, icon, iconColor, subtitle, variant = "default" }: StatCardProps) {
-  const colors = useColors();
+  const { isDark } = useTheme();
 
   const getIconColor = () => {
     if (iconColor) return iconColor;
@@ -29,8 +29,11 @@ export function StatCard({ label, value, icon, iconColor, subtitle, variant = "d
   const iconHex = getIconColor();
   const iconBg = iconHex + "25"; // 15% opacity
 
+  const cardBg = isDark ? "rgba(17, 24, 39, 0.75)" : "#1C83D2";
+  const cardBorder = isDark ? "rgba(255, 255, 255, 0.08)" : "#1565C0";
+
   return (
-    <View style={[styles.card, { backgroundColor: "rgba(17, 24, 39, 0.75)", borderColor: "rgba(255, 255, 255, 0.08)" }]}>
+    <View style={[styles.card, { backgroundColor: cardBg, borderColor: cardBorder }]}>
       <View style={styles.cardHeader}>
         <View style={[styles.iconWrap, { backgroundColor: iconBg }]}>
           <MaterialIcons name={icon} size={18} color={iconHex} />
