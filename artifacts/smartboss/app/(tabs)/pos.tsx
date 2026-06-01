@@ -638,6 +638,22 @@ function POSScreenInner() {
     }
   };
 
+  const handlePartialPaymentChange = (val: string) => {
+    const suffix = " UZS";
+    if (val === suffix || val === "") {
+      setPartialPayment("");
+      return;
+    }
+    
+    let numPart = val.replace(/\D/g, "");
+    const formattedLength = (formatSumma(partialPayment) + suffix).length;
+    if (partialPayment && numPart === partialPayment && val.length < formattedLength) {
+      numPart = numPart.slice(0, -1);
+    }
+    
+    setPartialPayment(numPart);
+  };
+
   const filteredProducts = (products ?? []).filter((p) => {
     if (unitFilter !== "all" && p.unit !== unitFilter) return false;
     if (!search.trim()) return true;
@@ -884,10 +900,10 @@ function POSScreenInner() {
                   <Text style={styles.partialPayLabel}>Hozir to'lanadigan summa (ixtiyoriy)</Text>
                   <TextInput
                     style={[styles.partialPayInput, { backgroundColor: colors.card, borderColor: colors.border, color: colors.foreground }]}
-                    placeholder="0 — to'liq qarzga yoziladi"
+                    placeholder="Masalan: 1 000 000 UZS"
                     placeholderTextColor={colors.mutedForeground}
-                    value={partialPayment}
-                    onChangeText={setPartialPayment}
+                    value={partialPayment ? `${formatSumma(partialPayment)} UZS` : ""}
+                    onChangeText={handlePartialPaymentChange}
                     keyboardType="numeric"
                     editable={!checkingOut}
                   />
