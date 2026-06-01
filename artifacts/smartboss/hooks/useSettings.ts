@@ -12,6 +12,7 @@ export interface StoreSettings {
   storeSubtitle: string;
   storeAddress: string;
   sellers: Seller[];
+  managerProfilePic?: string;
 }
 
 function settingsKey(managerId: number | null | undefined): string {

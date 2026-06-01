@@ -22,8 +22,8 @@ import {
   TouchableOpacity,
   View,
   Dimensions,
-} from "react-native";
-import Svg, { Circle, Line as SvgLine, Text as SvgText, Polyline } from "react-native-svg";
+import Svg, { Circle, Line as SvgLine, Text as SvgText, Polyline, Defs, LinearGradient as SvgLinearGradient, Stop } from "react-native-svg";
+import { Image } from "expo-image";
 import { MaterialIcons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useColors } from "@/hooks/useColors";
@@ -157,8 +157,9 @@ export default function DashboardScreen() {
   const colors = PREMIUM_THEME;
   const insets = useSafeAreaInsets();
   const router = useRouter();
+  const { username, logout, role, managerId, downloadBackup } = useAuth();
+  const { settings } = useSettings(managerId);
   const isWeb = Platform.OS === "web";
-  const { username, downloadBackup, role } = useAuth();
   const [backupLoading, setBackupLoading] = useState(false);
 
   const isManager = role === "manager";
@@ -278,8 +279,8 @@ export default function DashboardScreen() {
       refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} tintColor={colors.primary} colors={[colors.primary]} />}
     >
       <WebRefreshBar refreshing={isRefreshing} onRefresh={onRefresh} />
-      <View style={styles.header}>
-        <View style={styles.headerCenter}>
+      <View style={[styles.header, { flexDirection: "row", justifyContent: "space-between", alignItems: "center" }]}>
+        <View style={{ flex: 1, alignItems: "center", marginLeft: settings.managerProfilePic ? 44 : 0 }}>
           <Text style={[styles.title, { color: colors.foreground }]}>SMARTBOSScontrol</Text>
           <View style={styles.subHeader}>
             <Text style={[styles.greeting, { color: colors.mutedForeground }]}>{username ?? "Asosiy Do'kon"}</Text>
@@ -287,6 +288,25 @@ export default function DashboardScreen() {
             <LiveClock />
           </View>
         </View>
+        {settings.managerProfilePic && (
+          <View style={{ width: 44, height: 44, alignItems: 'center', justifyContent: 'center' }}>
+            <Svg width="44" height="44" style={{ position: 'absolute' }}>
+              <Defs>
+                <SvgLinearGradient id="ringGrad" x1="0" y1="0" x2="1" y2="1">
+                  <Stop offset="0%" stopColor="#fbbf24" />
+                  <Stop offset="25%" stopColor="#ef4444" />
+                  <Stop offset="50%" stopColor="#c026d3" />
+                  <Stop offset="75%" stopColor="#3b82f6" />
+                  <Stop offset="100%" stopColor="#22d3ee" />
+                </SvgLinearGradient>
+              </Defs>
+              <Circle cx="22" cy="22" r="20" fill="none" stroke="url(#ringGrad)" strokeWidth="2.5" />
+            </Svg>
+            <View style={{ width: 36, height: 36, borderRadius: 18, overflow: 'hidden', backgroundColor: colors.muted }}>
+              <Image source={{ uri: settings.managerProfilePic }} style={{ width: '100%', height: '100%' }} contentFit="cover" />
+            </View>
+          </View>
+        )}
       </View>
 
       {/* Pending notifications for manager */}

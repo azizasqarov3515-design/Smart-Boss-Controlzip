@@ -22,6 +22,8 @@ import { useSettings, type Seller, type StoreSettings } from "@/hooks/useSetting
 import { useTheme } from "@/contexts/ThemeContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { WebRefreshBar } from "@/components/WebRefreshBar";
+import * as ImagePicker from "expo-image-picker";
+import { Image } from "expo-image";
 import {
   useGetWorkers,
   useApproveWorker,
@@ -648,6 +650,7 @@ export default function SettingsScreen() {
   const [storeSubtitle, setStoreSubtitle] = useState("");
   const [storeAddress, setStoreAddress] = useState("");
   const [sellers, setSellers] = useState<Seller[]>([]);
+  const [profilePic, setProfilePic] = useState<string | undefined>(undefined);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [managerRefreshing, setManagerRefreshing] = useState(false);
@@ -686,6 +689,7 @@ export default function SettingsScreen() {
       setStoreSubtitle(settings.storeSubtitle);
       setStoreAddress(settings.storeAddress);
       setSellers(settings.sellers);
+      setProfilePic(settings.managerProfilePic);
     }
   }, [isLoading, settings]);
 
@@ -693,7 +697,7 @@ export default function SettingsScreen() {
   const handleSave = async () => {
     if (!storeName.trim()) return;
     setSaving(true);
-    const next: StoreSettings = { storeName: storeName.trim(), storeSubtitle: storeSubtitle.trim(), storeAddress: storeAddress.trim(), sellers };
+    const next: StoreSettings = { storeName: storeName.trim(), storeSubtitle: storeSubtitle.trim(), storeAddress: storeAddress.trim(), sellers, managerProfilePic: profilePic };
     await saveSettings(next);
     setSaving(false);
     setSaved(true);
@@ -731,6 +735,54 @@ export default function SettingsScreen() {
     } catch (e: unknown) {
       setDeleteAccountError(e instanceof Error ? e.message : "Xato yuz berdi");
       setDeletingAccount(false);
+    }
+  };
+
+  const pickProfilePic = async () => {
+    try {
+      const { status } = await ImagePicker.requestCameraPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('Xato', "Kameradan foydalanish uchun ruxsat kerak.");
+        return;
+      }
+      
+      Alert.alert(
+        "Profil rasmi",
+        "Rasm tanlang",
+        [
+          {
+            text: "Kameraga tushish",
+            onPress: async () => {
+              const res = await ImagePicker.launchCameraAsync({
+                allowsEditing: true,
+                aspect: [1, 1],
+                quality: 0.8,
+              });
+              if (!res.canceled && res.assets[0].uri) {
+                setProfilePic(res.assets[0].uri);
+                Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+              }
+            }
+          },
+          {
+            text: "Galereyadan olish",
+            onPress: async () => {
+              const res = await ImagePicker.launchImageLibraryAsync({
+                allowsEditing: true,
+                aspect: [1, 1],
+                quality: 0.8,
+              });
+              if (!res.canceled && res.assets[0].uri) {
+                setProfilePic(res.assets[0].uri);
+                Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+              }
+            }
+          },
+          { text: "Bekor qilish", style: "cancel" }
+        ]
+      );
+    } catch (e) {
+      console.log(e);
     }
   };
 
@@ -827,9 +879,41 @@ export default function SettingsScreen() {
           <SectionCard title="Do'kon ma'lumotlari" icon="store" colors={colors}>
             <Field label="Do'kon nomi *" value={storeName} onChangeText={setStoreName} placeholder="SMARTBOSS" colors={colors} />
             <Field label="Tavsif (kichik yozuv)" value={storeSubtitle} onChangeText={setStoreSubtitle} placeholder="Android mobil aksessuarlar do'koni" colors={colors} />
-            <Field label="Do'kon manzili" value={storeAddress} onChangeText={setStoreAddress} placeholder="Shahar, ko'cha, bino..." colors={colors} />
+            <Field label="Manzil" value={storeAddress} onChangeText={setStoreAddress} placeholder="Masalan: Toshkent, Chilonzor" colors={colors} />
+          </SectionCard>
 
-            {/* Credentials display */}
+          <SectionCard title="Profil rasmi (Rahbar)" icon="account-circle" colors={colors}>
+            <View style={{ alignItems: "center", marginVertical: 10 }}>
+              <TouchableOpacity
+                onPress={pickProfilePic}
+                activeOpacity={0.8}
+                style={{
+                  width: 100,
+                  height: 100,
+                  borderRadius: 50,
+                  backgroundColor: colors.muted,
+                  alignItems: "center",
+                  justifyContent: "center",
+                  overflow: "hidden",
+                  borderWidth: 2,
+                  borderColor: colors.border
+                }}
+              >
+                {profilePic ? (
+                  <Image source={{ uri: profilePic }} style={{ width: "100%", height: "100%" }} contentFit="cover" />
+                ) : (
+                  <MaterialIcons name="add-a-photo" size={32} color={colors.mutedForeground} />
+                )}
+              </TouchableOpacity>
+              {profilePic && (
+                <TouchableOpacity onPress={() => setProfilePic(undefined)} style={{ marginTop: 10 }}>
+                  <Text style={{ color: "#DC2626", fontFamily: "Inter_500Medium" }}>Rasmni o'chirish</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+          </SectionCard>
+
+          <View style={{ marginTop: 8 }}>
             {(managerLogin || managerStoreId) && (
               <View style={[styles.credentialsBox, { backgroundColor: colors.muted, borderColor: colors.border }]}>
                 <View style={styles.credentialsHeaderRow}>
