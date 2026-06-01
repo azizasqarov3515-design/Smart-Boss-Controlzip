@@ -18,12 +18,10 @@ import {
   RefreshControl,
   ScrollView,
   StyleSheet,
-  Text,
   TouchableOpacity,
   View,
-  Dimensions,
 } from "react-native";
-import { LineChart } from "react-native-chart-kit";
+import Svg, { Path, Defs, LinearGradient as SvgLinearGradient, Stop, Circle } from "react-native-svg";
 import { MaterialIcons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useColors } from "@/hooks/useColors";
@@ -301,49 +299,46 @@ export default function DashboardScreen() {
 
           <View style={[styles.chartContainer, { backgroundColor: colors.card, borderColor: colors.border }]}>
             <Text style={[styles.chartTitle, { color: "rgba(255, 255, 255, 0.9)" }]}>Haftalik savdo tendensiyasi</Text>
-            <LineChart
-              data={{
-                labels: ["Du", "Se", "Cho", "Pay", "Ju", "Sha", "Yak"],
-                datasets: [
-                  {
-                    data: [10, 24, 50, 37, 72, 52, 66]
-                  }
-                ]
-              }}
-              width={Dimensions.get("window").width - 32} // padding adjustment
-              height={220}
-              yAxisLabel=""
-              yAxisSuffix="m"
-              yLabelsOffset={8}
-              withInnerLines={true}
-              withOuterLines={false}
-              chartConfig={{
-                backgroundColor: "transparent",
-                backgroundGradientFrom: "#111827",
-                backgroundGradientFromOpacity: 0,
-                backgroundGradientTo: "#111827",
-                backgroundGradientToOpacity: 0,
-                decimalPlaces: 0,
-                color: (opacity = 1) => `rgba(249, 115, 22, ${opacity})`,
-                labelColor: (opacity = 1) => `rgba(255, 255, 255, 0.4)`,
-                strokeWidth: 3,
-                propsForDots: {
-                  r: "4",
-                  strokeWidth: "2",
-                  stroke: "#f97316",
-                  fill: "#111827"
-                },
-                propsForBackgroundLines: {
-                  stroke: "rgba(255, 255, 255, 0.05)"
-                }
-              }}
-              bezier
-              style={{
-                marginVertical: 10,
-                borderRadius: 16,
-                paddingRight: 40,
-              }}
-            />
+            
+            <View style={{ height: 180, marginTop: 10, paddingHorizontal: 10 }}>
+              <Svg width="100%" height="100%" viewBox="0 0 300 160" preserveAspectRatio="none">
+                <Defs>
+                  <SvgLinearGradient id="grad" x1="0" y1="0" x2="0" y2="1">
+                    <Stop offset="0" stopColor="#f97316" stopOpacity="0.4" />
+                    <Stop offset="1" stopColor="#111827" stopOpacity="0" />
+                  </SvgLinearGradient>
+                </Defs>
+                
+                {/* Fill Area */}
+                <Path
+                  d="M 0 140 Q 25 140 50 110 T 100 50 T 150 90 T 200 10 T 250 60 T 300 30 L 300 160 L 0 160 Z"
+                  fill="url(#grad)"
+                />
+                
+                {/* Line */}
+                <Path
+                  d="M 0 140 Q 25 140 50 110 T 100 50 T 150 90 T 200 10 T 250 60 T 300 30"
+                  fill="none"
+                  stroke="#f97316"
+                  strokeWidth="3"
+                />
+                
+                {/* Data Dots */}
+                <Circle cx="0" cy="140" r="4" fill="#111827" stroke="#f97316" strokeWidth="2" />
+                <Circle cx="50" cy="110" r="4" fill="#111827" stroke="#f97316" strokeWidth="2" />
+                <Circle cx="100" cy="50" r="4" fill="#111827" stroke="#f97316" strokeWidth="2" />
+                <Circle cx="150" cy="90" r="4" fill="#111827" stroke="#f97316" strokeWidth="2" />
+                <Circle cx="200" cy="10" r="4" fill="#111827" stroke="#f97316" strokeWidth="2" />
+                <Circle cx="250" cy="60" r="4" fill="#111827" stroke="#f97316" strokeWidth="2" />
+                <Circle cx="300" cy="30" r="4" fill="#111827" stroke="#f97316" strokeWidth="2" />
+              </Svg>
+            </View>
+            
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', paddingHorizontal: 20, marginTop: 5 }}>
+              {["Du", "Se", "Cho", "Pay", "Ju", "Sha", "Yak"].map((day, i) => (
+                <Text key={i} style={{ color: "rgba(255,255,255,0.4)", fontSize: 11, fontFamily: "Inter_400Regular" }}>{day}</Text>
+              ))}
+            </View>
           </View>
 
           <Text style={[styles.sectionTitle, { color: colors.foreground, marginTop: 18 }]}>Ombor holati</Text>
