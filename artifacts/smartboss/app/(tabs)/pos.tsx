@@ -1926,9 +1926,14 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   unitTab: {
-    paddingVertical: 16,
-    borderRadius: 100,
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 4,
+    paddingHorizontal: 24,
+    paddingVertical: 14,
+    borderRadius: 16,
     borderWidth: 1.5,
+    minWidth: 95,
   },
   unitTabActive: {
     shadowOffset: { width: 0, height: 4 },
@@ -1940,9 +1945,9 @@ const styles = StyleSheet.create({
     shadowOpacity: 0,
     elevation: 0,
   },
-  unitTabIcon: { fontSize: 22, lineHeight: 26 },
-  unitTabText: { fontFamily: "Inter_600SemiBold", fontSize: 17 },
-  unitTabTextActive: { fontFamily: "Inter_700Bold", fontSize: 17 },
+  unitTabIcon: { fontSize: 24, lineHeight: 28 },
+  unitTabText: { fontFamily: "Inter_600SemiBold", fontSize: 14 },
+  unitTabTextActive: { fontFamily: "Inter_700Bold", fontSize: 14 },
 
   // Qty prompt modal
   qtyPromptSheet: {
