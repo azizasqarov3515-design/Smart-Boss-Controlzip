@@ -271,12 +271,12 @@ export default function DashboardScreen() {
   }).join(" ");
   // -- END CHART LOGIC --
 
-  const chartBg = isDark ? colors.card : "#F97316";
-  const chartBorder = isDark ? colors.border : "#EA580C";
-  const chartLine = isDark ? colors.primary : "#FFFFFF";
-  const chartGrid = isDark ? colors.border : "rgba(255,255,255,0.3)";
-  const chartTextMain = isDark ? colors.foreground : "#FFFFFF";
-  const chartTextSub = isDark ? colors.mutedForeground : "rgba(255,255,255,0.85)";
+  const chartBg = colors.card;
+  const chartBorder = colors.border;
+  const chartLine = colors.primary;
+  const chartGrid = isDark ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.05)";
+  const chartTextMain = colors.foreground;
+  const chartTextSub = colors.mutedForeground;
 
   return (
     <ScrollView

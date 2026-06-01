@@ -2,6 +2,7 @@ import React from "react";
 import { StyleSheet, Text, View } from "react-native";
 import { MaterialIcons } from "@expo/vector-icons";
 import { useTheme } from "@/contexts/ThemeContext";
+import { useColors } from "@/hooks/useColors";
 
 type StatCardProps = {
   label: string;
@@ -14,6 +15,7 @@ type StatCardProps = {
 
 export function StatCard({ label, value, icon, iconColor, subtitle, variant = "default" }: StatCardProps) {
   const { isDark } = useTheme();
+  const colors = useColors();
 
   const getIconColor = () => {
     if (iconColor) return iconColor;
@@ -29,12 +31,12 @@ export function StatCard({ label, value, icon, iconColor, subtitle, variant = "d
   const iconHex = getIconColor();
   const iconBg = iconHex + "25"; // 15% opacity
 
-  const cardBg = isDark ? "rgba(17, 24, 39, 0.75)" : "#00295D";
-  const cardBorder = isDark ? "rgba(255, 255, 255, 0.08)" : "transparent";
+  const cardBg = isDark ? "rgba(17, 24, 39, 0.75)" : colors.card;
+  const cardBorder = isDark ? "rgba(255, 255, 255, 0.08)" : colors.border;
   
-  const textColor = isDark ? "#FFFFFF" : "#D7DEFF";
-  const labelColor = isDark ? "rgba(255, 255, 255, 0.7)" : "#D7DEFF";
-  const subtitleColor = isDark ? "rgba(255, 255, 255, 0.5)" : "#D7DEFF";
+  const textColor = isDark ? "#FFFFFF" : colors.cardForeground;
+  const labelColor = isDark ? "rgba(255, 255, 255, 0.7)" : colors.mutedForeground;
+  const subtitleColor = isDark ? "rgba(255, 255, 255, 0.5)" : colors.mutedForeground;
 
   return (
     <View style={[styles.card, { backgroundColor: cardBg, borderColor: cardBorder }]}>
