@@ -1347,12 +1347,12 @@ function POSScreenInner() {
                   onPress={() => setUnitFilter(ut.key)}
                   activeOpacity={0.75}
                 >
-                  <Text style={styles.unitTabIcon}>{ut.icon}</Text>
+                  <Text style={[styles.unitTabIcon, { marginBottom: 2 }]}>{ut.icon}</Text>
                   <Text
                     style={[
                       styles.unitTabText,
-                      { color: isActive ? "#fff" : colors.foreground },
                       isActive && styles.unitTabTextActive,
+                      { color: isActive ? "#fff" : colors.foreground },
                     ]}
                   >
                     {ut.label}
@@ -1917,19 +1917,15 @@ const styles = StyleSheet.create({
   },
 
   // Unit filter tabs
-  unitTabsScroll: { flexGrow: 0, maxHeight: 72 },
+  unitTabsScroll: { flexGrow: 0, flexShrink: 0, minHeight: 90 },
   unitTabsContainer: {
     flexDirection: "row",
     gap: 12,
     paddingHorizontal: 16,
-    paddingVertical: 10,
+    paddingVertical: 12,
     alignItems: "center",
   },
   unitTab: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    paddingHorizontal: 26,
     paddingVertical: 16,
     borderRadius: 100,
     borderWidth: 1.5,
