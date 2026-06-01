@@ -209,7 +209,7 @@ function SaleCard({
                     </View>
                   )}
                   <View style={styles.itemNames}>
-                    <Text style={[styles.itemName, { color: colors.foreground }]} numberOfLines={1}>{item.productName}</Text>
+                    <Text style={[styles.itemName, { color: colors.cardForeground }]} numberOfLines={1}>{item.productName}</Text>
                     <Text style={[styles.itemBrand, { color: colors.mutedForeground }]}>{item.brand}</Text>
                   </View>
                 </View>
@@ -369,7 +369,7 @@ function HistoryScreenInner() {
         <View style={[styles.summaryBar, { backgroundColor: colors.card, borderBottomColor: colors.border, paddingTop: isWeb ? 16 : 12 }]}>
           <View style={styles.summaryItem}>
             <Text style={[styles.summaryLabel, { color: colors.mutedForeground }]}>Jami savdolar</Text>
-            <Text style={[styles.summaryVal, { color: colors.foreground }]}>{sales?.length ?? 0} ta</Text>
+            <Text style={[styles.summaryVal, { color: colors.cardForeground }]}>{sales?.length ?? 0} ta</Text>
           </View>
           <View style={[styles.summaryDivider, { backgroundColor: colors.border }]} />
           <View style={styles.summaryItem}>
@@ -461,7 +461,7 @@ function HistoryScreenInner() {
           refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={colors.primary} colors={[colors.primary]} />}
         >
           <MaterialIcons name="receipt-long" size={64} color={colors.border} />
-          <Text style={[styles.emptyTitle, { color: colors.foreground }]}>Tranzaksiyalar yo'q</Text>
+          <Text style={[styles.emptyTitle, { color: colors.text }]}>Tranzaksiyalar yo'q</Text>
           <Text style={[styles.emptySub, { color: colors.mutedForeground }]}>Kassa bo'limidan birinchi sotuvni amalga oshiring</Text>
         </ScrollView>
       ) : (
@@ -499,7 +499,7 @@ function HistoryScreenInner() {
             <View style={styles.modalIconWrap}>
               <MaterialIcons name="delete-forever" size={36} color="#DC2626" />
             </View>
-            <Text style={[styles.modalTitle, { color: colors.foreground }]}>
+            <Text style={[styles.modalTitle, { color: colors.cardForeground }]}>
               {confirmType === "all" ? "Barchasini o'chirish" : `${selectedIds.size} ta sotuvni o'chirish`}
             </Text>
             <Text style={[styles.modalMsg, { color: colors.mutedForeground }]}>
@@ -548,7 +548,7 @@ function HistoryScreenInner() {
                 <View style={[styles.modalIconWrap, { backgroundColor: "#D1FAE5" }]}>
                   <MaterialIcons name="check-circle" size={40} color="#059669" />
                 </View>
-                <Text style={[styles.modalTitle, { color: colors.foreground }]}>So'rov yuborildi!</Text>
+                <Text style={[styles.modalTitle, { color: colors.cardForeground }]}>So'rov yuborildi!</Text>
                 <Text style={[styles.modalMsg, { color: colors.mutedForeground }]}>
                   Rahbar so'rovni ko'rib chiqib, tasdiqlasa ma'lumotlar o'chiriladi.
                 </Text>
@@ -558,7 +558,7 @@ function HistoryScreenInner() {
                 <View style={[styles.modalIconWrap, { backgroundColor: "#FEF3C7" }]}>
                   <MaterialIcons name="send" size={36} color="#D97706" />
                 </View>
-                <Text style={[styles.modalTitle, { color: colors.foreground }]}>O'chirish so'rovi</Text>
+                <Text style={[styles.modalTitle, { color: colors.cardForeground }]}>O'chirish so'rovi</Text>
                 <Text style={[styles.modalMsg, { color: colors.mutedForeground }]}>
                   {workerRequestModal === "all"
                     ? `Barcha ${sales?.length ?? 0} ta savdo uchun rahbarga o'chirish so'rovi yuboriladi.`

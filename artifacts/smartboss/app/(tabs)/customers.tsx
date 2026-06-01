@@ -121,7 +121,7 @@ function CustomerCard({
       </View>
 
       <View style={styles.cardInfo}>
-        <Text style={[styles.cardName, { color: colors.foreground }]} numberOfLines={1}>
+        <Text style={[styles.cardName, { color: colors.cardForeground }]} numberOfLines={1}>
           {customer.name}
         </Text>
         <View style={styles.cardPhoneRow}>
@@ -401,19 +401,19 @@ function CustomersScreenInner() {
       {(customers?.length ?? 0) > 0 && (
         <View style={[styles.statsRow, { backgroundColor: colors.card, borderBottomColor: colors.border }]}>
           <View style={styles.statItem}>
-            <Text style={[styles.statVal, { color: colors.foreground }]}>{customers?.length ?? 0}</Text>
+            <Text style={[styles.statVal, { color: colors.cardForeground }]}>{customers?.length ?? 0}</Text>
             <Text style={[styles.statLabel, { color: colors.mutedForeground }]}>Jami mijozlar</Text>
           </View>
           <View style={[styles.statDivider, { backgroundColor: colors.border }]} />
           <View style={styles.statItem}>
-            <Text style={[styles.statVal, { color: debtorsCount > 0 ? "#D97706" : colors.foreground }]}>
+            <Text style={[styles.statVal, { color: debtorsCount > 0 ? "#D97706" : colors.cardForeground }]}>
               {debtorsCount}
             </Text>
             <Text style={[styles.statLabel, { color: colors.mutedForeground }]}>Qarzdorlar</Text>
           </View>
           <View style={[styles.statDivider, { backgroundColor: colors.border }]} />
           <View style={styles.statItem}>
-            <Text style={[styles.statVal, { color: totalDebt > 0 ? "#DC2626" : colors.foreground }]}>
+            <Text style={[styles.statVal, { color: totalDebt > 0 ? "#DC2626" : colors.cardForeground }]}>
               {formatMoney(totalDebt)}
             </Text>
             <Text style={[styles.statLabel, { color: colors.mutedForeground }]}>Jami qarz</Text>
@@ -426,7 +426,7 @@ function CustomersScreenInner() {
         <View style={[styles.searchBar, { backgroundColor: colors.muted, borderColor: search ? colors.primary : colors.border }]}>
           <MaterialIcons name="search" size={18} color={colors.mutedForeground} />
           <TextInput
-            style={[styles.searchInput, { color: colors.foreground }]}
+            style={[styles.searchInput, { color: colors.cardForeground }]}
             placeholder="Ism yoki telefon bo'yicha..."
             placeholderTextColor={colors.mutedForeground}
             value={search}
@@ -461,7 +461,7 @@ function CustomersScreenInner() {
           refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={colors.primary} colors={[colors.primary]} />}
         >
           <MaterialIcons name="people" size={56} color={colors.mutedForeground} />
-          <Text style={[styles.emptyTitle, { color: colors.foreground }]}>
+          <Text style={[styles.emptyTitle, { color: colors.text }]}>
             {search ? "Topilmadi" : "Mijozlar yo'q"}
           </Text>
           <Text style={[styles.emptySubtitle, { color: colors.mutedForeground }]}>
@@ -518,7 +518,7 @@ function CustomersScreenInner() {
 
             <View style={styles.modalHeader}>
               <MaterialIcons name="person-add" size={24} color={colors.primary} />
-              <Text style={[styles.modalTitle, { color: colors.foreground }]}>Yangi mijoz</Text>
+              <Text style={[styles.modalTitle, { color: colors.cardForeground }]}>Yangi mijoz</Text>
             </View>
 
             <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 220 }}>
@@ -560,7 +560,7 @@ function CustomersScreenInner() {
 
               <Text style={[styles.label, { color: colors.mutedForeground }]}>To'liq ism *</Text>
               <TextInput
-                style={[styles.input, { backgroundColor: colors.muted, borderColor: colors.border, color: colors.foreground }]}
+                style={[styles.input, { backgroundColor: colors.muted, borderColor: colors.border, color: colors.cardForeground }]}
                 placeholder="Ism va familiya"
                 placeholderTextColor={colors.mutedForeground}
                 value={formName}
@@ -569,7 +569,7 @@ function CustomersScreenInner() {
 
               <Text style={[styles.label, { color: colors.mutedForeground }]}>Telefon raqami *</Text>
               <TextInput
-                style={[styles.input, { backgroundColor: colors.muted, borderColor: colors.border, color: colors.foreground }]}
+                style={[styles.input, { backgroundColor: colors.muted, borderColor: colors.border, color: colors.cardForeground }]}
                 placeholder="998xx xxx xx xx"
                 placeholderTextColor={colors.mutedForeground}
                 value={formPhone}
@@ -580,7 +580,7 @@ function CustomersScreenInner() {
 
               <Text style={[styles.label, { color: colors.mutedForeground }]}>Yashash joyi</Text>
               <TextInput
-                style={[styles.input, { backgroundColor: colors.muted, borderColor: colors.border, color: colors.foreground }]}
+                style={[styles.input, { backgroundColor: colors.muted, borderColor: colors.border, color: colors.cardForeground }]}
                 placeholder="Shahar, ko'cha, uy"
                 placeholderTextColor={colors.mutedForeground}
                 value={formAddress}
@@ -589,7 +589,7 @@ function CustomersScreenInner() {
 
               <Text style={[styles.label, { color: colors.mutedForeground }]}>Qarz limiti (UZS)</Text>
               <TextInput
-                style={[styles.input, { backgroundColor: colors.muted, borderColor: colors.border, color: colors.foreground }]}
+                style={[styles.input, { backgroundColor: colors.muted, borderColor: colors.border, color: colors.cardForeground }]}
                 placeholder="0 = cheksiz"
                 placeholderTextColor={colors.mutedForeground}
                 value={formLimit}
@@ -599,7 +599,7 @@ function CustomersScreenInner() {
 
               <Text style={[styles.label, { color: colors.mutedForeground }]}>Izoh</Text>
               <TextInput
-                style={[styles.input, { backgroundColor: colors.muted, borderColor: colors.border, color: colors.foreground }]}
+                style={[styles.input, { backgroundColor: colors.muted, borderColor: colors.border, color: colors.cardForeground }]}
                 placeholder="Ixtiyoriy"
                 placeholderTextColor={colors.mutedForeground}
                 value={formNote}

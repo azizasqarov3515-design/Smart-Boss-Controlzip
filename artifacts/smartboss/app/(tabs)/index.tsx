@@ -90,7 +90,7 @@ function WorkerDashboard() {
       <WebRefreshBar refreshing={isRefreshing} onRefresh={onRefresh} />
       <View style={styles.header}>
         <View style={styles.headerCenter}>
-          <Text style={[styles.title, { color: colors.foreground }]}>SMARTBOSScontrol</Text>
+          <Text style={[styles.title, { color: colors.text }]}>SMARTBOSScontrol</Text>
           <View style={styles.subHeader}>
             <LiveClock />
           </View>
@@ -118,7 +118,7 @@ function WorkerDashboard() {
           activeOpacity={0.8}
         >
           <MaterialIcons name="receipt-long" size={26} color={colors.primary} />
-          <Text style={[styles.quickCardLabel, { color: colors.foreground }]}>Tarix</Text>
+          <Text style={[styles.quickCardLabel, { color: colors.cardForeground }]}>Tarix</Text>
         </TouchableOpacity>
         <TouchableOpacity
           style={[styles.quickCard, { backgroundColor: colors.card, borderColor: colors.border }]}
@@ -126,7 +126,7 @@ function WorkerDashboard() {
           activeOpacity={0.8}
         >
           <MaterialIcons name="people" size={26} color={colors.primary} />
-          <Text style={[styles.quickCardLabel, { color: colors.foreground }]}>Mijozlar</Text>
+          <Text style={[styles.quickCardLabel, { color: colors.cardForeground }]}>Mijozlar</Text>
         </TouchableOpacity>
         <TouchableOpacity
           style={[styles.quickCard, { backgroundColor: colors.card, borderColor: colors.border }]}
@@ -134,7 +134,7 @@ function WorkerDashboard() {
           activeOpacity={0.8}
         >
           <MaterialIcons name="inventory" size={26} color={colors.primary} />
-          <Text style={[styles.quickCardLabel, { color: colors.foreground }]}>Tovarlar</Text>
+          <Text style={[styles.quickCardLabel, { color: colors.cardForeground }]}>Tovarlar</Text>
         </TouchableOpacity>
       </View>
     </ScrollView>
@@ -275,7 +275,7 @@ export default function DashboardScreen() {
   const chartBorder = isDark ? colors.border : "transparent";
   const chartLine = isDark ? colors.primary : "#FFFFFF";
   const chartGrid = isDark ? "rgba(255,255,255,0.1)" : "rgba(255,255,255,0.15)";
-  const chartTextMain = isDark ? colors.foreground : "#FFFFFF";
+  const chartTextMain = isDark ? colors.cardForeground : "#FFFFFF";
   const chartTextSub = isDark ? colors.mutedForeground : "rgba(255,255,255,0.7)";
 
   return (
@@ -288,7 +288,7 @@ export default function DashboardScreen() {
       <WebRefreshBar refreshing={isRefreshing} onRefresh={onRefresh} />
       <View style={[styles.header, { flexDirection: "row", justifyContent: "space-between", alignItems: "center" }]}>
         <View style={{ flex: 1, alignItems: "center", marginLeft: settings.managerProfilePic ? 44 : 0 }}>
-          <Text style={[styles.title, { color: colors.foreground }]}>SMARTBOSScontrol</Text>
+          <Text style={[styles.title, { color: colors.text }]}>SMARTBOSScontrol</Text>
           <View style={styles.subHeader}>
             <LiveClock />
           </View>
@@ -337,7 +337,7 @@ export default function DashboardScreen() {
         </View>
       ) : (
         <>
-          <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Bugungi savdo</Text>
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>Bugungi savdo</Text>
           <View style={styles.statsGrid}>
             <StatCard label="Bugungi sotuv" value={String(todaySales.length) + " ta"} icon="point-of-sale" variant="primary" />
             <StatCard label="Bugungi tushum" value={formatMoney(todayRevenue)} icon="trending-up" variant="success" />
@@ -446,7 +446,7 @@ export default function DashboardScreen() {
             </View>
           </View>
 
-          <Text style={[styles.sectionTitle, { color: colors.foreground, marginTop: 18 }]}>Ombor holati</Text>
+          <Text style={[styles.sectionTitle, { color: colors.cardForeground, marginTop: 18 }]}>Ombor holati</Text>
           <View style={styles.statsGrid}>
             <StatCard label="Mahsulot turi" value={String(stats?.totalProducts ?? 0)} icon="inventory-2" variant="primary" />
             <StatCard label="Jami dona" value={String(stats?.totalItems ?? 0)} icon="widgets" variant="warning" />
@@ -489,12 +489,12 @@ export default function DashboardScreen() {
 
           {recentSales.length > 0 && (
             <>
-              <Text style={[styles.sectionTitle, { color: colors.foreground }]}>So'nggi savdolar</Text>
+              <Text style={[styles.sectionTitle, { color: colors.text }]}>So'nggi savdolar</Text>
               {recentSales.map((sale) => (
                 <View key={sale.id} style={[styles.listCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
                   <View style={[styles.saleBadge, { backgroundColor: "rgba(59, 130, 246, 0.15)" }]}><Text style={styles.saleBadgeText}>#{sale.id}</Text></View>
                   <View style={styles.listCardInfo}>
-                    <Text style={[styles.listCardName, { color: colors.foreground }]}>{sale.itemCount} dona mahsulot</Text>
+                    <Text style={[styles.listCardName, { color: colors.cardForeground }]}>{sale.itemCount} dona mahsulot</Text>
                     <Text style={[styles.listCardSub, { color: colors.mutedForeground }]}>{formatTime(sale.createdAt)}</Text>
                   </View>
                   <Text style={[styles.saleAmount, { color: colors.primary }]}>{formatMoney(sale.totalAmount)}</Text>
@@ -509,7 +509,7 @@ export default function DashboardScreen() {
 
           {topProfitProducts.length > 0 && (
             <>
-              <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Eng foydali tovarlar</Text>
+              <Text style={[styles.sectionTitle, { color: colors.text }]}>Eng foydali tovarlar</Text>
               {topProfitProducts.map((p, i) => {
                 const profit = p.salePrice - p.costPrice;
                 const pct = p.costPrice > 0 ? ((profit / p.costPrice) * 100).toFixed(0) : "0";
@@ -517,7 +517,7 @@ export default function DashboardScreen() {
                   <TouchableOpacity key={p.id} style={[styles.listCard, { backgroundColor: colors.card, borderColor: colors.border }]} onPress={() => router.push({ pathname: "/product-form", params: { id: String(p.id) } })} activeOpacity={0.8}>
                     <View style={[styles.rankBadge, { backgroundColor: i === 0 ? "#FFC107" : i === 1 ? "#90A4AE" : "#A0724A" }]}><Text style={styles.rankText}>{i + 1}</Text></View>
                     <View style={styles.listCardInfo}>
-                      <Text style={[styles.listCardName, { color: colors.foreground }]} numberOfLines={1}>{p.name}</Text>
+                      <Text style={[styles.listCardName, { color: colors.cardForeground }]} numberOfLines={1}>{p.name}</Text>
                       <Text style={[styles.listCardSub, { color: colors.mutedForeground }]}>{p.brand}</Text>
                     </View>
                     <View style={styles.profitRight}>
@@ -533,7 +533,7 @@ export default function DashboardScreen() {
           {(products?.length ?? 0) === 0 && (
             <View style={styles.emptyState}>
               <MaterialIcons name="inventory-2" size={60} color={colors.border} />
-              <Text style={[styles.emptyTitle, { color: colors.foreground }]}>Mahsulotlar yo'q</Text>
+              <Text style={[styles.emptyTitle, { color: colors.text }]}>Mahsulotlar yo'q</Text>
               <Text style={[styles.emptySub, { color: colors.mutedForeground }]}>Birinchi mahsulotni qo'shib boshlang</Text>
               <TouchableOpacity style={[styles.emptyBtn, { backgroundColor: colors.primary }]} onPress={() => router.push("/product-form")} activeOpacity={0.85}>
                 <MaterialIcons name="add" size={18} color="#fff" />
