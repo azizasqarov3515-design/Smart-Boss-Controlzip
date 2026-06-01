@@ -21,8 +21,9 @@ import {
   Text,
   TouchableOpacity,
   View,
+  Dimensions,
 } from "react-native";
-import Svg, { Path, Defs, LinearGradient as SvgLinearGradient, Stop, Circle } from "react-native-svg";
+import Svg, { Circle, Line as SvgLine, Text as SvgText, Polyline } from "react-native-svg";
 import { MaterialIcons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useColors } from "@/hooks/useColors";
@@ -234,6 +235,41 @@ export default function DashboardScreen() {
   const pendingDeleteRequests = deleteRequests ?? [];
   const totalPending = pendingWorkers.length + pendingDeleteRequests.length;
 
+  // -- CHART LOGIC --
+  const screenWidth = Dimensions.get("window").width;
+  const chartWidth = isWeb ? Math.min(screenWidth - 32, 800) : screenWidth - 32;
+  const chartHeight = 220;
+  const pL = 45;
+  const pR = 15;
+  const pT = 15;
+  const pB = 25;
+  const dW = chartWidth - pL - pR;
+  const dH = chartHeight - pT - pB;
+
+  const chartData = [150000, 230000, 180000, 350000, 600000, 450000, 520000];
+  const maxVal = Math.max(...chartData);
+  const minVal = 0;
+  const yRange = maxVal - minVal || 1;
+
+  const formatCompact = (num: number) => {
+    if (num >= 1_000_000) return (num / 1_000_000).toFixed(1) + "M";
+    if (num >= 1_000) return (num / 1_000).toFixed(0) + "K";
+    return String(num);
+  };
+
+  const yAxisValues = [maxVal, maxVal * 0.66, maxVal * 0.33, 0];
+  const xLabels = ["Du", "Se", "Cho", "Pay", "Ju", "Sha", "Yak"];
+
+  const todayDate = new Date();
+  const dateStr = `${String(todayDate.getDate()).padStart(2, '0')}.${String(todayDate.getMonth() + 1).padStart(2, '0')}.${todayDate.getFullYear()}`;
+
+  const points = chartData.map((val, i) => {
+    const x = pL + (i / 6) * dW;
+    const y = pT + dH - ((val - minVal) / yRange) * dH;
+    return `${x},${y}`;
+  }).join(" ");
+  // -- END CHART LOGIC --
+
   return (
     <ScrollView
       style={[styles.container, { backgroundColor: colors.background }]}
@@ -299,46 +335,96 @@ export default function DashboardScreen() {
           </View>
 
           <View style={[styles.chartContainer, { backgroundColor: colors.card, borderColor: colors.border }]}>
-            <Text style={[styles.chartTitle, { color: "rgba(255, 255, 255, 0.9)" }]}>Haftalik savdo tendensiyasi</Text>
-            
-            <View style={{ height: 180, marginTop: 10, paddingHorizontal: 10 }}>
-              <Svg width="100%" height="100%" viewBox="0 0 300 160" preserveAspectRatio="none">
-                <Defs>
-                  <SvgLinearGradient id="grad" x1="0" y1="0" x2="0" y2="1">
-                    <Stop offset="0" stopColor="#f97316" stopOpacity="0.4" />
-                    <Stop offset="1" stopColor="#111827" stopOpacity="0" />
-                  </SvgLinearGradient>
-                </Defs>
-                
-                {/* Fill Area */}
-                <Path
-                  d="M 0 140 Q 25 140 50 110 T 100 50 T 150 90 T 200 10 T 250 60 T 300 30 L 300 160 L 0 160 Z"
-                  fill="url(#grad)"
-                />
-                
-                {/* Line */}
-                <Path
-                  d="M 0 140 Q 25 140 50 110 T 100 50 T 150 90 T 200 10 T 250 60 T 300 30"
-                  fill="none"
-                  stroke="#f97316"
-                  strokeWidth="3"
-                />
-                
-                {/* Data Dots */}
-                <Circle cx="0" cy="140" r="4" fill="#111827" stroke="#f97316" strokeWidth="2" />
-                <Circle cx="50" cy="110" r="4" fill="#111827" stroke="#f97316" strokeWidth="2" />
-                <Circle cx="100" cy="50" r="4" fill="#111827" stroke="#f97316" strokeWidth="2" />
-                <Circle cx="150" cy="90" r="4" fill="#111827" stroke="#f97316" strokeWidth="2" />
-                <Circle cx="200" cy="10" r="4" fill="#111827" stroke="#f97316" strokeWidth="2" />
-                <Circle cx="250" cy="60" r="4" fill="#111827" stroke="#f97316" strokeWidth="2" />
-                <Circle cx="300" cy="30" r="4" fill="#111827" stroke="#f97316" strokeWidth="2" />
-              </Svg>
+            <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingHorizontal: 16, marginBottom: 8 }}>
+              <Text style={[styles.chartTitle, { color: colors.foreground, marginLeft: 0, marginBottom: 0 }]}>Savdo tendensiyasi</Text>
+              <Text style={{ color: colors.mutedForeground, fontFamily: "Inter_500Medium", fontSize: 13 }}>{dateStr}</Text>
             </View>
             
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between', paddingHorizontal: 20, marginTop: 5 }}>
-              {["Du", "Se", "Cho", "Pay", "Ju", "Sha", "Yak"].map((day, i) => (
-                <Text key={i} style={{ color: "rgba(255,255,255,0.4)", fontSize: 11, fontFamily: "Inter_400Regular" }}>{day}</Text>
-              ))}
+            <View style={{ height: chartHeight, width: "100%" }}>
+              <Svg width="100%" height="100%">
+                {/* Horizontal Grid Lines & Y-Axis Labels */}
+                {yAxisValues.map((val, i) => {
+                  const y = pT + (i / 3) * dH;
+                  return (
+                    <React.Fragment key={`h-${i}`}>
+                      <SvgText
+                        x={pL - 8}
+                        y={y + 4}
+                        fill={colors.mutedForeground}
+                        fontSize="10"
+                        fontFamily="Inter_500Medium"
+                        textAnchor="end"
+                      >
+                        {formatCompact(val)}
+                      </SvgText>
+                      <SvgLine
+                        x1={pL}
+                        y1={y}
+                        x2={pL + dW}
+                        y2={y}
+                        stroke={colors.border}
+                        strokeWidth="1"
+                        strokeDasharray="4 4"
+                      />
+                    </React.Fragment>
+                  );
+                })}
+
+                {/* Vertical Grid Lines & X-Axis Labels */}
+                {xLabels.map((label, i) => {
+                  const x = pL + (i / 6) * dW;
+                  return (
+                    <React.Fragment key={`v-${i}`}>
+                      <SvgText
+                        x={x}
+                        y={chartHeight - 5}
+                        fill={colors.mutedForeground}
+                        fontSize="11"
+                        fontFamily="Inter_500Medium"
+                        textAnchor="middle"
+                      >
+                        {label}
+                      </SvgText>
+                      <SvgLine
+                        x1={x}
+                        y1={pT}
+                        x2={x}
+                        y2={pT + dH}
+                        stroke={colors.border}
+                        strokeWidth="1"
+                        strokeDasharray="4 4"
+                      />
+                    </React.Fragment>
+                  );
+                })}
+
+                {/* The Indicator Line */}
+                <Polyline
+                  points={points}
+                  fill="none"
+                  stroke={colors.primary}
+                  strokeWidth="3"
+                  strokeLinejoin="round"
+                  strokeLinecap="round"
+                />
+
+                {/* Data Dots */}
+                {chartData.map((val, i) => {
+                  const x = pL + (i / 6) * dW;
+                  const y = pT + dH - ((val - minVal) / yRange) * dH;
+                  return (
+                    <Circle
+                      key={`dot-${i}`}
+                      cx={x}
+                      cy={y}
+                      r="4"
+                      fill={colors.card}
+                      stroke={colors.primary}
+                      strokeWidth="2.5"
+                    />
+                  );
+                })}
+              </Svg>
             </View>
           </View>
 
