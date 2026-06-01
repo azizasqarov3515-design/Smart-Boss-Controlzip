@@ -624,6 +624,24 @@ function ProductFormScreenInner() {
   const profitPct = cost > 0 ? ((profit / cost) * 100).toFixed(1) : null;
   const showProfit = form.costPrice && form.salePrice;
 
+  const formatPrice = (val: string) => {
+    if (!val) return "";
+    return val.replace(/\B(?=(\d{3})+(?!\d))/g, " ");
+  };
+
+  const handleQtyChange = (val: string, currentUnit: string) => {
+    const suffix = currentUnit === "kg" ? "kg" : currentUnit === "m" ? "m" : "dona";
+    if (val === suffix || val === "") {
+      setField("quantity", "");
+      return;
+    }
+    let numPart = val.replace(/[^0-9.,]/g, "");
+    if (form.quantity && numPart === form.quantity && val.length < (form.quantity + suffix).length) {
+      numPart = numPart.slice(0, -1);
+    }
+    setField("quantity", numPart);
+  };
+
   return (
     <>
       <BarcodeScanModal
@@ -710,8 +728,18 @@ function ProductFormScreenInner() {
                       fontFamily: "Inter_400Regular",
                     },
                   ]}
-                  value={form[field.key]}
-                  onChangeText={(v) => setField(field.key, v)}
+                  value={
+                    field.key === "costPrice" || field.key === "salePrice"
+                      ? formatPrice(form[field.key])
+                      : form[field.key]
+                  }
+                  onChangeText={(v) => {
+                    if (field.key === "costPrice" || field.key === "salePrice") {
+                      setField(field.key, v.replace(/\D/g, ""));
+                    } else {
+                      setField(field.key, v);
+                    }
+                  }}
                   placeholder={field.placeholder}
                   placeholderTextColor={colors.mutedForeground}
                   keyboardType={field.keyboardType}
@@ -745,9 +773,9 @@ function ProductFormScreenInner() {
                     fontFamily: "Inter_400Regular",
                   },
                 ]}
-                value={form.quantity}
-                onChangeText={(v) => setField("quantity", v)}
-                placeholder={isFloatUnit ? "0.000" : "0"}
+                value={form.quantity ? `${form.quantity}${unit === "kg" ? "kg" : unit === "m" ? "m" : "dona"}` : ""}
+                onChangeText={(v) => handleQtyChange(v, unit)}
+                placeholder={isFloatUnit ? `0.000${unit === "kg" ? "kg" : "m"}` : "0dona"}
                 placeholderTextColor={colors.mutedForeground}
                 keyboardType={isFloatUnit ? "decimal-pad" : "numeric"}
                 returnKeyType="next"
