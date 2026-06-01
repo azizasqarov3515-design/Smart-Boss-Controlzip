@@ -309,7 +309,7 @@ function POSScreenInner() {
   const [customerSearch, setCustomerSearch] = useState("");
   const [customerMode, setCustomerMode] = useState<"list" | "create">("list");
   const [newCustomerName, setNewCustomerName] = useState("");
-  const [newCustomerPhone, setNewCustomerPhone] = useState("");
+  const [newCustomerPhone, setNewCustomerPhone] = useState("+998 ");
   const [customerConfirmVisible, setCustomerConfirmVisible] = useState(false);
   const [unitFilter, setUnitFilter] = useState<"all" | "dona" | "kg" | "m">("all");
   const [qtyPromptProduct, setQtyPromptProduct] = useState<Product | null>(null);
@@ -510,7 +510,7 @@ function POSScreenInner() {
     setCustomerPickerOpen(false);
     setCustomerMode("list");
     setNewCustomerName("");
-    setNewCustomerPhone("");
+    setNewCustomerPhone("+998 ");
     setTimeout(() => setConfirmOpen(true), 300);
   }, []);
 
@@ -1279,24 +1279,46 @@ function POSScreenInner() {
                   autoFocus
                 />
                 <Text style={{ fontFamily: "Inter_500Medium", fontSize: 13, color: colors.mutedForeground, marginBottom: 6 }}>
-                  Telefon (majburiy emas)
+                  Telefon raqami
                 </Text>
                 <TextInput
-                  style={[styles.qtyPromptInput, { color: colors.foreground, borderColor: colors.border, backgroundColor: colors.muted, marginBottom: 24 }]}
+                  style={[styles.qtyPromptInput, { color: colors.foreground, borderColor: colors.border, backgroundColor: colors.muted, marginBottom: 24, fontSize: 16 }]}
                   placeholder="+998"
                   placeholderTextColor={colors.mutedForeground}
                   value={newCustomerPhone}
-                  onChangeText={setNewCustomerPhone}
+                  onChangeText={(val) => {
+                    if (val.length < 5) {
+                      setNewCustomerPhone("+998 ");
+                      return;
+                    }
+                    const mainDigits = val.slice(5).replace(/\D/g, "");
+                    const code = mainDigits.slice(0, 2);
+                    const part1 = mainDigits.slice(2, 5);
+                    const part2 = mainDigits.slice(5, 7);
+                    const part3 = mainDigits.slice(7, 9);
+                    let formatted = "+998 ";
+                    if (code) formatted += code;
+                    if (part1) formatted += " " + part1;
+                    if (part2) formatted += " " + part2;
+                    if (part3) formatted += " " + part3;
+                    setNewCustomerPhone(formatted);
+                  }}
                   keyboardType="phone-pad"
+                  maxLength={17}
                 />
                 <TouchableOpacity
                   style={[styles.qtyPromptConfirm, { backgroundColor: colors.primary, width: "100%", justifyContent: "center" }]}
                   activeOpacity={0.8}
                   disabled={!newCustomerName.trim() || creatingCustomer}
                   onPress={() => {
+                    const cleanPhone = newCustomerPhone.replace(/[\s+]/g, "");
+                    if (cleanPhone.length !== 12 || !cleanPhone.startsWith("998")) {
+                      Alert.alert("Xato", "Telefon raqami noto'g'ri (misol: +998 90 123 45 67)");
+                      return;
+                    }
                     createCustomer({
                       name: newCustomerName.trim(),
-                      phone: newCustomerPhone.trim(),
+                      phone: cleanPhone,
                       debtLimit: 0
                     });
                   }}
