@@ -91,8 +91,6 @@ function WorkerDashboard() {
         <View style={styles.headerCenter}>
           <Text style={[styles.title, { color: colors.foreground }]}>SMARTBOSScontrol</Text>
           <View style={styles.subHeader}>
-            <Text style={[styles.greeting, { color: colors.mutedForeground }]}>{workerName ?? "Sotuvchi"}</Text>
-            <View style={[styles.dot, { backgroundColor: colors.mutedForeground }]} />
             <LiveClock />
           </View>
         </View>
@@ -283,8 +281,6 @@ export default function DashboardScreen() {
         <View style={{ flex: 1, alignItems: "center", marginLeft: settings.managerProfilePic ? 44 : 0 }}>
           <Text style={[styles.title, { color: colors.foreground }]}>SMARTBOSScontrol</Text>
           <View style={styles.subHeader}>
-            <Text style={[styles.greeting, { color: colors.mutedForeground }]}>{username ?? "Asosiy Do'kon"}</Text>
-            <View style={[styles.dot, { backgroundColor: colors.mutedForeground }]} />
             <LiveClock />
           </View>
         </View>

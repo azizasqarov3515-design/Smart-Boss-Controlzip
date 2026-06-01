@@ -3,19 +3,10 @@ import React, { useEffect, useState } from "react";
 import { StyleSheet, Text, View } from "react-native";
 import { useColors } from "@/hooks/useColors";
 
-function getTimezone(): string {
-  try {
-    const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
-    return tz.split("/").pop()?.replace(/_/g, " ") ?? tz;
-  } catch {
-    return "";
-  }
-}
-
+// Timezone function removed as per request
 export function LiveClock() {
   const colors = useColors();
   const [now, setNow] = useState(() => new Date());
-  const tzCity = getTimezone();
 
   useEffect(() => {
     const timer = setInterval(() => setNow(new Date()), 1000);
@@ -41,7 +32,7 @@ export function LiveClock() {
       <View style={styles.textBlock}>
         <Text style={[styles.time, { color: colors.foreground }]}>{timeStr}</Text>
         <Text style={[styles.sub, { color: colors.mutedForeground }]}>
-          {dateStr}{tzCity ? ` · ${tzCity}` : ""}
+          {dateStr}
         </Text>
       </View>
     </View>
