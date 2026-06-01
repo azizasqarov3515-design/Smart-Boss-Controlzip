@@ -13,6 +13,7 @@ import {
   TextInput,
   TouchableOpacity,
   View,
+  Image,
 } from "react-native";
 
 import { MaterialIcons } from "@expo/vector-icons";
@@ -23,7 +24,6 @@ import { useTheme } from "@/contexts/ThemeContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { WebRefreshBar } from "@/components/WebRefreshBar";
 import * as ImagePicker from "expo-image-picker";
-import { Image } from "expo-image";
 import {
   useGetWorkers,
   useApproveWorker,
@@ -900,7 +900,7 @@ export default function SettingsScreen() {
                 }}
               >
                 {profilePic ? (
-                  <Image source={{ uri: profilePic }} style={{ width: "100%", height: "100%" }} contentFit="cover" />
+                  <Image source={{ uri: profilePic }} style={{ width: "100%", height: "100%" }} resizeMode="cover" />
                 ) : (
                   <MaterialIcons name="add-a-photo" size={32} color={colors.mutedForeground} />
                 )}

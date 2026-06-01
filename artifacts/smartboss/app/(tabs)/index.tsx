@@ -22,9 +22,10 @@ import {
   TouchableOpacity,
   View,
   Dimensions,
+  Image,
 } from "react-native";
-import Svg, { Circle, Line as SvgLine, Text as SvgText, Polyline, Defs, LinearGradient as SvgLinearGradient, Stop } from "react-native-svg";
-import { Image } from "expo-image";
+import Svg, { Circle, Line as SvgLine, Text as SvgText, Polyline } from "react-native-svg";
+import { LinearGradient } from "expo-linear-gradient";
 import { MaterialIcons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useColors } from "@/hooks/useColors";
@@ -290,23 +291,16 @@ export default function DashboardScreen() {
           </View>
         </View>
         {settings.managerProfilePic && (
-          <View style={{ width: 44, height: 44, alignItems: 'center', justifyContent: 'center' }}>
-            <Svg width="44" height="44" style={{ position: 'absolute' }}>
-              <Defs>
-                <SvgLinearGradient id="ringGrad" x1="0" y1="0" x2="1" y2="1">
-                  <Stop offset="0%" stopColor="#fbbf24" />
-                  <Stop offset="25%" stopColor="#ef4444" />
-                  <Stop offset="50%" stopColor="#c026d3" />
-                  <Stop offset="75%" stopColor="#3b82f6" />
-                  <Stop offset="100%" stopColor="#22d3ee" />
-                </SvgLinearGradient>
-              </Defs>
-              <Circle cx="22" cy="22" r="20" fill="none" stroke="url(#ringGrad)" strokeWidth="2.5" />
-            </Svg>
-            <View style={{ width: 36, height: 36, borderRadius: 18, overflow: 'hidden', backgroundColor: colors.muted }}>
-              <Image source={{ uri: settings.managerProfilePic }} style={{ width: '100%', height: '100%' }} contentFit="cover" />
+          <LinearGradient
+            colors={["#fbbf24", "#ef4444", "#c026d3", "#3b82f6", "#22d3ee"]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={{ width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center' }}
+          >
+            <View style={{ width: 38, height: 38, borderRadius: 19, overflow: 'hidden', backgroundColor: colors.muted, borderWidth: 2, borderColor: colors.background }}>
+              <Image source={{ uri: settings.managerProfilePic }} style={{ width: '100%', height: '100%' }} resizeMode="cover" />
             </View>
-          </View>
+          </LinearGradient>
         )}
       </View>
 
