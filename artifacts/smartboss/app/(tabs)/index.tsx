@@ -22,6 +22,7 @@ import {
   TouchableOpacity,
   View,
   Dimensions,
+} from "react-native";
 import Svg, { Circle, Line as SvgLine, Text as SvgText, Polyline, Defs, LinearGradient as SvgLinearGradient, Stop } from "react-native-svg";
 import { Image } from "expo-image";
 import { MaterialIcons } from "@expo/vector-icons";
