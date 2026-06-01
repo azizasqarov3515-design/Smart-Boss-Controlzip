@@ -29,6 +29,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import { MaterialIcons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useColors } from "@/hooks/useColors";
+import { useTheme } from "@/contexts/ThemeContext";
 import { useSettings } from "@/hooks/useSettings";
 import { StatCard } from "@/components/StatCard";
 import { LiveClock } from "@/components/LiveClock";
@@ -142,6 +143,7 @@ function WorkerDashboard() {
 
 export default function DashboardScreen() {
   const colors = useColors();
+  const { isDark } = useTheme();
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { username, logout, role, managerId, downloadBackup } = useAuth();
@@ -252,7 +254,7 @@ export default function DashboardScreen() {
   const yRange = maxVal - minVal;
 
   const formatCompact = (num: number) => {
-    if (num >= 1_000_000) return (num / 1_000_000).toFixed(1) + "M";
+    if (num >= 1_000_000) return (num / 1_000_000).toFixed(1) + " mln";
     if (num >= 1_000) return (num / 1_000).toFixed(0) + "K";
     return String(Math.round(num));
   };
@@ -268,6 +270,13 @@ export default function DashboardScreen() {
     return `${x},${y}`;
   }).join(" ");
   // -- END CHART LOGIC --
+
+  const chartBg = isDark ? colors.card : "#F97316";
+  const chartBorder = isDark ? colors.border : "#EA580C";
+  const chartLine = isDark ? colors.primary : "#FFFFFF";
+  const chartGrid = isDark ? colors.border : "rgba(255,255,255,0.3)";
+  const chartTextMain = isDark ? colors.foreground : "#FFFFFF";
+  const chartTextSub = isDark ? colors.mutedForeground : "rgba(255,255,255,0.85)";
 
   return (
     <ScrollView
@@ -343,10 +352,10 @@ export default function DashboardScreen() {
             />
           </View>
 
-          <View style={[styles.chartContainer, { backgroundColor: colors.card, borderColor: colors.border }]}>
+          <View style={[styles.chartContainer, { backgroundColor: chartBg, borderColor: chartBorder }]}>
             <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingHorizontal: 16, marginBottom: 8 }}>
-              <Text style={[styles.chartTitle, { color: colors.foreground, marginLeft: 0, marginBottom: 0 }]}>Savdo tendensiyasi</Text>
-              <Text style={{ color: colors.mutedForeground, fontFamily: "Inter_500Medium", fontSize: 13 }}>{dateStr}</Text>
+              <Text style={[styles.chartTitle, { color: chartTextMain, marginLeft: 0, marginBottom: 0 }]}>Savdo tendensiyasi</Text>
+              <Text style={{ color: chartTextSub, fontFamily: "Inter_500Medium", fontSize: 13 }}>{dateStr}</Text>
             </View>
             
             <View style={{ height: chartHeight, width: "100%" }}>
@@ -359,7 +368,7 @@ export default function DashboardScreen() {
                       <SvgText
                         x={pL - 8}
                         y={y + 4}
-                        fill={colors.mutedForeground}
+                        fill={chartTextSub}
                         fontSize="10"
                         fontFamily="Inter_500Medium"
                         textAnchor="end"
@@ -371,7 +380,7 @@ export default function DashboardScreen() {
                         y1={y}
                         x2={pL + dW}
                         y2={y}
-                        stroke={colors.border}
+                        stroke={chartGrid}
                         strokeWidth="1"
                         strokeDasharray="4 4"
                       />
@@ -387,7 +396,7 @@ export default function DashboardScreen() {
                       <SvgText
                         x={x}
                         y={chartHeight - 5}
-                        fill={colors.mutedForeground}
+                        fill={chartTextSub}
                         fontSize="11"
                         fontFamily="Inter_500Medium"
                         textAnchor="middle"
@@ -399,7 +408,7 @@ export default function DashboardScreen() {
                         y1={pT}
                         x2={x}
                         y2={pT + dH}
-                        stroke={colors.border}
+                        stroke={chartGrid}
                         strokeWidth="1"
                         strokeDasharray="4 4"
                       />
@@ -411,7 +420,7 @@ export default function DashboardScreen() {
                 <Polyline
                   points={points}
                   fill="none"
-                  stroke={colors.primary}
+                  stroke={chartLine}
                   strokeWidth="3"
                   strokeLinejoin="round"
                   strokeLinecap="round"
@@ -427,8 +436,8 @@ export default function DashboardScreen() {
                       cx={x}
                       cy={y}
                       r="4"
-                      fill={colors.card}
-                      stroke={colors.primary}
+                      fill={chartBg}
+                      stroke={chartLine}
                       strokeWidth="2.5"
                     />
                   );
