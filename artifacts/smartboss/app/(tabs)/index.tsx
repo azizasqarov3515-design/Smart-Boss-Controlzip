@@ -236,19 +236,30 @@ export default function DashboardScreen() {
   const dW = chartWidth - pL - pR;
   const dH = chartHeight - pT - pB;
 
-  const chartData = [150000, 230000, 180000, 350000, 600000, 450000, 520000];
-  const maxVal = Math.max(...chartData);
+  const dayNames = ["Yak", "Du", "Se", "Cho", "Pay", "Ju", "Sha"];
+  const chartData = [];
+  const xLabels = [];
+  
+  for (let i = 6; i >= 0; i--) {
+    const d = new Date();
+    d.setDate(d.getDate() - i);
+    const dateString = d.toDateString();
+    const dayTotal = (sales ?? []).filter((s) => new Date(s.createdAt).toDateString() === dateString).reduce((sum, sale) => sum + sale.totalAmount, 0);
+    chartData.push(dayTotal);
+    xLabels.push(dayNames[d.getDay()]);
+  }
+
+  const maxVal = Math.max(...chartData, 1000); // Ensures chart isn't empty if 0 sales
   const minVal = 0;
-  const yRange = maxVal - minVal || 1;
+  const yRange = maxVal - minVal;
 
   const formatCompact = (num: number) => {
     if (num >= 1_000_000) return (num / 1_000_000).toFixed(1) + "M";
     if (num >= 1_000) return (num / 1_000).toFixed(0) + "K";
-    return String(num);
+    return String(Math.round(num));
   };
 
   const yAxisValues = [maxVal, maxVal * 0.66, maxVal * 0.33, 0];
-  const xLabels = ["Du", "Se", "Cho", "Pay", "Ju", "Sha", "Yak"];
 
   const todayDate = new Date();
   const dateStr = `${String(todayDate.getDate()).padStart(2, '0')}.${String(todayDate.getMonth() + 1).padStart(2, '0')}.${todayDate.getFullYear()}`;
