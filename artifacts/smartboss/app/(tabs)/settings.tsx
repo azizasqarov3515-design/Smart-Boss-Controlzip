@@ -952,7 +952,7 @@ export default function SettingsScreen() {
                 )}
               </View>
             )}
-          </SectionCard>
+          </View>
 
           {/* Sellers */}
           <SectionCard title="Sotuvchilar" icon="people" colors={colors}>
