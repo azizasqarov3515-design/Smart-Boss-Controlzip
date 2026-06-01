@@ -299,12 +299,12 @@ export default function DashboardScreen() {
 
           <Text style={[styles.sectionTitle, { color: colors.foreground, marginTop: 18 }]}>Ombor holati</Text>
           <View style={styles.statsGrid}>
-            <StatCard label="Mahsulot turi" value={String(stats?.totalProducts ?? 0)} icon="inventory-2" variant="default" />
-            <StatCard label="Jami dona" value={String(stats?.totalItems ?? 0)} icon="widgets" variant="default" />
+            <StatCard label="Mahsulot turi" value={String(stats?.totalProducts ?? 0)} icon="inventory-2" variant="primary" />
+            <StatCard label="Jami dona" value={String(stats?.totalItems ?? 0)} icon="widgets" variant="warning" />
           </View>
           <View style={[styles.statsGrid, { marginTop: 10 }]}>
-            <StatCard label="Tan narxi (jami)" value={formatMoney(stats?.totalCostValue ?? 0)} icon="account-balance-wallet" variant="default" subtitle="Ombordagi qiymat" />
-            <StatCard label="Sotuv (jami)" value={formatMoney(stats?.totalSaleValue ?? 0)} icon="monetization-on" variant="default" subtitle="Potentsial tushum" />
+            <StatCard label="Tan narxi (jami)" value={formatMoney(stats?.totalCostValue ?? 0)} icon="account-balance-wallet" variant="primary" subtitle="Ombordagi qiymat" />
+            <StatCard label="Sotuv (jami)" value={formatMoney(stats?.totalSaleValue ?? 0)} icon="monetization-on" variant="warning" subtitle="Potentsial tushum" />
           </View>
 
           {lowStockProducts.length > 0 && (
@@ -343,12 +343,12 @@ export default function DashboardScreen() {
               <Text style={[styles.sectionTitle, { color: colors.foreground }]}>So'nggi savdolar</Text>
               {recentSales.map((sale) => (
                 <View key={sale.id} style={[styles.listCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
-                  <View style={[styles.saleBadge, { backgroundColor: colors.primary }]}><Text style={styles.saleBadgeText}>#{sale.id}</Text></View>
+                  <View style={[styles.saleBadge, { backgroundColor: "rgba(59, 130, 246, 0.15)" }]}><Text style={styles.saleBadgeText}>#{sale.id}</Text></View>
                   <View style={styles.listCardInfo}>
                     <Text style={[styles.listCardName, { color: colors.foreground }]}>{sale.itemCount} dona mahsulot</Text>
                     <Text style={[styles.listCardSub, { color: colors.mutedForeground }]}>{formatTime(sale.createdAt)}</Text>
                   </View>
-                  <Text style={[styles.saleAmount, { color: colors.success }]}>{formatMoney(sale.totalAmount)}</Text>
+                  <Text style={[styles.saleAmount, { color: colors.primary }]}>{formatMoney(sale.totalAmount)}</Text>
                 </View>
               ))}
               <TouchableOpacity style={[styles.moreBtn, { borderColor: colors.border }]} onPress={() => router.push("/(tabs)/history")} activeOpacity={0.8}>
@@ -478,15 +478,15 @@ const styles = StyleSheet.create({
   alertFooterText: { fontFamily: "Inter_600SemiBold", fontSize: 12 },
   smallBadge: { paddingHorizontal: 5, paddingVertical: 1, borderRadius: 5 },
   smallBadgeText: { fontFamily: "Inter_500Medium", fontSize: 10 },
-  listCard: { flexDirection: "row", alignItems: "center", borderRadius: 14, borderWidth: 1, padding: 12, marginBottom: 8, shadowColor: "#000", shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.04, shadowRadius: 3, elevation: 1 },
-  listCardInfo: { flex: 1, paddingHorizontal: 10 },
-  listCardName: { fontFamily: "Inter_600SemiBold", fontSize: 14 },
-  listCardSub: { fontFamily: "Inter_400Regular", fontSize: 12, marginTop: 1 },
-  saleBadge: { width: 36, height: 36, borderRadius: 10, alignItems: "center", justifyContent: "center" },
-  saleBadgeText: { fontFamily: "Inter_700Bold", fontSize: 13, color: "#fff" },
-  saleAmount: { fontFamily: "Inter_700Bold", fontSize: 14 },
-  moreBtn: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, borderRadius: 12, borderWidth: 1, paddingVertical: 11, marginTop: 2, marginBottom: 4 },
-  moreBtnText: { fontFamily: "Inter_600SemiBold", fontSize: 13 },
+  listCard: { flexDirection: "row", alignItems: "center", borderRadius: 18, borderWidth: 1, padding: 14, marginBottom: 10, shadowColor: "#000", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 8, elevation: 3 },
+  listCardInfo: { flex: 1, paddingHorizontal: 12 },
+  listCardName: { fontFamily: "Inter_600SemiBold", fontSize: 15 },
+  listCardSub: { fontFamily: "Inter_400Regular", fontSize: 12, marginTop: 2 },
+  saleBadge: { width: 40, height: 40, borderRadius: 12, alignItems: "center", justifyContent: "center" },
+  saleBadgeText: { fontFamily: "Inter_700Bold", fontSize: 13, color: "#3b82f6" },
+  saleAmount: { fontFamily: "Inter_700Bold", fontSize: 15 },
+  moreBtn: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, borderRadius: 14, borderWidth: 1, paddingVertical: 14, marginTop: 4, marginBottom: 8, backgroundColor: "rgba(59, 130, 246, 0.05)" },
+  moreBtnText: { fontFamily: "Inter_600SemiBold", fontSize: 14 },
   rankBadge: { width: 28, height: 28, borderRadius: 9, alignItems: "center", justifyContent: "center" },
   rankText: { fontFamily: "Inter_700Bold", fontSize: 14, color: "#fff" },
   profitRight: { alignItems: "flex-end" },

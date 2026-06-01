@@ -15,39 +15,30 @@ type StatCardProps = {
 export function StatCard({ label, value, icon, iconColor, subtitle, variant = "default" }: StatCardProps) {
   const colors = useColors();
 
-  const getBg = () => {
+  const getIconColor = () => {
+    if (iconColor) return iconColor;
     switch (variant) {
-      case "primary": return colors.primary;
-      case "warning": return colors.warning;
-      case "success": return colors.success;
-      case "danger": return colors.destructive;
-      default: return colors.card;
+      case "primary": return "#3b82f6"; // neon blue
+      case "warning": return "#f97316"; // neon orange
+      case "success": return "#10b981"; // neon green
+      case "danger": return "#ef4444";
+      default: return "#3b82f6";
     }
   };
 
-  const getTextColor = () => {
-    if (variant === "default") return colors.foreground;
-    return "#FFFFFF";
-  };
-
-  const getSubtextColor = () => {
-    if (variant === "default") return colors.mutedForeground;
-    return "rgba(255,255,255,0.8)";
-  };
-
-  const bg = getBg();
-  const textColor = getTextColor();
-  const subtextColor = getSubtextColor();
-  const resolvedIconColor = iconColor ?? (variant === "default" ? colors.primary : "#FFFFFF");
+  const iconHex = getIconColor();
+  const iconBg = iconHex + "25"; // 15% opacity
 
   return (
-    <View style={[styles.card, { backgroundColor: bg, borderColor: variant === "default" ? colors.border : "transparent" }]}>
-      <View style={[styles.iconWrap, { backgroundColor: variant === "default" ? colors.secondary : "rgba(255,255,255,0.2)" }]}>
-        <MaterialIcons name={icon} size={22} color={resolvedIconColor} />
+    <View style={[styles.card, { backgroundColor: "rgba(17, 24, 39, 0.75)", borderColor: "rgba(255, 255, 255, 0.08)" }]}>
+      <View style={styles.cardHeader}>
+        <View style={[styles.iconWrap, { backgroundColor: iconBg }]}>
+          <MaterialIcons name={icon} size={18} color={iconHex} />
+        </View>
+        <Text style={styles.label}>{label}</Text>
       </View>
-      <Text style={[styles.value, { color: textColor }]}>{value}</Text>
-      <Text style={[styles.label, { color: subtextColor }]}>{label}</Text>
-      {subtitle ? <Text style={[styles.subtitle, { color: subtextColor }]}>{subtitle}</Text> : null}
+      <Text style={styles.value}>{value}</Text>
+      {subtitle ? <Text style={styles.subtitle}>{subtitle}</Text> : null}
     </View>
   );
 }
@@ -56,35 +47,42 @@ const styles = StyleSheet.create({
   card: {
     flex: 1,
     minWidth: 150,
-    borderRadius: 16,
-    padding: 16,
+    borderRadius: 20,
+    padding: 18,
     borderWidth: 1,
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 8,
-    elevation: 2,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.3,
+    shadowRadius: 12,
+    elevation: 4,
+  },
+  cardHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    marginBottom: 14,
   },
   iconWrap: {
-    width: 40,
-    height: 40,
-    borderRadius: 10,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
     alignItems: "center",
     justifyContent: "center",
-    marginBottom: 10,
   },
   value: {
     fontFamily: "Inter_700Bold",
-    fontSize: 24,
-    marginBottom: 2,
+    fontSize: 22,
+    color: "#FFFFFF",
+    marginBottom: 4,
   },
   label: {
     fontFamily: "Inter_500Medium",
     fontSize: 13,
+    color: "rgba(255, 255, 255, 0.7)",
   },
   subtitle: {
     fontFamily: "Inter_400Regular",
     fontSize: 11,
-    marginTop: 2,
+    color: "rgba(255, 255, 255, 0.5)",
   },
 });
