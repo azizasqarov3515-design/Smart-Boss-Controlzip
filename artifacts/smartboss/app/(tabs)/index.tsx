@@ -29,6 +29,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import { MaterialIcons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useColors } from "@/hooks/useColors";
+import { useTheme } from "@/contexts/ThemeContext";
 import { useSettings } from "@/hooks/useSettings";
 import { StatCard } from "@/components/StatCard";
 import { LiveClock } from "@/components/LiveClock";
@@ -157,7 +158,9 @@ function WorkerDashboard() {
 }
 
 export default function DashboardScreen() {
-  const colors = PREMIUM_THEME;
+  const systemColors = useColors();
+  const { isDark } = useTheme();
+  const colors = isDark ? PREMIUM_THEME : (systemColors as any);
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { username, logout, role, managerId, downloadBackup } = useAuth();
