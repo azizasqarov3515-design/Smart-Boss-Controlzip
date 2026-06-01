@@ -29,8 +29,12 @@ export function StatCard({ label, value, icon, iconColor, subtitle, variant = "d
   const iconHex = getIconColor();
   const iconBg = iconHex + "25"; // 15% opacity
 
-  const cardBg = isDark ? "rgba(17, 24, 39, 0.75)" : "#1C83D2";
-  const cardBorder = isDark ? "rgba(255, 255, 255, 0.08)" : "#1565C0";
+  const cardBg = isDark ? "rgba(17, 24, 39, 0.75)" : "#00295D";
+  const cardBorder = isDark ? "rgba(255, 255, 255, 0.08)" : "transparent";
+  
+  const textColor = isDark ? "#FFFFFF" : "#D7DEFF";
+  const labelColor = isDark ? "rgba(255, 255, 255, 0.7)" : "#D7DEFF";
+  const subtitleColor = isDark ? "rgba(255, 255, 255, 0.5)" : "#D7DEFF";
 
   return (
     <View style={[styles.card, { backgroundColor: cardBg, borderColor: cardBorder }]}>
@@ -38,10 +42,10 @@ export function StatCard({ label, value, icon, iconColor, subtitle, variant = "d
         <View style={[styles.iconWrap, { backgroundColor: iconBg }]}>
           <MaterialIcons name={icon} size={18} color={iconHex} />
         </View>
-        <Text style={styles.label}>{label}</Text>
+        <Text style={[styles.label, { color: labelColor }]}>{label}</Text>
       </View>
-      <Text style={styles.value}>{value}</Text>
-      {subtitle ? <Text style={styles.subtitle}>{subtitle}</Text> : null}
+      <Text style={[styles.value, { color: textColor }]}>{value}</Text>
+      {subtitle ? <Text style={[styles.subtitle, { color: subtitleColor }]}>{subtitle}</Text> : null}
     </View>
   );
 }
