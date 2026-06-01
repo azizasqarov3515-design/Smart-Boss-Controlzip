@@ -30,6 +30,20 @@ import { LiveClock } from "@/components/LiveClock";
 import { WebRefreshBar } from "@/components/WebRefreshBar";
 import { useAuth } from "@/contexts/AuthContext";
 
+const PREMIUM_THEME = {
+  background: "#0b0f19",
+  foreground: "#ffffff",
+  mutedForeground: "#9ca3af",
+  border: "rgba(255, 255, 255, 0.08)",
+  card: "rgba(17, 24, 39, 0.75)", // glassmorphism dark container
+  primary: "#3b82f6", // neon blue
+  orange: "#f97316", // neon orange
+  green: "#10b981", // neon green
+  success: "#10b981",
+  warning: "#f97316",
+  text: "#ffffff",
+};
+
 function formatMoney(amount: number) {
   if (amount >= 1_000_000_000) return (amount / 1_000_000_000).toFixed(1) + " mlrd UZS";
   if (amount >= 1_000_000) return (amount / 1_000_000).toFixed(1) + " mln UZS";
@@ -137,7 +151,7 @@ function WorkerDashboard() {
 }
 
 export default function DashboardScreen() {
-  const colors = useColors();
+  const colors = PREMIUM_THEME;
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const isWeb = Platform.OS === "web";
