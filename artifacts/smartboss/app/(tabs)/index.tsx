@@ -97,12 +97,13 @@ function WorkerDashboard() {
     >
       <WebRefreshBar refreshing={isRefreshing} onRefresh={onRefresh} />
       <View style={styles.header}>
-        <View style={styles.headerLeft}>
-          <Text style={[styles.greeting, { color: colors.mutedForeground }]}>Xush kelibsiz, {workerName ?? "Sotuvchi"}</Text>
+        <View style={styles.headerCenter}>
           <Text style={[styles.title, { color: colors.foreground }]}>SMARTBOSScontrol</Text>
-        </View>
-        <View style={styles.headerRight}>
-          <LiveClock />
+          <View style={styles.subHeader}>
+            <Text style={[styles.greeting, { color: colors.mutedForeground }]}>{workerName ?? "Sotuvchi"}</Text>
+            <View style={[styles.dot, { backgroundColor: colors.mutedForeground }]} />
+            <LiveClock />
+          </View>
         </View>
       </View>
 
@@ -241,20 +242,13 @@ export default function DashboardScreen() {
     >
       <WebRefreshBar refreshing={isRefreshing} onRefresh={onRefresh} />
       <View style={styles.header}>
-        <View style={styles.headerLeft}>
-          <Text style={[styles.greeting, { color: colors.mutedForeground }]}>Xush kelibsiz, {username ?? "Rahbar"}</Text>
+        <View style={styles.headerCenter}>
           <Text style={[styles.title, { color: colors.foreground }]}>SMARTBOSScontrol</Text>
-        </View>
-        <View style={styles.headerRight}>
-          <LiveClock />
-          <TouchableOpacity
-            style={[styles.posBtn, { backgroundColor: colors.primary }]}
-            onPress={() => router.push("/(tabs)/pos")}
-            activeOpacity={0.85}
-          >
-            <MaterialIcons name="point-of-sale" size={18} color="#fff" />
-            <Text style={styles.posBtnText}>Kassa</Text>
-          </TouchableOpacity>
+          <View style={styles.subHeader}>
+            <Text style={[styles.greeting, { color: colors.mutedForeground }]}>{username ?? "Asosiy Do'kon"}</Text>
+            <View style={[styles.dot, { backgroundColor: colors.mutedForeground }]} />
+            <LiveClock />
+          </View>
         </View>
       </View>
 
@@ -427,14 +421,26 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   content: { paddingHorizontal: 16 },
   header: {
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 24,
+    paddingTop: 10,
+  },
+  headerCenter: {
+    alignItems: "center",
+  },
+  subHeader: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
-    marginBottom: 18,
+    marginTop: 6,
     gap: 8,
   },
-  headerLeft: { flex: 1, minWidth: 0 },
-  headerRight: { flexDirection: "row", alignItems: "center", gap: 8, flexShrink: 0 },
+  dot: {
+    width: 4,
+    height: 4,
+    borderRadius: 2,
+    opacity: 0.5,
+  },
   greeting: { fontFamily: "Inter_400Regular", fontSize: 11 },
   title: { fontFamily: "Inter_700Bold", fontSize: 19 },
   posBtn: {
