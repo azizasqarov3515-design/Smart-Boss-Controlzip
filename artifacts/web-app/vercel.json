@@ -2,7 +2,7 @@
   "rewrites": [
     {
       "source": "/api/:path*",
-      "destination": "https://smartboss-api.onrender.com/api/:path*"
+      "destination": "https://smartboss-api-4dmr.onrender.com/api/:path*"
     },
     {
       "source": "/((?!api/).*)",
