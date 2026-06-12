@@ -1,0 +1,45 @@
+# Dependencies
+node_modules
+**/node_modules
+
+# Build outputs
+dist
+**/dist
+build
+**/build
+out
+**/out
+.vercel
+
+# Archives and big zip files
+*.zip
+*.tar.gz
+*.tgz
+*.rar
+
+# Images and screenshots
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.svg
+*.ico
+
+# Cache and local tooling configs
+.git
+.cache
+.local
+.expo
+.expo-shared
+.agents
+.canvas
+.config
+temp
+tmp
+*.log
+
+# Documents and other files
+attached_assets/
+preview_dizaynlar.html
+preview_hujjatlar.html
+*.md
