@@ -13,5 +13,6 @@ export interface SaleItem {
   brand: string;
   unitPrice: number;
   quantity: number;
+  unit: string;
   totalPrice: number;
 }

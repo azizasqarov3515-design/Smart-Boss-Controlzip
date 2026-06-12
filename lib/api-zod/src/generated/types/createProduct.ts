@@ -5,6 +5,7 @@
  * API specification for SMARTBOSScontrol
  * OpenAPI spec version: 0.1.0
  */
+import type { CreateProductUnit } from "./createProductUnit";
 
 export interface CreateProduct {
   name: string;
@@ -12,5 +13,8 @@ export interface CreateProduct {
   costPrice: number;
   salePrice: number;
   quantity: number;
+  unit?: CreateProductUnit;
+  thickness?: number | null;
   barcode?: string | null;
+  imageUrl?: string | null;
 }

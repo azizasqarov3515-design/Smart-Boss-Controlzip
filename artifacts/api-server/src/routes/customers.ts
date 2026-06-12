@@ -29,6 +29,11 @@ const customerInputSchema = z.object({
     .trim()
     .nullish()
     .transform((v) => v ?? null),
+  telegramId: z
+    .string()
+    .trim()
+    .nullish()
+    .transform((v) => v ?? null),
 });
 
 const debtPaymentInputSchema = z.object({
@@ -53,6 +58,7 @@ function mapCustomer(c: typeof customersTable.$inferSelect) {
     totalDebt: parseFloat(c.totalDebt),
     note: c.note ?? null,
     imageUrl: c.imageUrl ?? null,
+    telegramId: c.telegramId ?? null,
     createdAt: c.createdAt.toISOString(),
   };
 }
@@ -89,6 +95,7 @@ router.post("/customers", async (req, res) => {
         debtLimit: body.debtLimit,
         note: body.note,
         imageUrl: body.imageUrl,
+        telegramId: body.telegramId,
       })
       .returning();
     res.status(201).json(mapCustomer(customer));
@@ -140,6 +147,7 @@ router.put("/customers/:id", async (req, res) => {
         debtLimit: body.debtLimit,
         note: body.note,
         imageUrl: body.imageUrl,
+        telegramId: body.telegramId,
       })
       .where(condition)
       .returning();

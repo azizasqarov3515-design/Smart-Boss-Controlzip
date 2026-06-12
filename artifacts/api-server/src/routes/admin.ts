@@ -210,7 +210,7 @@ router.post("/admin/reset-password", async (req, res) => {
 
 // POST /api/admin/managers/:id/block — block a manager (freezes all access)
 router.post("/admin/managers/:id/block", requireAdmin, async (req, res) => {
-  const id = parseInt(req.params.id ?? "");
+  const id = parseInt(req.params.id as string);
   if (isNaN(id)) { res.status(400).json({ error: "Noto'g'ri ID" }); return; }
   try {
     const [updated] = await db
@@ -237,7 +237,7 @@ router.post("/admin/managers/:id/block", requireAdmin, async (req, res) => {
 
 // POST /api/admin/managers/:id/unblock — unblock a manager
 router.post("/admin/managers/:id/unblock", requireAdmin, async (req, res) => {
-  const id = parseInt(req.params.id ?? "");
+  const id = parseInt(req.params.id as string);
   if (isNaN(id)) { res.status(400).json({ error: "Noto'g'ri ID" }); return; }
   try {
     const [updated] = await db
@@ -264,7 +264,7 @@ router.post("/admin/managers/:id/unblock", requireAdmin, async (req, res) => {
 
 // DELETE /api/admin/managers/:id — fully delete manager and all their data
 router.delete("/admin/managers/:id", requireAdmin, async (req, res) => {
-  const id = parseInt(req.params.id ?? "");
+  const id = parseInt(req.params.id as string);
   if (isNaN(id)) { res.status(400).json({ error: "Noto'g'ri ID" }); return; }
   try {
     const { deleteRequestsTable: drTable, salesTable: sTable, customersTable: cTable, productsTable: pTable, workersTable: wTable } = await import("@workspace/db/schema");
@@ -358,7 +358,7 @@ router.get("/admin/managers", requireAdmin, async (req, res) => {
 
 // GET /api/admin/managers/:id
 router.get("/admin/managers/:id", requireAdmin, async (req, res) => {
-  const id = parseInt(req.params.id ?? "");
+  const id = parseInt(req.params.id as string);
   if (isNaN(id)) { res.status(400).json({ error: "Noto'g'ri ID" }); return; }
   try {
     const [manager] = await db
@@ -400,7 +400,7 @@ const subscriptionSchema = z.object({
 });
 
 router.put("/admin/managers/:id/subscription", requireAdmin, async (req, res) => {
-  const id = parseInt(req.params.id ?? "");
+  const id = parseInt(req.params.id as string);
   if (isNaN(id)) { res.status(400).json({ error: "Noto'g'ri ID" }); return; }
   try {
     const body = subscriptionSchema.parse(req.body);
@@ -464,7 +464,7 @@ const tempCredSchema = z.object({
 });
 
 router.post("/admin/managers/:id/temp-credentials", requireAdmin, async (req, res) => {
-  const id = parseInt(req.params.id ?? "");
+  const id = parseInt(req.params.id as string);
   if (isNaN(id)) { res.status(400).json({ error: "Noto'g'ri ID" }); return; }
   try {
     const body = tempCredSchema.parse(req.body);
@@ -578,7 +578,7 @@ router.post("/admin/settings", requireAdmin, async (req, res) => {
 
 // DELETE /api/admin/managers/:id/subscription — deactivate subscription
 router.delete("/admin/managers/:id/subscription", requireAdmin, async (req, res) => {
-  const id = parseInt(req.params.id ?? "");
+  const id = parseInt(req.params.id as string);
   if (isNaN(id)) { res.status(400).json({ error: "Noto'g'ri ID" }); return; }
   try {
     await db
@@ -598,7 +598,7 @@ router.delete("/admin/managers/:id/subscription", requireAdmin, async (req, res)
 });
 
 // ─── Admin: Delete Request Management ─────────────────────────────────────────
-import { deleteRequestsTable, productsTable, customersTable, salesTable, saleItemsTable } from "@workspace/db/schema";
+import { deleteRequestsTable, productsTable, customersTable, saleItemsTable } from "@workspace/db/schema";
 import { inArray } from "drizzle-orm";
 
 router.get("/admin/delete-requests", requireAdmin, async (req, res) => {
@@ -627,7 +627,7 @@ router.get("/admin/delete-requests", requireAdmin, async (req, res) => {
 });
 
 router.post("/admin/delete-requests/:id/approve", requireAdmin, async (req, res) => {
-  const id = parseInt(req.params.id ?? "");
+  const id = parseInt(req.params.id as string);
   if (isNaN(id)) { res.status(400).json({ error: "Noto'g'ri ID" }); return; }
   try {
     const [request] = await db
@@ -670,7 +670,7 @@ router.post("/admin/delete-requests/:id/approve", requireAdmin, async (req, res)
 });
 
 router.post("/admin/delete-requests/:id/reject", requireAdmin, async (req, res) => {
-  const id = parseInt(req.params.id ?? "");
+  const id = parseInt(req.params.id as string);
   if (isNaN(id)) { res.status(400).json({ error: "Noto'g'ri ID" }); return; }
   try {
     const [request] = await db

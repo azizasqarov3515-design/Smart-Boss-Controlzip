@@ -13,4 +13,5 @@ export interface CreateCustomer {
   debtLimit?: number;
   note?: string | null;
   imageUrl?: string | null;
+  telegramId?: string | null;
 }

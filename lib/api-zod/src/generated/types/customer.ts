@@ -15,5 +15,6 @@ export interface Customer {
   totalDebt: number;
   note?: string | null;
   imageUrl?: string | null;
+  telegramId?: string | null;
   createdAt: string;
 }

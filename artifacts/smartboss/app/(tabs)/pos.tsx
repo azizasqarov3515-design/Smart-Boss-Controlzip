@@ -162,7 +162,7 @@ function ScannerModal({
             <CameraView
               style={StyleSheet.absoluteFill}
               facing="back"
-              autoFocus="on"
+              autofocus="on"
               zoom={0.15}
               barcodeScannerSettings={{
                 barcodeTypes: [
@@ -341,13 +341,15 @@ function POSScreenInner() {
   const { data: customers, refetch: refetchCustomers, isLoading: customersLoading } = useGetCustomers();
 
   const { mutate: createCustomer, isPending: creatingCustomer } = useCreateCustomer({
-    onSuccess: (data) => {
-      setSelectedCustomer(data);
-      closeCustomerPicker();
-      refetchCustomers();
-    },
-    onError: () => {
-      Alert.alert("Xato", "Mijozni saqlashda xato yuz berdi");
+    mutation: {
+      onSuccess: (data: any) => {
+        setSelectedCustomer(data);
+        closeCustomerPicker();
+        refetchCustomers();
+      },
+      onError: () => {
+        Alert.alert("Xato", "Mijozni saqlashda xato yuz berdi");
+      },
     },
   });
 

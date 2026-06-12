@@ -9,6 +9,14 @@ export interface HealthStatus {
   status: string;
 }
 
+export type ProductUnit = (typeof ProductUnit)[keyof typeof ProductUnit];
+
+export const ProductUnit = {
+  dona: "dona",
+  kg: "kg",
+  m: "m",
+} as const;
+
 export interface Product {
   id: number;
   name: string;
@@ -16,9 +24,21 @@ export interface Product {
   costPrice: number;
   salePrice: number;
   quantity: number;
+  unit: ProductUnit;
+  thickness?: number | null;
   barcode?: string | null;
+  imageUrl?: string | null;
   createdAt: string;
 }
+
+export type CreateProductUnit =
+  (typeof CreateProductUnit)[keyof typeof CreateProductUnit];
+
+export const CreateProductUnit = {
+  dona: "dona",
+  kg: "kg",
+  m: "m",
+} as const;
 
 export interface CreateProduct {
   name: string;
@@ -26,7 +46,10 @@ export interface CreateProduct {
   costPrice: number;
   salePrice: number;
   quantity: number;
+  unit?: CreateProductUnit;
+  thickness?: number | null;
   barcode?: string | null;
+  imageUrl?: string | null;
 }
 
 export interface DashboardStats {
@@ -114,6 +137,7 @@ export interface SaleItem {
   brand: string;
   unitPrice: number;
   quantity: number;
+  unit: string;
   totalPrice: number;
 }
 
@@ -168,6 +192,7 @@ export interface Customer {
   totalDebt: number;
   note?: string | null;
   imageUrl?: string | null;
+  telegramId?: string | null;
   createdAt: string;
 }
 
@@ -178,6 +203,7 @@ export interface CreateCustomer {
   debtLimit?: number;
   note?: string | null;
   imageUrl?: string | null;
+  telegramId?: string | null;
 }
 
 export interface DebtPayment {

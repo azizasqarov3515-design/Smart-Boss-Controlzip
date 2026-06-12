@@ -596,12 +596,21 @@ components:
           type: number
         quantity:
           type: integer
+        unit:
+          type: string
+          enum: [dona, kg, m]
+        thickness:
+          type: number
+          nullable: true
         barcode:
+          type: string
+          nullable: true
+        imageUrl:
           type: string
           nullable: true
         createdAt:
           type: string
-      required: [id, name, brand, costPrice, salePrice, quantity, createdAt]
+      required: [id, name, brand, costPrice, salePrice, quantity, unit, createdAt]
     CreateProduct:
       type: object
       properties:
@@ -615,7 +624,16 @@ components:
           type: number
         quantity:
           type: integer
+        unit:
+          type: string
+          enum: [dona, kg, m]
+        thickness:
+          type: number
+          nullable: true
         barcode:
+          type: string
+          nullable: true
+        imageUrl:
           type: string
           nullable: true
       required: [name, brand, costPrice, salePrice, quantity]
@@ -793,9 +811,11 @@ components:
           type: number
         quantity:
           type: integer
+        unit:
+          type: string
         totalPrice:
           type: number
-      required: [id, productName, brand, unitPrice, quantity, totalPrice]
+      required: [id, productName, brand, unitPrice, quantity, unit, totalPrice]
     SaleWithItems:
       type: object
       properties:
@@ -892,6 +912,9 @@ components:
         imageUrl:
           type: string
           nullable: true
+        telegramId:
+          type: string
+          nullable: true
         createdAt:
           type: string
       required: [id, name, phone, debtLimit, totalDebt, createdAt]
@@ -911,6 +934,9 @@ components:
           type: string
           nullable: true
         imageUrl:
+          type: string
+          nullable: true
+        telegramId:
           type: string
           nullable: true
       required: [name, phone]

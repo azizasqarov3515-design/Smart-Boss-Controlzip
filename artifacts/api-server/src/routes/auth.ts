@@ -44,6 +44,21 @@ function encryptValue(text: string): string {
   return iv.toString("hex") + ":" + enc.toString("hex");
 }
 
+function decryptValue(cipherText: string | null | undefined): string | null {
+  if (!cipherText) return null;
+  try {
+    const [ivHex, encHex] = cipherText.split(":");
+    if (!ivHex || !encHex) return null;
+    const key = crypto.scryptSync(SESSION_SECRET, "smartboss-enc-salt-v1", 32);
+    const iv = Buffer.from(ivHex, "hex");
+    const decipher = crypto.createDecipheriv("aes-256-cbc", key, iv);
+    const dec = Buffer.concat([decipher.update(Buffer.from(encHex, "hex")), decipher.final()]);
+    return dec.toString("utf8");
+  } catch {
+    return null;
+  }
+}
+
 function subscriptionDaysLeft(end: Date | null): number | null {
   if (!end) return null;
   return Math.ceil((end.getTime() - Date.now()) / (1000 * 60 * 60 * 24));
@@ -150,6 +165,7 @@ router.post("/auth/manager-register", async (req, res) => {
       managerId: manager?.id,
       login: manager?.login,
       phone: manager?.phone,
+      password: body.password,
       ...buildSubscriptionInfo({
         subscriptionPlan: null,
         subscriptionEnd: null,
@@ -193,6 +209,7 @@ router.post("/auth/login", async (req, res) => {
         login: manager.login,
         storeId: manager.storeId,
         phone: manager.phone,
+        password: decryptValue(manager.encryptedPassword),
         ...buildSubscriptionInfo(manager),
       });
       return;
@@ -387,6 +404,7 @@ router.get("/auth/me", requireAuth, async (req, res) => {
         login: manager.login,
         storeId: manager.storeId,
         phone: manager.phone,
+        password: decryptValue(manager.encryptedPassword),
         blocked: manager.blocked ?? false,
         ...buildSubscriptionInfo(manager),
       });

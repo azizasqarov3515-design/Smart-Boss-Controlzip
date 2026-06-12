@@ -24,7 +24,10 @@ export const GetProductsResponseItem = zod.object({
   costPrice: zod.number(),
   salePrice: zod.number(),
   quantity: zod.number(),
+  unit: zod.enum(["dona", "kg", "m"]),
+  thickness: zod.number().nullish(),
   barcode: zod.string().nullish(),
+  imageUrl: zod.string().nullish(),
   createdAt: zod.string(),
 });
 export const GetProductsResponse = zod.array(GetProductsResponseItem);
@@ -38,7 +41,10 @@ export const CreateProductBody = zod.object({
   costPrice: zod.number(),
   salePrice: zod.number(),
   quantity: zod.number(),
+  unit: zod.enum(["dona", "kg", "m"]).optional(),
+  thickness: zod.number().nullish(),
   barcode: zod.string().nullish(),
+  imageUrl: zod.string().nullish(),
 });
 
 /**
@@ -54,7 +60,10 @@ export const UpdateProductBody = zod.object({
   costPrice: zod.number(),
   salePrice: zod.number(),
   quantity: zod.number(),
+  unit: zod.enum(["dona", "kg", "m"]).optional(),
+  thickness: zod.number().nullish(),
   barcode: zod.string().nullish(),
+  imageUrl: zod.string().nullish(),
 });
 
 export const UpdateProductResponse = zod.object({
@@ -64,7 +73,10 @@ export const UpdateProductResponse = zod.object({
   costPrice: zod.number(),
   salePrice: zod.number(),
   quantity: zod.number(),
+  unit: zod.enum(["dona", "kg", "m"]),
+  thickness: zod.number().nullish(),
   barcode: zod.string().nullish(),
+  imageUrl: zod.string().nullish(),
   createdAt: zod.string(),
 });
 
@@ -112,6 +124,7 @@ export const GetSalesResponseItem = zod.object({
       brand: zod.string(),
       unitPrice: zod.number(),
       quantity: zod.number(),
+      unit: zod.string(),
       totalPrice: zod.number(),
     }),
   ),
@@ -174,7 +187,10 @@ export const GetProductByBarcodeResponse = zod.object({
   costPrice: zod.number(),
   salePrice: zod.number(),
   quantity: zod.number(),
+  unit: zod.enum(["dona", "kg", "m"]),
+  thickness: zod.number().nullish(),
   barcode: zod.string().nullish(),
+  imageUrl: zod.string().nullish(),
   createdAt: zod.string(),
 });
 
@@ -190,6 +206,7 @@ export const GetCustomersResponseItem = zod.object({
   totalDebt: zod.number(),
   note: zod.string().nullish(),
   imageUrl: zod.string().nullish(),
+  telegramId: zod.string().nullish(),
   createdAt: zod.string(),
 });
 export const GetCustomersResponse = zod.array(GetCustomersResponseItem);
@@ -204,6 +221,7 @@ export const CreateCustomerBody = zod.object({
   debtLimit: zod.number().optional(),
   note: zod.string().nullish(),
   imageUrl: zod.string().nullish(),
+  telegramId: zod.string().nullish(),
 });
 
 /**
@@ -222,6 +240,7 @@ export const GetCustomerResponse = zod.object({
   totalDebt: zod.number(),
   note: zod.string().nullish(),
   imageUrl: zod.string().nullish(),
+  telegramId: zod.string().nullish(),
   createdAt: zod.string(),
 });
 
@@ -239,6 +258,7 @@ export const UpdateCustomerBody = zod.object({
   debtLimit: zod.number().optional(),
   note: zod.string().nullish(),
   imageUrl: zod.string().nullish(),
+  telegramId: zod.string().nullish(),
 });
 
 export const UpdateCustomerResponse = zod.object({
@@ -250,6 +270,7 @@ export const UpdateCustomerResponse = zod.object({
   totalDebt: zod.number(),
   note: zod.string().nullish(),
   imageUrl: zod.string().nullish(),
+  telegramId: zod.string().nullish(),
   createdAt: zod.string(),
 });
 
@@ -307,6 +328,7 @@ export const GetCustomerStatementResponse = zod.object({
     totalDebt: zod.number(),
     note: zod.string().nullish(),
     imageUrl: zod.string().nullish(),
+    telegramId: zod.string().nullish(),
     createdAt: zod.string(),
   }),
   sales: zod.array(

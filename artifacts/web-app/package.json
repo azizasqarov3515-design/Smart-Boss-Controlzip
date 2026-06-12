@@ -1,0 +1,31 @@
+{
+  "name": "@workspace/web-app",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@tanstack/react-query": "catalog:",
+    "@workspace/api-client-react": "workspace:*",
+    "framer-motion": "catalog:",
+    "html2canvas": "^1.4.1",
+    "jspdf": "^4.2.1",
+    "lucide-react": "catalog:",
+    "react": "19.1.0",
+    "react-dom": "19.1.0",
+    "wouter": "catalog:",
+    "zod": "catalog:"
+  },
+  "devDependencies": {
+    "@types/react": "catalog:",
+    "@types/react-dom": "catalog:",
+    "@vitejs/plugin-react": "catalog:",
+    "typescript": "~5.9.2",
+    "vite": "catalog:"
+  }
+}

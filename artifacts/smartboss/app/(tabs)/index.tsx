@@ -193,8 +193,8 @@ export default function DashboardScreen() {
         return;
       }
 
-      const fileUri = (FileSystem.cacheDirectory ?? "") + filename;
-      await FileSystem.writeAsStringAsync(fileUri, json, { encoding: FileSystem.EncodingType.UTF8 });
+      const fileUri = ((FileSystem as any).cacheDirectory ?? "") + filename;
+      await FileSystem.writeAsStringAsync(fileUri, json, { encoding: (FileSystem as any).EncodingType.UTF8 });
 
       const canShare = await Sharing.isAvailableAsync();
       if (canShare) {

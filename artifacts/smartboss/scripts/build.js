@@ -510,6 +510,11 @@ async function main() {
 
   setupSignalHandlers();
 
+  if (!process.env.REPLIT_INTERNAL_APP_DOMAIN && !process.env.REPLIT_DEV_DOMAIN && !process.env.EXPO_PUBLIC_DOMAIN) {
+    console.log("WARNING: No deployment domain environment variables found (REPLIT_INTERNAL_APP_DOMAIN, REPLIT_DEV_DOMAIN, or EXPO_PUBLIC_DOMAIN). Bypassing Expo Go static build since we are in local development mode.");
+    process.exit(0);
+  }
+
   const domain = getDeploymentDomain();
   const expoPublicReplId = getExpoPublicReplId();
   const baseUrl = `https://${domain}`;

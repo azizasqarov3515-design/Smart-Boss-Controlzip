@@ -111,7 +111,7 @@ function BarcodeScanModal({
               <CameraView
                 style={StyleSheet.absoluteFill}
                 facing="back"
-                autoFocus="on"
+                autofocus="on"
                 zoom={0.15}
                 barcodeScannerSettings={{
                   barcodeTypes: [

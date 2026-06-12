@@ -1,0 +1,72 @@
+import { useTheme } from "../contexts/ThemeContext";
+
+const colors = {
+  light: {
+    text: "#1A1A2E",
+    tint: "#1565C0",
+    background: "#F4F6FB",
+    foreground: "#1A1A2E",
+    card: "#FFFFFF",
+    cardForeground: "#1A1A2E",
+    primary: "#1565C0",
+    primaryLight: "#1976D2",
+    primaryForeground: "#FFFFFF",
+    secondary: "#E3F2FD",
+    secondaryForeground: "#0D47A1",
+    muted: "#F1F3F8",
+    mutedForeground: "#64748B",
+    accent: "#42A5F5",
+    accentForeground: "#FFFFFF",
+    destructive: "#D32F2F",
+    destructiveForeground: "#FFFFFF",
+    success: "#2E7D32",
+    successForeground: "#FFFFFF",
+    warning: "#F57C00",
+    warningForeground: "#FFFFFF",
+    border: "#DDE3EE",
+    input: "#DDE3EE",
+    surface: "#FFFFFF",
+    surfaceVariant: "#EEF2FA",
+    onSurface: "#1A1A2E",
+    headerBg: "#1565C0",
+    headerText: "#FFFFFF",
+  },
+  dark: {
+    text: "#ffffff",
+    tint: "#3b82f6",
+    background: "#0b0f19",
+    foreground: "#ffffff",
+    card: "rgba(17, 24, 39, 0.75)",
+    cardForeground: "#ffffff",
+    primary: "#3b82f6",
+    primaryLight: "#60a5fa",
+    primaryForeground: "#ffffff",
+    secondary: "#1e293b",
+    secondaryForeground: "#93c5fd",
+    muted: "#1f2937",
+    mutedForeground: "#9ca3af",
+    accent: "#3b82f6",
+    accentForeground: "#ffffff",
+    destructive: "#ef4444",
+    destructiveForeground: "#ffffff",
+    success: "#10b981",
+    successForeground: "#ffffff",
+    warning: "#f97316",
+    warningForeground: "#ffffff",
+    border: "rgba(255, 255, 255, 0.08)",
+    input: "rgba(255, 255, 255, 0.08)",
+    surface: "#111827",
+    surfaceVariant: "#1f2937",
+    onSurface: "#ffffff",
+    headerBg: "#0b0f19",
+    headerText: "#ffffff",
+  },
+  radius: 12,
+};
+
+export function useColors() {
+  const { isDark } = useTheme();
+  const palette = isDark ? colors.dark : colors.light;
+  return { ...palette, radius: colors.radius };
+}
+export default useColors;

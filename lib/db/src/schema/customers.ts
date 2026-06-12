@@ -10,6 +10,7 @@ export const customersTable = pgTable("customers", {
   totalDebt: numeric("total_debt", { precision: 14, scale: 2 }).notNull().default("0"),
   note: text("note"),
   imageUrl: text("image_url"),
+  telegramId: text("telegram_id"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
