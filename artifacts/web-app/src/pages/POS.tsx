@@ -397,7 +397,8 @@ export function POS() {
   return (
     <div style={{ paddingBottom: "100px", display: "flex", flexDirection: "column", height: "100%" }}>
       {/* Top Bar Tabs */}
-      <div style={{
+      {/* Tabs Header (Mobile Only) */}
+      <div className="pos-tabs-header" style={{
         display: "flex",
         height: "50px",
         backgroundColor: colors.card,
@@ -458,103 +459,9 @@ export function POS() {
         </div>
       </div>
 
-      {/* Cart View */}
-      {tab === "cart" && (
-        <div style={{ display: "flex", flexDirection: "column", flex: 1 }}>
-          {cartItems.length === 0 ? (
-            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "40px", gap: "10px", marginTop: "60px" }}>
-              <span className="material-icons" style={{ fontSize: "64px", color: colors.border }}>shopping_cart</span>
-              <h3 style={{ fontSize: "16px" }}>Savat bo'sh</h3>
-              <p className="text-muted" style={{ fontSize: "13px", textAlign: "center" }}>
-                Tovarlar bo'limidan mahsulot qo'shing yoki yuqoridagi skaner tugmasini bosing
-              </p>
-              <button className="btn-primary" onClick={() => setTab("products")} style={{ marginTop: "10px" }}>
-                <span className="material-icons">add</span>
-                <span>Tovar tanlash</span>
-              </button>
-            </div>
-          ) : (
-            <div style={{ padding: "16px", display: "flex", flexDirection: "column", gap: "12px" }}>
-              {cartItems.map(({ product, quantity }) => (
-                <div key={product.id} className="card-standard" style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
-                  <div style={{ display: "flex", justifyContent: "space-between" }}>
-                    <div>
-                      <h4 style={{ fontSize: "15px" }}>{product.name}</h4>
-                      <p className="text-muted" style={{ fontSize: "12px" }}>{product.brand}</p>
-                    </div>
-                    <span style={{ fontWeight: 700, color: colors.primary }}>
-                      {formatMoney(product.salePrice * quantity)}
-                    </span>
-                  </div>
-
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                      <button
-                        className="btn-secondary"
-                        onClick={() => setQty(product.id, quantity - 1)}
-                        style={{ padding: "6px 12px" }}
-                      >
-                        -
-                      </button>
-                      <input
-                        type="number"
-                        className="input-field"
-                        value={quantity}
-                        onChange={(e) => setQty(product.id, parseFloat(e.target.value) || 0)}
-                        style={{ width: "60px", textAlign: "center", padding: "6px" }}
-                      />
-                      <button
-                        className="btn-secondary"
-                        onClick={() => setQty(product.id, quantity + 1)}
-                        style={{ padding: "6px 12px" }}
-                      >
-                        +
-                      </button>
-                      <span className="text-muted" style={{ fontSize: "13px" }}>{product.unit || "dona"}</span>
-                    </div>
-
-                    <button
-                      className="btn-secondary"
-                      onClick={() => setQty(product.id, 0)}
-                      style={{ color: "#EF4444", border: "1px solid rgba(239, 68, 68, 0.2)" }}
-                    >
-                      <span className="material-icons" style={{ fontSize: "18px" }}>delete</span>
-                    </button>
-                  </div>
-                </div>
-              ))}
-
-              {/* Checkout Panel */}
-              <div style={{
-                position: "fixed",
-                bottom: "65px",
-                left: 0,
-                right: 0,
-                backgroundColor: colors.card,
-                borderTop: `1px solid ${colors.border}`,
-                padding: "16px",
-                display: "flex",
-                flexDirection: "column",
-                gap: "10px",
-                zIndex: 5
-              }}>
-                <div style={{ display: "flex", justifyContent: "space-between", fontSize: "15px", fontWeight: 700 }}>
-                  <span className="text-muted">Umumiy summa:</span>
-                  <span>{formatMoney(total)}</span>
-                </div>
-                <button className="btn-success" onClick={handleCheckout} style={{ width: "100%" }}>
-                  <span className="material-icons">check_circle</span>
-                  <span>Sotish — {formatMoney(total)}</span>
-                </button>
-              </div>
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* Products list view */}
-      {tab === "products" && (
-        <div style={{ display: "flex", flexDirection: "column", flex: 1, padding: "16px" }}>
+      <div className="pos-desktop-layout">
+        {/* Products list view (Left Column on Desktop) */}
+        <div className={`pos-products-pane ${tab === "products" ? "" : "hidden-mobile"}`} style={{ display: "flex", flexDirection: "column", flex: 1, padding: "16px" }}>
           {/* Search bar */}
           <div style={{ position: "relative", marginBottom: "12px" }}>
             <span className="material-icons" style={{ position: "absolute", left: "14px", top: "50%", transform: "translateY(-50%)", color: colors.mutedForeground }}>search</span>
@@ -604,7 +511,7 @@ export function POS() {
               <div className="spinner" style={{ width: "24px", height: "24px", border: `2px solid ${colors.border}`, borderTopColor: colors.primary, borderRadius: "50%", animation: "spin 1s linear infinite" }}></div>
             </div>
           ) : (
-            <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+            <div className="pos-products-list" style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
               {filteredProducts.map((p) => (
                 <div
                   key={p.id}
@@ -631,7 +538,89 @@ export function POS() {
             </div>
           )}
         </div>
-      )}
+
+        {/* Cart View (Right Column on Desktop) */}
+        <div className={`pos-cart-pane ${tab === "cart" ? "" : "hidden-mobile"}`} style={{ display: "flex", flexDirection: "column", flex: 1 }}>
+          {cartItems.length === 0 ? (
+            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "40px", gap: "10px", marginTop: "60px" }}>
+              <span className="material-icons" style={{ fontSize: "64px", color: colors.border }}>shopping_cart</span>
+              <h3 style={{ fontSize: "16px" }}>Savat bo'sh</h3>
+              <p className="text-muted" style={{ fontSize: "13px", textAlign: "center" }}>
+                Tovarlar bo'limidan mahsulot qo'shing yoki yuqoridagi skaner tugmasini bosing
+              </p>
+              <button className="btn-primary" onClick={() => setTab("products")} style={{ marginTop: "10px" }}>
+                <span className="material-icons">add</span>
+                <span>Tovar tanlash</span>
+              </button>
+            </div>
+          ) : (
+            <div className="pos-cart-container" style={{ display: "flex", flexDirection: "column", flex: 1, height: "100%", position: "relative" }}>
+              <div className="pos-cart-items-list" style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+                {cartItems.map(({ product, quantity }) => (
+                  <div key={product.id} className="card-standard" style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+                    <div style={{ display: "flex", justifyContent: "space-between" }}>
+                      <div>
+                        <h4 style={{ fontSize: "15px" }}>{product.name}</h4>
+                        <p className="text-muted" style={{ fontSize: "12px" }}>{product.brand}</p>
+                      </div>
+                      <span style={{ fontWeight: 700, color: colors.primary }}>
+                        {formatMoney(product.salePrice * quantity)}
+                      </span>
+                    </div>
+
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                        <button
+                          className="btn-secondary"
+                          onClick={() => setQty(product.id, quantity - 1)}
+                          style={{ padding: "6px 12px" }}
+                        >
+                          -
+                        </button>
+                        <input
+                          type="number"
+                          className="input-field"
+                          value={quantity}
+                          onChange={(e) => setQty(product.id, parseFloat(e.target.value) || 0)}
+                          style={{ width: "60px", textAlign: "center", padding: "6px" }}
+                        />
+                        <button
+                          className="btn-secondary"
+                          onClick={() => setQty(product.id, quantity + 1)}
+                          style={{ padding: "6px 12px" }}
+                        >
+                          +
+                        </button>
+                        <span className="text-muted" style={{ fontSize: "13px" }}>{product.unit || "dona"}</span>
+                      </div>
+
+                      <button
+                        className="btn-secondary"
+                        onClick={() => setQty(product.id, 0)}
+                        style={{ color: "#EF4444", border: "1px solid rgba(239, 68, 68, 0.2)" }}
+                      >
+                        <span className="material-icons" style={{ fontSize: "18px" }}>delete</span>
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Checkout Panel */}
+              <div className="pos-checkout-panel">
+                <div style={{ display: "flex", justifyContent: "space-between", fontSize: "15px", fontWeight: 700 }}>
+                  <span className="text-muted">Umumiy summa:</span>
+                  <span>{formatMoney(total)}</span>
+                </div>
+                <button className="btn-success" onClick={handleCheckout} style={{ width: "100%" }}>
+                  <span className="material-icons">check_circle</span>
+                  <span>Sotish — {formatMoney(total)}</span>
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
 
       {/* Quantity prompt modal */}
       {qtyPromptProduct && (

@@ -63,21 +63,21 @@ body {
   justify-content: flex-start;
 }
 
-/* Mobile viewport simulator on desktop, full screen on mobile */
+/* Wide responsive viewport layout */
 #root {
   width: 100%;
-  max-width: 480px;
+  max-width: 1200px;
   min-height: 100vh;
   background-color: var(--bg-primary);
   display: flex;
   flex-direction: column;
   position: relative;
-  box-shadow: 0 0 40px rgba(0, 0, 0, 0.8);
+  box-shadow: 0 0 40px rgba(0, 0, 0, 0.4);
   border-left: 1px solid var(--border);
   border-right: 1px solid var(--border);
 }
 
-@media (max-width: 480px) {
+@media (max-width: 1200px) {
   #root {
     border-left: none;
     border-right: none;
@@ -286,7 +286,7 @@ a:hover {
 .bottom-nav {
   height: var(--nav-height);
   width: 100%;
-  max-width: 480px;
+  max-width: 1200px;
   background: var(--bg-secondary);
   backdrop-filter: blur(15px);
   -webkit-backdrop-filter: blur(15px);
@@ -296,6 +296,8 @@ a:hover {
   align-items: center;
   position: fixed;
   bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
   z-index: 100;
 }
 
@@ -352,6 +354,19 @@ a:hover {
   animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
+@media (min-width: 768px) {
+  .bottom-sheet {
+    max-width: 600px;
+    border-radius: 24px;
+    border-bottom: 1px solid var(--border);
+    margin: auto 0;
+    max-height: 80vh;
+  }
+  .modal-backdrop {
+    align-items: center;
+  }
+}
+
 @keyframes slideUp {
   from {
     transform: translateY(100%);
@@ -400,4 +415,130 @@ a:hover {
   background-color: rgba(245, 158, 11, 0.08);
   padding: 16px;
   margin-top: 18px;
+}
+
+/* Responsive Grid and POS Layout Classes */
+.dashboard-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.dashboard-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+}
+
+.dashboard-stats-grid > :nth-child(3) {
+  grid-column: span 2;
+}
+
+.dashboard-warehouse-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+}
+
+.pos-desktop-layout {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
+
+.pos-products-pane {
+  display: flex;
+  flex-direction: column;
+}
+
+.pos-cart-pane {
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  min-height: 300px;
+}
+
+.pos-checkout-panel {
+  position: fixed;
+  bottom: 65px;
+  left: 0;
+  right: 0;
+  background-color: var(--bg-card);
+  backdrop-filter: blur(15px);
+  -webkit-backdrop-filter: blur(15px);
+  border-top: 1px solid var(--border);
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  z-index: 5;
+}
+
+@media (min-width: 768px) {
+  .dashboard-grid {
+    display: grid;
+    grid-template-columns: 7fr 5fr;
+    gap: 24px;
+    align-items: start;
+  }
+
+  .dashboard-stats-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+
+  .dashboard-stats-grid > :nth-child(3) {
+    grid-column: span 1;
+  }
+
+  .dashboard-warehouse-grid {
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+  }
+
+  /* POS Desktop Split Layout */
+  .pos-desktop-layout {
+    display: grid;
+    grid-template-columns: 7fr 5fr;
+    gap: 24px;
+    height: calc(100vh - var(--header-height) - var(--nav-height) - 40px);
+    align-items: stretch;
+  }
+
+  .pos-products-pane,
+  .pos-cart-pane {
+    display: flex !important;
+    flex-direction: column;
+    height: 100%;
+    overflow: hidden;
+  }
+
+  .pos-products-pane.hidden-mobile,
+  .pos-cart-pane.hidden-mobile {
+    display: flex !important;
+  }
+
+  .pos-products-list {
+    flex: 1;
+    overflow-y: auto;
+    max-height: calc(100vh - 280px);
+  }
+
+  .pos-cart-items-list {
+    flex: 1;
+    overflow-y: auto;
+    max-height: calc(100vh - 350px);
+    padding-bottom: 20px;
+  }
+
+  .pos-checkout-panel {
+    position: sticky;
+    bottom: 0;
+    left: auto;
+    right: auto;
+    width: 100%;
+    border-top: 2px solid var(--border);
+    background-color: var(--bg-secondary);
+    box-shadow: 0 -4px 15px rgba(0, 0, 0, 0.15);
+    border-radius: 12px 12px 0 0;
+  }
 }
