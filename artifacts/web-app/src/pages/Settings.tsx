@@ -880,15 +880,24 @@ export function Settings() {
 
       {/* Biz haqimizda Section */}
       <SectionCard title="Biz haqimizda" icon="info" colors={colors}>
-        <div style={{ display: "flex", flexDirection: "column", gap: "8px", fontSize: "13px", lineHeight: "1.5" }}>
-          <div style={{ fontWeight: 700, fontSize: "15px", color: colors.primary }}>SMARTBOSS Control</div>
-          <p className="text-muted">
-            Do'konlar, kassa apparatlari va tovarlar zaxirasini boshqarish uchun eng zamonaviy POS tizim.
-          </p>
-          <div style={{ borderTop: `1px solid ${colors.border}`, paddingTop: "8px", marginTop: "4px" }}>
-            <strong>Ishlab chiquvchi:</strong> SMARTBOSS Team<br />
-            <strong>Sayt:</strong> <a href="https://smartboss.uz" target="_blank" rel="noreferrer">smartboss.uz</a><br />
-            <strong>Telegram:</strong> <a href="https://t.me/smartboss_support" target="_blank" rel="noreferrer">@smartboss_support</a>
+        <div style={{ display: "flex", flexDirection: "column", gap: "8px", fontSize: "13px", lineHeight: "1.6" }}>
+          <div>
+            <span style={{ fontWeight: 600, color: colors.mutedForeground }}>Administrator tel:</span>
+            <div style={{ marginTop: "4px" }}>
+              <a href="tel:+998934831289" style={{ fontSize: "15px", fontWeight: 700, color: colors.primary, display: "block", marginBottom: "4px" }}>+998 93 483 12 89</a>
+              <a href="tel:+998946893515" style={{ fontSize: "15px", fontWeight: 700, color: colors.primary, display: "block" }}>+998 94 689 35 15</a>
+            </div>
+          </div>
+          <div style={{
+            borderTop: `1px solid ${colors.border}`,
+            paddingTop: "12px",
+            marginTop: "6px",
+            fontSize: "14px",
+            fontWeight: 500,
+            color: colors.foreground,
+            lineHeight: "1.4"
+          }}>
+            Barcha Ishni bizga qo'yib bering siz esa dam oling!
           </div>
         </div>
       </SectionCard>
