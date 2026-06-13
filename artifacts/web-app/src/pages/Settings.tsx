@@ -298,45 +298,185 @@ export function Settings() {
       </div>
 
       {/* Subscription Card */}
-      <div className="card-standard" style={{ display: "flex", flexDirection: "column", gap: "10px", padding: "16px", border: `1.5px solid ${subscriptionActive ? colors.success : colors.border}` }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          <div>
-            <span className="text-muted" style={{ fontSize: "10px", textTransform: "uppercase", fontWeight: 600 }}>Obuna ma'lumotlari</span>
-            <h4 style={{ fontSize: "16px", fontWeight: 700, marginTop: "2px" }}>
-              {subscriptionPlan === "unlimited" ? "Cheksiz Premium Tarif" : subscriptionPlan ? `${subscriptionPlan.toUpperCase()} Tarif` : "Bepul (Demo)"}
-            </h4>
-          </div>
-          <span style={{
-            backgroundColor: subscriptionActive ? "rgba(16, 185, 129, 0.15)" : "rgba(239, 68, 68, 0.15)",
-            color: subscriptionActive ? colors.success : colors.destructive,
-            padding: "4px 10px",
-            borderRadius: "10px",
-            fontSize: "11px",
-            fontWeight: 700
-          }}>
-            {subscriptionActive ? "Faol" : "Faol emas"}
-          </span>
-        </div>
+      {(() => {
+        const daysLeft = subscriptionDaysLeft || 0;
+        let totalDays = 30;
+        const planLower = (subscriptionPlan || "").toLowerCase();
+        if (planLower.includes("1 oylik") || planLower.includes("1-oylik") || planLower.includes("bir oylik") || planLower === "1 oylik obuna") {
+          totalDays = 30;
+        } else if (planLower.includes("3 oylik") || planLower.includes("3-oylik") || planLower.includes("uch oylik")) {
+          totalDays = 90;
+        } else if (planLower.includes("6 oylik") || planLower.includes("6-oylik") || planLower.includes("olti oylik")) {
+          totalDays = 180;
+        } else if (planLower.includes("1 yillik") || planLower.includes("yillik") || planLower.includes("1-yillik")) {
+          totalDays = 365;
+        } else if (subscriptionPlan === "unlimited") {
+          totalDays = 365;
+        } else if (daysLeft > totalDays) {
+          totalDays = Math.max(30, Math.ceil(daysLeft / 30) * 30);
+        }
 
-        <div style={{ display: "flex", justifyContent: "space-between", fontSize: "12px", marginTop: "6px", borderTop: `1px solid ${colors.border}`, paddingTop: "8px" }}>
-          <span className="text-muted">Muddati:</span>
-          <span style={{ fontWeight: 600 }}>
-            {subscriptionPlan === "unlimited"
-              ? "Cheksiz foydalanish"
-              : subscriptionEnd
-              ? new Date(subscriptionEnd).toLocaleDateString("uz-UZ", { year: "numeric", month: "long", day: "numeric" })
-              : "Mavjud emas"}
-          </span>
-        </div>
-        {subscriptionPlan !== "unlimited" && subscriptionDaysLeft !== null && subscriptionDaysLeft > 0 && (
-          <div style={{ display: "flex", justifyContent: "space-between", fontSize: "12px" }}>
-            <span className="text-muted">Qolgan muddat:</span>
-            <span style={{ color: subscriptionDaysLeft <= 5 ? colors.destructive : colors.primary, fontWeight: 700 }}>
-              {subscriptionDaysLeft} kun qoldi
-            </span>
+        const usedDays = Math.max(0, totalDays - daysLeft);
+        const progressPercent = totalDays > 0 ? Math.min(100, (usedDays / totalDays) * 100) : 0;
+
+        const formatSubEndDate = (d: Date | null) => {
+          if (!d) return "Mavjud emas";
+          const dateObj = new Date(d);
+          if (isNaN(dateObj.getTime())) return "Mavjud emas";
+          const yyyy = dateObj.getFullYear();
+          const mm = String(dateObj.getMonth() + 1).padStart(2, "0");
+          const dd = String(dateObj.getDate()).padStart(2, "0");
+          return `${yyyy}.${mm}.${dd}`;
+        };
+
+        const formattedEndDate = formatSubEndDate(subscriptionEnd);
+        const displayPlanName = subscriptionPlan === "unlimited"
+          ? "Cheksiz Premium"
+          : subscriptionPlan
+          ? (subscriptionPlan.toLowerCase().includes("obuna") ? subscriptionPlan : `${subscriptionPlan} obuna`)
+          : "Bepul (Demo)";
+
+        return (
+          <div style={{
+            backgroundColor: "#0B1320", // Deep dark navy
+            border: "1px solid #1E293B",
+            borderRadius: "20px",
+            padding: "20px",
+            display: "flex",
+            flexDirection: "column",
+            gap: "16px",
+            color: "#FFFFFF",
+            boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.4), 0 8px 10px -6px rgba(0, 0, 0, 0.4)",
+          }}>
+            {/* Header row */}
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                <div style={{
+                  width: "40px",
+                  height: "40px",
+                  borderRadius: "12px",
+                  backgroundColor: subscriptionActive ? "rgba(16, 185, 129, 0.12)" : "rgba(239, 68, 68, 0.12)",
+                  color: subscriptionActive ? "#10B981" : "#EF4444",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center"
+                }}>
+                  <span className="material-icons" style={{ fontSize: "22px" }}>
+                    {subscriptionActive ? "verified" : "gpp_bad"}
+                  </span>
+                </div>
+                <div>
+                  <span style={{ fontSize: "11px", color: "#94A3B8", fontWeight: 500, display: "block", lineHeight: "1.2" }}>Obuna holati</span>
+                  <h4 style={{ fontSize: "16px", fontWeight: 700, margin: "2px 0 0 0", color: "#FFFFFF" }}>
+                    {displayPlanName}
+                  </h4>
+                </div>
+              </div>
+              <span style={{
+                backgroundColor: subscriptionActive ? "rgba(16, 185, 129, 0.15)" : "rgba(239, 68, 68, 0.15)",
+                color: subscriptionActive ? "#10B981" : "#EF4444",
+                padding: "6px 12px",
+                borderRadius: "20px",
+                fontSize: "12px",
+                fontWeight: 700,
+                display: "flex",
+                alignItems: "center",
+                gap: "6px"
+              }}>
+                <span style={{
+                  width: "6px",
+                  height: "6px",
+                  borderRadius: "50%",
+                  backgroundColor: subscriptionActive ? "#10B981" : "#EF4444",
+                  display: "inline-block"
+                }}></span>
+                {subscriptionActive ? "Faol" : "Faol emas"}
+              </span>
+            </div>
+
+            {/* Inner green card */}
+            <div style={{
+              backgroundColor: "#F0FDF4", // Light green tint
+              borderRadius: "16px",
+              padding: "24px 16px",
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              justifyContent: "center",
+              margin: "4px 0",
+              border: "1px solid rgba(16, 185, 129, 0.1)"
+            }}>
+              <span style={{
+                fontSize: "64px",
+                fontWeight: 800,
+                color: "#16A34A", // Green color
+                lineHeight: 1,
+                fontFamily: '"Outfit", sans-serif'
+              }}>
+                {subscriptionPlan === "unlimited" ? "∞" : daysLeft}
+              </span>
+              <span style={{
+                fontSize: "14px",
+                fontWeight: 600,
+                color: "#15803D", // Medium green
+                marginTop: "6px"
+              }}>
+                {subscriptionPlan === "unlimited" ? "cheksiz foydalanish" : "kun qoldi"}
+              </span>
+            </div>
+
+            {/* Progress bar and label */}
+            {subscriptionPlan !== "unlimited" && (
+              <div>
+                <div style={{
+                  height: "8px",
+                  backgroundColor: "#1E293B",
+                  borderRadius: "4px",
+                  overflow: "hidden",
+                  width: "100%"
+                }}>
+                  <div style={{
+                    height: "100%",
+                    backgroundColor: "#10B981",
+                    borderRadius: "4px",
+                    width: `${progressPercent}%`,
+                    transition: "width 0.5s ease"
+                  }}></div>
+                </div>
+                <div style={{ display: "flex", justifyContent: "space-between", fontSize: "11px", marginTop: "6px", color: "#94A3B8", fontWeight: 500 }}>
+                  <span>{usedDays} kun ishlatildi</span>
+                  <span>{totalDays} kundan</span>
+                </div>
+              </div>
+            )}
+
+            {/* Divider line */}
+            <div style={{ borderTop: "1px solid #1E293B", margin: "4px 0" }}></div>
+
+            {/* Detail rows */}
+            <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: "8px", color: "#94A3B8" }}>
+                  <span className="material-icons" style={{ fontSize: "16px" }}>calendar_today</span>
+                  <span style={{ fontSize: "13px" }}>Tugash sanasi</span>
+                </div>
+                <span style={{ fontWeight: 700, fontSize: "14px", color: "#FFFFFF" }}>
+                  {subscriptionPlan === "unlimited" ? "Muddatsiz" : formattedEndDate}
+                </span>
+              </div>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: "8px", color: "#94A3B8" }}>
+                  <span className="material-icons" style={{ fontSize: "16px" }}>workspace_premium</span>
+                  <span style={{ fontSize: "13px" }}>Tarif rejasi</span>
+                </div>
+                <span style={{ fontWeight: 700, fontSize: "14px", color: "#10B981" }}>
+                  {subscriptionPlan === "unlimited" ? "Cheksiz Premium" : subscriptionPlan ? `${subscriptionPlan}` : "Demo"}
+                </span>
+              </div>
+            </div>
           </div>
-        )}
-      </div>
+        );
+      })()}
 
       {/* 1. Theme Configuration */}
       <SectionCard title="Ko'rinish (Mavzu)" icon="palette" colors={colors}>
