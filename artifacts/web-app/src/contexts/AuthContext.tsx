@@ -138,15 +138,18 @@ export function AuthProvider({ children, queryClient }: AuthProviderProps) {
     setSubscriptionExpired(data.subscriptionExpired ?? false);
   }
 
-  useEffect(() => {
-    setAuthTokenGetter(() => token);
-    return () => { setAuthTokenGetter(null); };
-  }, [token]);
+  // Set the auth token getter and unauthorized handler synchronously during render.
+  // This prevents race conditions where child components make API requests immediately upon mounting
+  // before the useEffect hook has registered the getters and handlers.
+  setAuthTokenGetter(() => localStorage.getItem(TOKEN_KEY));
+  setOnUnauthorized(clearAll);
 
   useEffect(() => {
-    setOnUnauthorized(() => { clearAll(); });
-    return () => { setOnUnauthorized(null); };
-  }, [clearAll]);
+    return () => {
+      setAuthTokenGetter(null);
+      setOnUnauthorized(null);
+    };
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
