@@ -233,7 +233,6 @@ function ProductFormScreenInner() {
   const validate = (): boolean => {
     const newErrors: Partial<FormValues> = {};
     if (!form.name.trim()) newErrors.name = "Nomi kiritilishi shart";
-    if (!form.brand.trim()) newErrors.brand = unit === "kg" ? "Navi kiritilishi shart" : "Brend kiritilishi shart";
     if (!form.costPrice.trim() || isNaN(parseFloat(form.costPrice))) newErrors.costPrice = "Tan narxini to'g'ri kiriting";
     if (!form.salePrice.trim() || isNaN(parseFloat(form.salePrice))) newErrors.salePrice = "Sotuv narxini to'g'ri kiriting";
     if (!form.quantity.trim() || isNaN(parseFloat(form.quantity))) newErrors.quantity = "Miqdorni to'g'ri kiriting";
@@ -351,7 +350,7 @@ function ProductFormScreenInner() {
         {/* Brand */}
         <div>
           <label style={{ display: "block", fontSize: "12px", color: colors.mutedForeground, marginBottom: "4px", fontWeight: 500 }}>
-            {unit === "kg" ? "Navi yoki Turi" : "Brend / Ishlab chiqaruvchi"}
+            {unit === "kg" ? "Navi yoki Turi (ixtiyoriy)" : "Brend / Ishlab chiqaruvchi (ixtiyoriy)"}
           </label>
           <input
             type="text"
