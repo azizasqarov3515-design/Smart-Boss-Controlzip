@@ -13,6 +13,7 @@ import { useAuth } from "../contexts/AuthContext";
 import { useColors } from "../hooks/useColors";
 import { useSettings } from "../hooks/useSettings";
 import { SubscriptionLockScreen } from "../components/SubscriptionLockScreen";
+import { useTranslation } from "../contexts/LanguageContext";
 
 interface FormValues {
   name: string;
@@ -35,6 +36,7 @@ const INITIAL_FORM: FormValues = {
 };
 
 function ProductFormScreenInner() {
+  const { t } = useTranslation();
   const colors = useColors();
   const [, setLocation] = useLocation();
   const queryClient = useQueryClient();
@@ -78,7 +80,7 @@ function ProductFormScreenInner() {
         setLocation("/products");
       },
       onError: (err: any) => {
-        alert(err.message || "Saqlashda xato yuz berdi");
+        alert(err.message || t("Saqlashda xato yuz berdi"));
       },
     },
   });
@@ -91,7 +93,7 @@ function ProductFormScreenInner() {
         setLocation("/products");
       },
       onError: (err: any) => {
-        alert(err.message || "Tahrirlashda xato yuz berdi");
+        alert(err.message || t("Tahrirlashda xato yuz berdi"));
       },
     },
   });
@@ -140,13 +142,13 @@ function ProductFormScreenInner() {
       });
 
       if (!response.ok) {
-        throw new Error(`Rasm yuklash xatosi: ${response.status}`);
+        throw new Error(t("Rasm yuklash xatoligi:") + ` ${response.status}`);
       }
 
       const data = await response.json();
       setImageUrl(data.url);
     } catch (err: any) {
-      alert(err.message || "Rasmni yuklashda xato yuz berdi");
+      alert(err.message || t("Rasmni yuklashda xato yuz berdi"));
     } finally {
       setImageUploading(false);
     }
@@ -156,7 +158,7 @@ function ProductFormScreenInner() {
   const startCameraScanner = async () => {
     setCameraScannerOpen(true);
     setCameraActive(true);
-    setScanMessage("Kameraga ruxsat so'ralmoqda...");
+    setScanMessage(t("Kameraga ruxsat so'ralmoqda..."));
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
         video: { facingMode: "environment" },
@@ -167,7 +169,7 @@ function ProductFormScreenInner() {
         videoRef.current.setAttribute("playsinline", "true");
         videoRef.current.play();
       }
-      setScanMessage("Kamerani shtrix-kodga qarating");
+      setScanMessage(t("Kamerani shtrix-kodga qarating"));
 
       // Check if BarcodeDetector is supported
       if ("BarcodeDetector" in window) {
@@ -199,10 +201,10 @@ function ProductFormScreenInner() {
           };
         }
       } else {
-        setScanMessage("Brauzeringiz kameradan shtrix-kodni o'qishni qo'llab-quvvatlamaydi. Jismoniy skaner qurolidan foydalaning.");
+        setScanMessage(t("Brauzeringiz kameradan shtrix-kodni o'qishni qo'llab-quvvatlamaydi. Jismoniy skaner qurolidan foydalaning."));
       }
     } catch (err) {
-      setScanMessage("Kameraga ulanib bo'lmadi. Ruxsatlarni tekshiring.");
+      setScanMessage(t("Kameraga ulanib bo'lmadi. Ruxsatlarni tekshiring."));
     }
   };
 
@@ -232,10 +234,10 @@ function ProductFormScreenInner() {
 
   const validate = (): boolean => {
     const newErrors: Partial<FormValues> = {};
-    if (!form.name.trim()) newErrors.name = "Nomi kiritilishi shart";
-    if (!form.costPrice.trim() || isNaN(parseFloat(form.costPrice))) newErrors.costPrice = "Tan narxini to'g'ri kiriting";
-    if (!form.salePrice.trim() || isNaN(parseFloat(form.salePrice))) newErrors.salePrice = "Sotuv narxini to'g'ri kiriting";
-    if (!form.quantity.trim() || isNaN(parseFloat(form.quantity))) newErrors.quantity = "Miqdorni to'g'ri kiriting";
+    if (!form.name.trim()) newErrors.name = t("Nomi kiritilishi shart");
+    if (!form.costPrice.trim() || isNaN(parseFloat(form.costPrice))) newErrors.costPrice = t("Tan narxini to'g'ri kiriting");
+    if (!form.salePrice.trim() || isNaN(parseFloat(form.salePrice))) newErrors.salePrice = t("Sotuv narxini to'g'ri kiriting");
+    if (!form.quantity.trim() || isNaN(parseFloat(form.quantity))) newErrors.quantity = t("Miqdorni to'g'ri kiriting");
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -268,7 +270,7 @@ function ProductFormScreenInner() {
     return (
       <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", flex: 1, gap: "12px", height: "80vh" }}>
         <div className="spinner" style={{ width: "30px", height: "30px", border: `3px solid ${colors.border}`, borderTopColor: colors.primary, borderRadius: "50%", animation: "spin 1s linear infinite" }}></div>
-        <span style={{ fontSize: "14px", color: colors.mutedForeground }}>Yuklanmoqda...</span>
+        <span style={{ fontSize: "14px", color: colors.mutedForeground }}>{t("Yuklanmoqda...")}</span>
       </div>
     );
   }
@@ -278,23 +280,23 @@ function ProductFormScreenInner() {
       {/* Header */}
       <div>
         <h2 style={{ fontSize: "20px", color: colors.foreground }}>
-          {isEdit ? "Tovarni tahrirlash" : "Yangi tovar qo'shish"}
+          {isEdit ? t("Tovarni tahrirlash") : t("Yangi tovar qo'shish")}
         </h2>
         <p className="text-muted" style={{ fontSize: "12px", marginTop: "2px" }}>
-          Mahsulot parametrlari, narxlari va ombor qoldig'ini kiriting
+          {t("Mahsulot parametrlari, narxlari va ombor qoldig'ini kiriting")}
         </p>
       </div>
 
       {/* Unit choice */}
       <div>
         <label style={{ display: "block", fontSize: "12px", color: colors.mutedForeground, marginBottom: "8px", fontWeight: 500 }}>
-          O'lchov birligi
+          {t("O'lchov birligi")}
         </label>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "8px" }}>
           {([
-            { value: "dona", label: "Dona", icon: "🔢" },
-            { value: "kg", label: "Kilogramm (kg)", icon: "⚖️" },
-            { value: "m", label: "Metr (m)", icon: "📏" },
+            { value: "dona", label: t("Dona"), icon: "🔢" },
+            { value: "kg", label: t("Kilogramm") + " (kg)", icon: "⚖️" },
+            { value: "m", label: t("Metr") + " (m)", icon: "📏" },
           ] as const).filter((opt) => opt.value === unit || !settings.disabledUnits?.includes(opt.value)).map((opt) => {
             const active = unit === opt.value;
             return (
@@ -328,7 +330,7 @@ function ProductFormScreenInner() {
         {/* Name */}
         <div>
           <label style={{ display: "block", fontSize: "12px", color: colors.mutedForeground, marginBottom: "4px", fontWeight: 500 }}>
-            Mahsulot nomi
+            {t("Mahsulot nomi")}
           </label>
           <input
             type="text"
@@ -337,10 +339,10 @@ function ProductFormScreenInner() {
             onChange={(e) => handleChange("name", e.target.value)}
             placeholder={
               unit === "kg"
-                ? "Masalan: Olma, Kartoshka..."
+                ? t("Masalan: Olma, Kartoshka...")
                 : unit === "m"
-                ? "Masalan: Alyumin profil, Kabel..."
-                : "Masalan: iPhone 15 Pro Max qopqoq"
+                ? t("Masalan: Alyumin profil, Kabel...")
+                : t("Masalan: iPhone 15 Pro Max qopqoq")
             }
             style={{ borderColor: errors.name ? colors.destructive : colors.border }}
           />
@@ -350,7 +352,7 @@ function ProductFormScreenInner() {
         {/* Brand */}
         <div>
           <label style={{ display: "block", fontSize: "12px", color: colors.mutedForeground, marginBottom: "4px", fontWeight: 500 }}>
-            {unit === "kg" ? "Navi yoki Turi (ixtiyoriy)" : "Brend / Ishlab chiqaruvchi (ixtiyoriy)"}
+            {unit === "kg" ? t("Navi yoki Turi (ixtiyoriy)") : t("Brend / Ishlab chiqaruvchi (ixtiyoriy)")}
           </label>
           <input
             type="text"
@@ -359,10 +361,10 @@ function ProductFormScreenInner() {
             onChange={(e) => handleChange("brand", e.target.value)}
             placeholder={
               unit === "kg"
-                ? "Masalan: Samarqand, Lazer..."
+                ? t("Masalan: Samarqand, Lazer...")
                 : unit === "m"
-                ? "Masalan: Xitoy, O'zbekiston..."
-                : "Masalan: Apple, Samsung, Xiaomi"
+                ? t("Masalan: Xitoy, O'zbekiston...")
+                : t("Masalan: Apple, Samsung, Xiaomi")
             }
             style={{ borderColor: errors.brand ? colors.destructive : colors.border }}
           />
@@ -373,7 +375,7 @@ function ProductFormScreenInner() {
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
           <div>
             <label style={{ display: "block", fontSize: "12px", color: colors.mutedForeground, marginBottom: "4px", fontWeight: 500 }}>
-              Tan narxi (UZS)
+              {t("Tan narxi (UZS)")}
             </label>
             <input
               type="text"
@@ -387,7 +389,7 @@ function ProductFormScreenInner() {
           </div>
           <div>
             <label style={{ display: "block", fontSize: "12px", color: colors.mutedForeground, marginBottom: "4px", fontWeight: 500 }}>
-              Sotuv narxi (UZS)
+              {t("Sotuv narxi (UZS)")}
             </label>
             <input
               type="text"
@@ -404,7 +406,7 @@ function ProductFormScreenInner() {
         {/* Stock quantity */}
         <div>
           <label style={{ display: "block", fontSize: "12px", color: colors.mutedForeground, marginBottom: "4px", fontWeight: 500 }}>
-            Ombor qoldig'i ({unit})
+            {t("Ombor qoldig'i")} ({unit === "dona" ? t("Dona") : unit === "kg" ? t("Kg") : t("Metr")})
           </label>
           <input
             type="text"
@@ -421,14 +423,14 @@ function ProductFormScreenInner() {
         {unit === "m" && (
           <div>
             <label style={{ display: "block", fontSize: "12px", color: colors.mutedForeground, marginBottom: "4px", fontWeight: 500 }}>
-              Profil qalinligi (mm, ixtiyoriy)
+              {t("Profil qalinligi (mm, ixtiyoriy)")}
             </label>
             <input
               type="text"
               className="input-field"
               value={form.thickness}
               onChange={(e) => handleChange("thickness", e.target.value.replace(/[^0-9.]/g, ""))}
-              placeholder="Masalan: 1.2"
+              placeholder={t("Masalan:") + " 1.2"}
             />
           </div>
         )}
@@ -436,7 +438,7 @@ function ProductFormScreenInner() {
         {/* Barcode input & Scan buttons */}
         <div>
           <label style={{ display: "block", fontSize: "12px", color: colors.mutedForeground, marginBottom: "4px", fontWeight: 500 }}>
-            Shtrix-kod (Skaner)
+            {t("Shtrix-kod (Skaner)")}
           </label>
           <div style={{ display: "flex", gap: "8px" }}>
             <input
@@ -444,7 +446,7 @@ function ProductFormScreenInner() {
               className="input-field"
               value={form.barcode}
               onChange={(e) => handleChange("barcode", e.target.value.replace(/\s/g, ""))}
-              placeholder="Barcode raqami..."
+              placeholder={t("Barcode raqami...")}
               style={{ flex: 1 }}
             />
             <button
@@ -457,14 +459,14 @@ function ProductFormScreenInner() {
             </button>
           </div>
           <p className="text-muted" style={{ fontSize: "11px", marginTop: "4px" }}>
-            Maslahat: Jismoniy skaner quroli yordamida shtrix-kodni to'g'ridan-to'g'ri skanerlashingiz ham mumkin.
+            {t("Maslahat: Jismoniy skaner quroli yordamida shtrix-kodni to'g'ridan-to'g'ri skanerlashingiz ham mumkin.")}
           </p>
         </div>
 
         {/* Image upload */}
         <div>
           <label style={{ display: "block", fontSize: "12px", color: colors.mutedForeground, marginBottom: "8px", fontWeight: 500 }}>
-            Mahsulot rasmi
+            {t("Mahsulot rasmi")}
           </label>
           <div style={{ display: "flex", gap: "16px", alignItems: "center" }}>
             {imageUrl ? (
@@ -517,7 +519,7 @@ function ProductFormScreenInner() {
                 backgroundColor: colors.card
               }}>
                 <span className="material-icons" style={{ fontSize: "24px" }}>image</span>
-                <span style={{ fontSize: "9px", marginTop: "2px", fontWeight: 600 }}>Rasm yo'q</span>
+                <span style={{ fontSize: "9px", marginTop: "2px", fontWeight: 600 }}>{t("Rasm yo'q")}</span>
               </div>
             )}
 
@@ -536,7 +538,7 @@ function ProductFormScreenInner() {
                 onClick={() => document.getElementById("product-image-file")?.click()}
                 style={{ fontSize: "12px", padding: "8px 12px" }}
               >
-                {imageUploading ? "Yuklanmoqda..." : "Rasm tanlash"}
+                {imageUploading ? t("Yuklanmoqda...") : t("Rasm tanlash")}
               </button>
               <span className="text-muted" style={{ fontSize: "11px" }}>
                 Max: 5MB (Format: JPG, PNG, WEBP)
@@ -552,7 +554,7 @@ function ProductFormScreenInner() {
           <div className="bottom-sheet" onClick={(e) => e.stopPropagation()} style={{ height: "450px" }}>
             <div className="sheet-handle"></div>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "12px" }}>
-              <h3 style={{ fontSize: "16px" }}>Kamera orqali skanerlash</h3>
+              <h3 style={{ fontSize: "16px" }}>{t("Kamera orqali skanerlash")}</h3>
               <button
                 onClick={stopCameraScanner}
                 style={{ background: "none", border: "none", color: colors.mutedForeground, cursor: "pointer" }}
@@ -614,7 +616,7 @@ function ProductFormScreenInner() {
           style={{ flex: 1 }}
           disabled={isPending}
         >
-          Bekor qilish
+          {t("Bekor qilish")}
         </button>
         <button
           className="btn-primary"
@@ -622,7 +624,7 @@ function ProductFormScreenInner() {
           style={{ flex: 1 }}
           disabled={isPending}
         >
-          {isPending ? "Saqlanmoqda..." : "Saqlash"}
+          {isPending ? t("Saqlanmoqda...") : t("Saqlash")}
         </button>
       </div>
     </div>
@@ -631,6 +633,7 @@ function ProductFormScreenInner() {
 
 export default function ProductForm() {
   const { subscriptionActive } = useAuth();
-  if (!subscriptionActive) return <SubscriptionLockScreen screenName="Mahsulot formasi" />;
+  const { t } = useTranslation();
+  if (!subscriptionActive) return <SubscriptionLockScreen screenName={t("Mahsulot formasi")} />;
   return <ProductFormScreenInner />;
 }

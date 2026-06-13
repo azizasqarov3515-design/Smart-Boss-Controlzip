@@ -23,6 +23,7 @@ import { useColors } from "../hooks/useColors";
 import { useSettings } from "../hooks/useSettings";
 import { SubscriptionLockScreen } from "../components/SubscriptionLockScreen";
 import { printDoc } from "../utils/PrintService";
+import { useTranslation } from "../contexts/LanguageContext";
 
 function formatMoney(n: number) {
   return n.toLocaleString("uz-UZ") + " UZS";
@@ -41,6 +42,7 @@ function formatDate(iso: string) {
 
 function buildStatementHtml(
   stmt: CustomerStatement,
+  t: (text: string) => string,
   storeName = "SMARTBOSScontrol",
   sellerName = "",
   sellerPhone = "",
@@ -54,7 +56,7 @@ function buildStatementHtml(
       (s) => `
       <tr>
         <td>${formatDate(s.createdAt)}</td>
-        <td>${s.itemCount} dona</td>
+        <td>${s.itemCount} ${t("ta tovar")}</td>
         <td style="color:#DC2626;font-weight:600">+${formatMoney(s.debtAmount ?? s.totalAmount)}</td>
         <td style="color:#10B981">${formatMoney(s.paidAmount ?? 0)}</td>
       </tr>`
@@ -76,7 +78,7 @@ function buildStatementHtml(
 <html>
 <head>
   <meta charset="utf-8">
-  <title>Qarz ko'chirmasi — ${customer.name}</title>
+  <title>${t("Qarz ko'chirmasi")} — ${customer.name}</title>
   <style>
     body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; font-size: 13px; padding: 30px; color: #111; max-width: 650px; margin: 0 auto; }
     h1 { font-size: 20px; margin-bottom: 4px; color: #1E3A8A; }
@@ -97,25 +99,25 @@ function buildStatementHtml(
   </style>
 </head>
 <body>
-  <h1>QARZ KO'CHIRMASI</h1>
-  <p class="subtitle">Sana: ${new Date().toLocaleDateString("uz-UZ")}</p>
+  <h1>${t("QARZ KO'CHIRMASI")}</h1>
+  <p class="subtitle">${t("Sana:")} ${new Date().toLocaleDateString("uz-UZ")}</p>
 
   <div class="info-box">
-    <div class="info-row"><span class="info-label">Mijoz F.I.Sh:</span><span class="info-val">${customer.name}</span></div>
-    <div class="info-row"><span class="info-label">Telefon raqami:</span><span class="info-val">${customer.phone}</span></div>
-    ${customer.debtLimit > 0 ? `<div class="info-row"><span class="info-label">Qarz limiti:</span><span class="info-val">${formatMoney(customer.debtLimit)}</span></div>` : ""}
-    <div class="info-row" style="margin-top: 8px; border-top: 1px solid #E5E7EB; padding-top: 6px;"><span class="info-label" style="font-weight: 600;">Joriy umumiy qarz:</span><span class="debt-total">${formatMoney(customer.totalDebt)}</span></div>
+    <div class="info-row"><span class="info-label">${t("Mijoz F.I.Sh")}:</span><span class="info-val">${customer.name}</span></div>
+    <div class="info-row"><span class="info-label">${t("Telefon raqami")}:</span><span class="info-val">${customer.phone}</span></div>
+    ${customer.debtLimit > 0 ? `<div class="info-row"><span class="info-label">${t("Qarz limiti")}:</span><span class="info-val">${formatMoney(customer.debtLimit)}</span></div>` : ""}
+    <div class="info-row" style="margin-top: 8px; border-top: 1px solid #E5E7EB; padding-top: 6px;"><span class="info-label" style="font-weight: 600;">${t("Mijoz joriy qarzi")}:</span><span class="debt-total">${formatMoney(customer.totalDebt)}</span></div>
   </div>
 
   ${debtSales.length > 0 ? `
-  <h2>Nasiyaga olingan savdolar</h2>
+  <h2>${t("Nasiyaga olingan savdolar")}</h2>
   <table>
     <thead>
       <tr>
-        <th>Sotilgan sana</th>
-        <th>Tovarlar miqdori</th>
-        <th>Qarz summasi</th>
-        <th>To'langan qism</th>
+        <th>${t("Sotilgan sana")}</th>
+        <th>${t("Tovarlar miqdori")}</th>
+        <th>${t("Qarz summasi")}</th>
+        <th>${t("To'langan qism")}</th>
       </tr>
     </thead>
     <tbody>${salesRows}</tbody>
@@ -123,13 +125,13 @@ function buildStatementHtml(
   ` : ""}
 
   ${payments && payments.length > 0 ? `
-  <h2>Qarz to'lovlari tarixi</h2>
+  <h2>${t("Qarz to'lovlari tarixi")}</h2>
   <table>
     <thead>
       <tr>
-        <th>To'lov sanasi</th>
-        <th>To'lov turi / Izoh</th>
-        <th>To'langan summa</th>
+        <th>${t("To'lov sanasi")}</th>
+        <th>${t("To'lov turi / Izoh")}</th>
+        <th>${t("To'langan summa")}</th>
       </tr>
     </thead>
     <tbody>${paymentRows}</tbody>
@@ -138,11 +140,11 @@ function buildStatementHtml(
 
   <div style="margin-top: 24px; font-size: 11px; color: #6B7280;">
     ${storeAddress ? `<div>📍 Manzil: ${storeAddress}</div>` : ""}
-    ${sellerName ? `<div>Sotuvchi: ${sellerName}${sellerPhone ? ` · ${sellerPhone}` : ""}</div>` : ""}
+    ${sellerName ? `<div>${t("Sotuvchi")}: ${sellerName}${sellerPhone ? ` · ${sellerPhone}` : ""}</div>` : ""}
   </div>
 
   <div class="footer">
-    ${storeName} &mdash; Tizim orqali shakllantirildi
+    ${storeName} &mdash; ${t("Tizim orqali shakllantirildi")}
   </div>
 </body>
 </html>`;
@@ -155,6 +157,7 @@ function CustomerDetailScreenInner() {
   const { managerId, role } = useAuth();
   const isWorker = role === "worker";
   const { settings } = useSettings(managerId);
+  const { t } = useTranslation();
 
   // Parse customer ID from query: /customer-detail?id=123
   const searchParams = new URLSearchParams(window.location.search);
@@ -200,7 +203,7 @@ function CustomerDetailScreenInner() {
         setPayError(null);
       },
       onError: (err: any) => {
-        setPayError(err.message || "To'lovni saqlashda xato yuz berdi");
+        setPayError(err.message || t("To'lovni saqlashda xato yuz berdi"));
       },
     },
   });
@@ -214,7 +217,7 @@ function CustomerDetailScreenInner() {
         setEditError(null);
       },
       onError: (err: any) => {
-        setEditError(err.message || "Mijoz ma'lumotlarini saqlashda xato");
+        setEditError(err.message || t("Mijoz ma'lumotlarini saqlashda xato"));
       },
     },
   });
@@ -227,7 +230,7 @@ function CustomerDetailScreenInner() {
         setLocation("/customers");
       },
       onError: (err: any) => {
-        alert(err.message || "O'chirishda xato yuz berdi");
+        alert(err.message || t("O'chirishda xato yuz berdi"));
       },
     },
   });
@@ -238,7 +241,7 @@ function CustomerDetailScreenInner() {
         setDeleteRequestSent(true);
       },
       onError: (err: any) => {
-        alert(err.message || "O'chirish so'rovini yuborishda xato yuz berdi");
+        alert(err.message || t("O'chirish so'rovini yuborishda xato yuz berdi"));
       },
     },
   });
@@ -247,7 +250,7 @@ function CustomerDetailScreenInner() {
     setPayError(null);
     const amount = parseFloat(payAmount.replace(/\s/g, ""));
     if (isNaN(amount) || amount <= 0) {
-      setPayError("To'g'ri to'lov summasini kiriting");
+      setPayError(t("To'g'ri to'lov summasini kiriting"));
       return;
     }
     createPayment({
@@ -284,8 +287,8 @@ function CustomerDetailScreenInner() {
 
   const handleSaveEdit = () => {
     setEditError(null);
-    if (!editName.trim()) { setEditError("Ism kiritilishi shart"); return; }
-    if (!editPhone.trim()) { setEditError("Telefon kiritilishi shart"); return; }
+    if (!editName.trim()) { setEditError(t("Ism kiritilishi shart")); return; }
+    if (!editPhone.trim()) { setEditError(t("Telefon kiritilishi shart")); return; }
     const limit = editLimit ? parseFloat(editLimit.replace(/\s/g, "")) : 0;
     updateCustomer({
       id: customerId,
@@ -304,6 +307,7 @@ function CustomerDetailScreenInner() {
     const primarySeller = settings.sellers?.[0];
     const html = buildStatementHtml(
       statement,
+      t,
       settings.storeName,
       primarySeller?.name ?? "",
       primarySeller?.phone ?? "",
@@ -316,7 +320,7 @@ function CustomerDetailScreenInner() {
     return (
       <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", flex: 1, gap: "12px", height: "80vh" }}>
         <div className="spinner" style={{ width: "30px", height: "30px", border: `3px solid ${colors.border}`, borderTopColor: colors.primary, borderRadius: "50%", animation: "spin 1s linear infinite" }}></div>
-        <span style={{ fontSize: "14px", color: colors.mutedForeground }}>Mijoz yuklanmoqda...</span>
+        <span style={{ fontSize: "14px", color: colors.mutedForeground }}>{t("Mijoz yuklanmoqda...")}</span>
       </div>
     );
   }
@@ -356,7 +360,7 @@ function CustomerDetailScreenInner() {
           style={{ padding: "8px 12px", gap: "6px" }}
         >
           <span className="material-icons" style={{ fontSize: "18px" }}>arrow_back</span>
-          <span>Orqaga</span>
+          <span>{t("Orqaga")}</span>
         </button>
         
         <div style={{ display: "flex", gap: "6px" }}>
@@ -430,7 +434,7 @@ function CustomerDetailScreenInner() {
           )}
           {customer.note && (
             <p className="text-muted" style={{ fontSize: "12px", fontStyle: "italic", marginTop: "4px" }}>
-              Izoh: "{customer.note}"
+              {t("Izoh:")} "{customer.note}"
             </p>
           )}
         </div>
@@ -441,7 +445,7 @@ function CustomerDetailScreenInner() {
         <div style={{ backgroundColor: "rgba(239, 68, 68, 0.08)", borderColor: colors.destructive, borderWidth: "1px", borderStyle: "solid", borderRadius: "12px", padding: "10px 14px", display: "flex", alignItems: "center", gap: "8px" }}>
           <span className="material-icons" style={{ color: colors.destructive, fontSize: "18px" }}>cancel</span>
           <span style={{ fontSize: "12px", color: colors.destructive, fontWeight: 500 }}>
-            Tizim rahbari o'chirish so'rovingizni rad etdi.
+            {t("Tizim rahbari o'chirish so'rovingizni rad etdi.")}
           </span>
         </div>
       )}
@@ -449,7 +453,7 @@ function CustomerDetailScreenInner() {
         <div style={{ backgroundColor: "rgba(245, 158, 11, 0.08)", borderColor: "#D97706", borderWidth: "1px", borderStyle: "solid", borderRadius: "12px", padding: "10px 14px", display: "flex", alignItems: "center", gap: "8px" }}>
           <span className="material-icons" style={{ color: "#D97706", fontSize: "18px" }}>hourglass_empty</span>
           <span style={{ fontSize: "12px", color: "#92400E", fontWeight: 500 }}>
-            O'chirish so'rovi rahbar tasdig'ini kutmoqda.
+            {t("O'chirish so'rovi rahbar tasdig'ini kutmoqda.")}
           </span>
         </div>
       )}
@@ -465,14 +469,14 @@ function CustomerDetailScreenInner() {
       }}>
         <div>
           <span style={{ fontSize: "11px", color: colors.mutedForeground, display: "block", textTransform: "uppercase", fontWeight: 600 }}>
-            {isOverLimit ? "⚠ Qarz limiti oshdi!" : isNearLimit ? "⚠ Qarz limitiga yaqin" : "Mijoz qarzdorligi"}
+            {isOverLimit ? t("LIMIT!") : isNearLimit ? t("Qarz limitiga yaqin") : t("Mijoz qarzdorligi")}
           </span>
           <span style={{ fontSize: "24px", fontWeight: 800, color: statusColor, display: "block", marginTop: "4px" }}>
             {formatMoney(customer.totalDebt)}
           </span>
           {customer.debtLimit > 0 && (
             <span style={{ fontSize: "11px", color: colors.mutedForeground, display: "block", marginTop: "2px" }}>
-              Qarz limiti: {formatMoney(customer.debtLimit)}
+              {t("Qarz limiti:")} {formatMoney(customer.debtLimit)}
             </span>
           )}
         </div>
@@ -485,7 +489,7 @@ function CustomerDetailScreenInner() {
               style={{ flex: 1, gap: "6px" }}
             >
               <span className="material-icons">payments</span>
-              <span>To'lov qabul qilish</span>
+              <span>{t("To'lov qabul qilish")}</span>
             </button>
           )}
           <button
@@ -494,7 +498,7 @@ function CustomerDetailScreenInner() {
             style={{ flex: customer.totalDebt > 0 ? 0.6 : 1, gap: "6px", color: colors.primary, borderColor: colors.primary }}
           >
             <span className="material-icons">picture_as_pdf</span>
-            <span>Ko'chirma</span>
+            <span>{t("Ko'chirma")}</span>
           </button>
         </div>
       </div>
@@ -520,7 +524,7 @@ function CustomerDetailScreenInner() {
           }}
         >
           <span className="material-icons" style={{ fontSize: "16px" }}>shopping_bag</span>
-          <span>Nasiyalar ({debtSales.length})</span>
+          <span>{t("Nasiyalar")} ({debtSales.length})</span>
         </button>
         <button
           onClick={() => setActiveTab("payments")}
@@ -541,7 +545,7 @@ function CustomerDetailScreenInner() {
           }}
         >
           <span className="material-icons" style={{ fontSize: "16px" }}>payments</span>
-          <span>To'lovlar ({payments?.length ?? 0})</span>
+          <span>{t("To'lovlar")} ({payments?.length ?? 0})</span>
         </button>
         <button
           onClick={() => setLocation(`/pos?preCustomerId=${customer.id}&preCustomerName=${encodeURIComponent(customer.name)}`)}
@@ -562,7 +566,7 @@ function CustomerDetailScreenInner() {
           }}
         >
           <span className="material-icons" style={{ fontSize: "16px" }}>add_shopping_cart</span>
-          <span>Yangi savdo</span>
+          <span>{t("Yangi savdo")}</span>
         </button>
       </div>
 
@@ -572,7 +576,7 @@ function CustomerDetailScreenInner() {
           debtSales.length === 0 ? (
             <div className="card-standard" style={{ padding: "40px", textAlign: "center", color: colors.mutedForeground }}>
               <span className="material-icons" style={{ fontSize: "36px", color: colors.border }}>shopping_bag</span>
-              <p style={{ fontSize: "12px", marginTop: "8px" }}>Nasiyaga sotilgan mahsulotlar yo'q</p>
+              <p style={{ fontSize: "12px", marginTop: "8px" }}>{t("Nasiyaga sotilgan mahsulotlar yo'q")}</p>
             </div>
           ) : (
             <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
@@ -582,10 +586,10 @@ function CustomerDetailScreenInner() {
                     <span className="material-icons" style={{ color: "#DC2626", fontSize: "20px" }}>shopping_bag</span>
                     <div>
                       <span className="text-muted" style={{ fontSize: "10px", display: "block" }}>{formatDate(s.createdAt)}</span>
-                      <span style={{ fontSize: "14px", fontWeight: 600 }}>#{s.id} · {s.itemCount} ta tovar</span>
+                      <span style={{ fontSize: "14px", fontWeight: 600 }}>#{s.id} · {s.itemCount} {t("ta tovar")}</span>
                       {s.paidAmount != null && s.paidAmount > 0 && (
                         <span style={{ fontSize: "11px", color: colors.success, display: "block", marginTop: "2px" }}>
-                          Kassa to'lovi: {formatMoney(s.paidAmount)}
+                          {t("Kassa to'lovi:")} {formatMoney(s.paidAmount)}
                         </span>
                       )}
                     </div>
@@ -594,7 +598,7 @@ function CustomerDetailScreenInner() {
                     <span style={{ fontSize: "14px", fontWeight: 700, color: "#DC2626" }}>
                       +{formatMoney(s.debtAmount ?? s.totalAmount)}
                     </span>
-                    <span style={{ fontSize: "9px", color: colors.mutedForeground, display: "block", textTransform: "uppercase" }}>qarzga</span>
+                    <span style={{ fontSize: "9px", color: colors.mutedForeground, display: "block", textTransform: "uppercase" }}>{t("qarzga")}</span>
                   </div>
                 </div>
               ))}
@@ -604,7 +608,7 @@ function CustomerDetailScreenInner() {
           (payments ?? []).length === 0 ? (
             <div className="card-standard" style={{ padding: "40px", textAlign: "center", color: colors.mutedForeground }}>
               <span className="material-icons" style={{ fontSize: "36px", color: colors.border }}>payments</span>
-              <p style={{ fontSize: "12px", marginTop: "8px" }}>Qarz to'lovlari tarixi mavjud emas</p>
+              <p style={{ fontSize: "12px", marginTop: "8px" }}>{t("Qarz to'lovlari tarixi mavjud emas")}</p>
             </div>
           ) : (
             <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
@@ -614,14 +618,14 @@ function CustomerDetailScreenInner() {
                     <span className="material-icons" style={{ color: colors.success, fontSize: "20px" }}>check_circle</span>
                     <div>
                       <span className="text-muted" style={{ fontSize: "10px", display: "block" }}>{formatDate(p.createdAt)}</span>
-                      <span style={{ fontSize: "14px", fontWeight: 600 }}>{p.note || "Qarz qaytarilishi"}</span>
+                      <span style={{ fontSize: "14px", fontWeight: 600 }}>{p.note || t("Qarz qaytarilishi")}</span>
                     </div>
                   </div>
                   <div style={{ textAlign: "right" }}>
                     <span style={{ fontSize: "14px", fontWeight: 700, color: colors.success }}>
                       -{formatMoney(p.amount)}
                     </span>
-                    <span style={{ fontSize: "9px", color: colors.mutedForeground, display: "block", textTransform: "uppercase" }}>to'landi</span>
+                    <span style={{ fontSize: "9px", color: colors.mutedForeground, display: "block", textTransform: "uppercase" }}>{t("to'landi")}</span>
                   </div>
                 </div>
               ))}
@@ -637,38 +641,38 @@ function CustomerDetailScreenInner() {
             <div className="sheet-handle"></div>
             <div style={{ display: "flex", gap: "8px", alignItems: "center", marginBottom: "14px" }}>
               <span className="material-icons" style={{ color: colors.success }}>payments</span>
-              <h3 style={{ fontSize: "17px" }}>To'lov qabul qilish</h3>
+              <h3 style={{ fontSize: "17px" }}>{t("To'lov qabul qilish")}</h3>
             </div>
 
             <p style={{ fontSize: "13px", color: colors.mutedForeground, marginBottom: "12px" }}>
-              Mijoz joriy qarzi: <strong style={{ color: colors.foreground }}>{formatMoney(customer.totalDebt)}</strong>
+              {t("Mijoz joriy qarzi:")} <strong style={{ color: colors.foreground }}>{formatMoney(customer.totalDebt)}</strong>
             </p>
 
             <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
               <div>
                 <label style={{ display: "block", fontSize: "12px", color: colors.mutedForeground, marginBottom: "4px" }}>
-                  To'lanayotgan summa (UZS) *
+                  {t("To'lanayotgan summa (UZS) *")}
                 </label>
                 <input
                   type="text"
                   className="input-field"
                   value={payAmount}
                   onChange={(e) => setPayAmount(e.target.value.replace(/\D/g, ""))}
-                  placeholder="Masalan: 250000"
+                  placeholder={`${t("Masalan:")} 250000`}
                   autoFocus
                 />
               </div>
 
               <div>
                 <label style={{ display: "block", fontSize: "12px", color: colors.mutedForeground, marginBottom: "4px" }}>
-                  Izoh / Eslatma
+                  {t("Izoh / Eslatma")}
                 </label>
                 <input
                   type="text"
                   className="input-field"
                   value={payNote}
                   onChange={(e) => setPayNote(e.target.value)}
-                  placeholder="To'lov bo'yicha izoh (ixtiyoriy)..."
+                  placeholder={t("To'lov bo'yicha izoh (ixtiyoriy)...")}
                 />
               </div>
 
@@ -680,10 +684,10 @@ function CustomerDetailScreenInner() {
 
               <div style={{ display: "flex", gap: "10px", marginTop: "12px" }}>
                 <button className="btn-secondary" onClick={() => setPaymentOpen(false)} disabled={payingDebt} style={{ flex: 1 }}>
-                  Bekor qilish
+                  {t("Bekor qilish")}
                 </button>
                 <button className="btn-success" onClick={handlePayment} disabled={payingDebt} style={{ flex: 1 }}>
-                  {payingDebt ? "Saqlanmoqda..." : "Saqlash"}
+                  {payingDebt ? t("Saqlanmoqda...") : t("Saqlash")}
                 </button>
               </div>
             </div>
@@ -698,26 +702,26 @@ function CustomerDetailScreenInner() {
             <div className="sheet-handle"></div>
             <div style={{ display: "flex", gap: "8px", alignItems: "center", marginBottom: "14px" }}>
               <span className="material-icons" style={{ color: colors.primary }}>edit</span>
-              <h3 style={{ fontSize: "17px" }}>Mijoz ma'lumotlarini tahrirlash</h3>
+              <h3 style={{ fontSize: "17px" }}>{t("Mijoz ma'lumotlarini tahrirlash")}</h3>
             </div>
 
             <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
               <div>
                 <label style={{ display: "block", fontSize: "12px", color: colors.mutedForeground, marginBottom: "4px" }}>
-                  To'liq ism *
+                  {t("To'liq ism")} *
                 </label>
                 <input
                   type="text"
                   className="input-field"
                   value={editName}
                   onChange={(e) => setEditName(e.target.value)}
-                  placeholder="Ism F.I.Sh"
+                  placeholder={t("Ism F.I.Sh")}
                 />
               </div>
 
               <div>
                 <label style={{ display: "block", fontSize: "12px", color: colors.mutedForeground, marginBottom: "4px" }}>
-                  Telefon raqami *
+                  {t("Telefon raqami")} *
                 </label>
                 <input
                   type="text"
@@ -730,40 +734,40 @@ function CustomerDetailScreenInner() {
 
               <div>
                 <label style={{ display: "block", fontSize: "12px", color: colors.mutedForeground, marginBottom: "4px" }}>
-                  Yashash joyi (Manzil)
+                  {t("Yashash joyi (Manzil)")}
                 </label>
                 <input
                   type="text"
                   className="input-field"
                   value={editAddress}
                   onChange={(e) => setEditAddress(e.target.value)}
-                  placeholder="Shahar, ko'cha, uy..."
+                  placeholder={t("Shahar, ko'cha, uy...")}
                 />
               </div>
 
               <div>
                 <label style={{ display: "block", fontSize: "12px", color: colors.mutedForeground, marginBottom: "4px" }}>
-                  Qarz limiti (UZS)
+                  {t("Qarz limiti (UZS)")}
                 </label>
                 <input
                   type="text"
                   className="input-field"
                   value={editLimit}
                   onChange={(e) => setEditLimit(e.target.value.replace(/\D/g, ""))}
-                  placeholder="0 = cheksiz limit"
+                  placeholder={t("0 = cheksiz limit")}
                 />
               </div>
 
               <div>
                 <label style={{ display: "block", fontSize: "12px", color: colors.mutedForeground, marginBottom: "4px" }}>
-                  Eslatma / Izoh
+                  {t("Eslatma / Izoh")}
                 </label>
                 <input
                   type="text"
                   className="input-field"
                   value={editNote}
                   onChange={(e) => setEditNote(e.target.value)}
-                  placeholder="Izoh..."
+                  placeholder={t("Izoh...")}
                 />
               </div>
 
@@ -775,10 +779,10 @@ function CustomerDetailScreenInner() {
 
               <div style={{ display: "flex", gap: "10px", marginTop: "12px" }}>
                 <button className="btn-secondary" onClick={() => setEditOpen(false)} disabled={updating} style={{ flex: 1 }}>
-                  Bekor qilish
+                  {t("Bekor qilish")}
                 </button>
                 <button className="btn-primary" onClick={handleSaveEdit} disabled={updating} style={{ flex: 1 }}>
-                  {updating ? "Saqlanmoqda..." : "Saqlash"}
+                  {updating ? t("Saqlanmoqda...") : t("Saqlash")}
                 </button>
               </div>
             </div>
@@ -797,12 +801,12 @@ function CustomerDetailScreenInner() {
                 <div style={{ width: "60px", height: "60px", borderRadius: "50%", backgroundColor: "rgba(16, 185, 129, 0.1)", color: colors.success, display: "flex", alignItems: "center", justifyContent: "center" }}>
                   <span className="material-icons" style={{ fontSize: "32px" }}>check_circle</span>
                 </div>
-                <h3 style={{ fontSize: "17px" }}>So'rov yuborildi!</h3>
+                <h3 style={{ fontSize: "17px" }}>{t("So'rov yuborildi!")}</h3>
                 <p className="text-muted" style={{ fontSize: "13px" }}>
-                  Rahbar tasdiqlasa, mijoz butunlay o'chiriladi.
+                  {t("Rahbar tasdiqlasa, mijoz butunlay o'chiriladi.")}
                 </p>
                 <button className="btn-primary" onClick={() => { setDeleteConfirmOpen(false); setDeleteRequestSent(false); }} style={{ width: "100%", marginTop: "10px" }}>
-                  Yaxshi
+                  {t("Yaxshi")}
                 </button>
               </div>
             ) : isWorker ? (
@@ -812,21 +816,21 @@ function CustomerDetailScreenInner() {
                     <span className="material-icons">send</span>
                   </div>
                   <div>
-                    <h3 style={{ fontSize: "16px" }}>O'chirish so'rovi</h3>
-                    <p className="text-muted" style={{ fontSize: "11px" }}>Raxbar tasdig'i kutiladi</p>
+                    <h3 style={{ fontSize: "16px" }}>{t("O'chirish so'rovi")}</h3>
+                    <p className="text-muted" style={{ fontSize: "11px" }}>{t("Raxbar tasdig'i kutiladi")}</p>
                   </div>
                 </div>
 
                 <p style={{ fontSize: "13.5px", lineHeight: "1.5" }}>
-                  Haqiqatdan ham <strong style={{ color: colors.foreground }}>"{customer.name}"</strong> mijozini o'chirish bo'yicha tizim rahbariga so'rov yuborilsinmi?
+                  {t("Haqiqatdan ham")} <strong style={{ color: colors.foreground }}>"{customer.name}"</strong> {t("mijozini o'chirish bo'yicha tizim rahbariga so'rov yuborilsinmi?")}
                 </p>
 
                 <div style={{ display: "flex", gap: "10px", marginTop: "12px" }}>
                   <button className="btn-secondary" onClick={() => setDeleteConfirmOpen(false)} disabled={sendingRequest} style={{ flex: 1 }}>
-                    Bekor qilish
+                    {t("Bekor qilish")}
                   </button>
                   <button className="btn-primary" onClick={handleConfirmDelete} disabled={sendingRequest} style={{ flex: 1, backgroundColor: "#E65100", borderColor: "#E65100" }}>
-                    {sendingRequest ? "Yuborilmoqda..." : "Ha, yuborish"}
+                    {sendingRequest ? t("Yuborilmoqda...") : t("Ha, yuborish")}
                   </button>
                 </div>
               </div>
@@ -837,21 +841,21 @@ function CustomerDetailScreenInner() {
                     <span className="material-icons">delete_forever</span>
                   </div>
                   <div>
-                    <h3 style={{ fontSize: "16px" }}>Mijozni o'chirish</h3>
-                    <p className="text-muted" style={{ fontSize: "11px" }}>Ushbu amalni ortga qaytarib bo'lmaydi</p>
+                    <h3 style={{ fontSize: "16px" }}>{t("Mijozni o'chirish")}</h3>
+                    <p className="text-muted" style={{ fontSize: "11px" }}>{t("Ushbu amalni ortga qaytarib bo'lmaydi")}</p>
                   </div>
                 </div>
 
                 <p style={{ fontSize: "13.5px", lineHeight: "1.5" }}>
-                  Haqiqatdan ham <strong style={{ color: colors.foreground }}>"{customer.name}"</strong> mijozini butunlay o'chirasizmi?
+                  {t("Haqiqatdan ham")} <strong style={{ color: colors.foreground }}>"{customer.name}"</strong> {t("mijozini butunlay o'chirasizmi?")}
                 </p>
 
                 <div style={{ display: "flex", gap: "10px", marginTop: "12px" }}>
                   <button className="btn-secondary" onClick={() => setDeleteConfirmOpen(false)} disabled={deleting} style={{ flex: 1 }}>
-                    Bekor qilish
+                    {t("Bekor qilish")}
                   </button>
                   <button className="btn-primary" onClick={handleConfirmDelete} disabled={deleting} style={{ flex: 1, backgroundColor: colors.destructive, borderColor: colors.destructive }}>
-                    {deleting ? "O'chirilmoqda..." : "Ha, o'chirilsin"}
+                    {deleting ? t("O'chirilmoqda...") : t("Ha, o'chirilsin")}
                   </button>
                 </div>
               </div>
@@ -865,6 +869,7 @@ function CustomerDetailScreenInner() {
 
 export default function CustomerDetail() {
   const { subscriptionActive } = useAuth();
-  if (!subscriptionActive) return <SubscriptionLockScreen screenName="Mijoz tafsilotlari" />;
+  const { t } = useTranslation();
+  if (!subscriptionActive) return <SubscriptionLockScreen screenName={t("Mijoz tafsilotlari")} />;
   return <CustomerDetailScreenInner />;
 }

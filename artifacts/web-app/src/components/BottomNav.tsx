@@ -1,11 +1,13 @@
 import { useLocation } from "wouter";
 import { useColors } from "../hooks/useColors";
 import { useAuth } from "../contexts/AuthContext";
+import { useTranslation } from "../contexts/LanguageContext";
 
 export default function BottomNav() {
   const [location, setLocation] = useLocation();
   const colors = useColors();
   const { role } = useAuth();
+  const { t } = useTranslation();
 
   const isWorker = role === "worker";
 
@@ -13,13 +15,13 @@ export default function BottomNav() {
   // Managers see all 6 tabs
   const tabs = [
     ...(!isWorker
-      ? [{ path: "/", label: "Asosiy", icon: "dashboard" }]
+      ? [{ path: "/", label: t("Asosiy"), icon: "dashboard" }]
       : []),
-    { path: "/pos", label: "Kassa", icon: "shopping_cart" },
-    { path: "/products", label: "Tovarlar", icon: "inventory_2" },
-    { path: "/history", label: "Tarix", icon: "history" },
-    { path: "/customers", label: "Mijozlar", icon: "people" },
-    { path: "/settings", label: "Sozlamalar", icon: "settings" },
+    { path: "/pos", label: t("Kassa"), icon: "shopping_cart" },
+    { path: "/products", label: t("Tovarlar"), icon: "inventory_2" },
+    { path: "/history", label: t("Tarix"), icon: "history" },
+    { path: "/customers", label: t("Mijozlar"), icon: "people" },
+    { path: "/settings", label: t("Sozlamalar"), icon: "settings" },
   ];
 
   return (

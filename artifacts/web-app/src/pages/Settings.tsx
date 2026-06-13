@@ -91,6 +91,7 @@ export function Settings() {
   const colors = useColors();
   const queryClient = useQueryClient();
   const { mode: themeMode, setMode: setThemeMode } = useTheme();
+  const { t, setLanguage } = useTranslation();
   const {
     role,
     managerId,
@@ -189,10 +190,12 @@ export function Settings() {
       setProfilePic(settings.managerProfilePic);
       setTelegramBotToken(settings.telegramBotToken || "");
       setTelegramChatId(settings.telegramChatId || "");
-      setAppLanguage(settings.appLanguage || "uz");
+      const lang = settings.appLanguage || "uz";
+      setAppLanguage(lang);
+      setLanguage(lang);
       setDisabledUnits(settings.disabledUnits || []);
     }
-  }, [settingsLoading, settings]);
+  }, [settingsLoading, settings, setLanguage]);
 
   const handleSaveStoreSettings = async () => {
     if (!storeName.trim()) return;
@@ -785,13 +788,14 @@ export function Settings() {
       )}
 
       {/* Language Section */}
-      <SectionCard title="Ilova tili" icon="translate" colors={colors}>
+      <SectionCard title={t("Ilova tili")} icon="translate" colors={colors}>
         <div style={{ display: "flex", gap: "8px" }}>
           <button
             onClick={() => {
               setAppLanguage("uz");
               const next = { ...settings, appLanguage: "uz" as const };
               saveSettings(next);
+              setLanguage("uz");
             }}
             className="btn-secondary"
             style={{
@@ -803,13 +807,14 @@ export function Settings() {
               fontWeight: 600,
             }}
           >
-            🇺🇿 O'zbekcha
+            {t("O'zbekcha")}
           </button>
           <button
             onClick={() => {
               setAppLanguage("ru");
               const next = { ...settings, appLanguage: "ru" as const };
               saveSettings(next);
+              setLanguage("ru");
             }}
             className="btn-secondary"
             style={{
@@ -821,7 +826,7 @@ export function Settings() {
               fontWeight: 600,
             }}
           >
-            🇷🇺 Русский
+            {t("Русский")}
           </button>
         </div>
       </SectionCard>

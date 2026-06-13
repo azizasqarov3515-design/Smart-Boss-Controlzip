@@ -23,6 +23,7 @@ import {
   type PdfSeller,
 } from "../utils/pdfTemplates";
 import { printDoc, sharePdf } from "../utils/PrintService";
+import { useTranslation } from "../contexts/LanguageContext";
 
 type DocType = "invoice" | "receipt" | "waybill";
 
@@ -76,6 +77,7 @@ function SaleCard({
 }) {
   const [expanded, setExpanded] = useState(false);
   const [loadingDoc, setLoadingDoc] = useState<DocType | null>(null);
+  const { t } = useTranslation();
 
   const pdfCustomer: PdfCustomer | null = sale.customerId
     ? (() => {
@@ -101,7 +103,7 @@ function SaleCard({
     }
   };
 
-  const payTypeLabel: Record<string, string> = { cash: "Naqd", card: "Karta", debt: "Qarz" };
+  const payTypeLabel: Record<string, string> = { cash: t("Naqd"), card: t("Plastik"), debt: t("Qarz") };
   const payTypeBg: Record<string, string> = { cash: "rgba(16, 185, 129, 0.15)", card: "rgba(59, 130, 246, 0.15)", debt: "rgba(245, 158, 11, 0.15)" };
   const payTypeColor: Record<string, string> = { cash: "#10B981", card: "#3B82F6", debt: "#F59E0B" };
 
@@ -166,7 +168,7 @@ function SaleCard({
           </div>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "2px" }}>
             <span style={{ fontSize: "15px", fontWeight: 700, color: colors.success }}>{formatMoney(sale.totalAmount)}</span>
-            <span className="text-muted" style={{ fontSize: "11px" }}>{sale.itemCount} dona</span>
+            <span className="text-muted" style={{ fontSize: "11px" }}>{sale.itemCount} {t("dona")}</span>
           </div>
           {sale.customerName && (
             <div style={{ display: "flex", alignItems: "center", gap: "4px", fontSize: "11px", color: colors.mutedForeground, marginTop: "4px" }}>
@@ -182,11 +184,11 @@ function SaleCard({
         <div style={{ borderTop: `1px solid ${colors.border}`, backgroundColor: colors.muted, padding: "12px", display: "flex", flexDirection: "column", gap: "12px" }}>
           {/* Docs printer row */}
           <div>
-            <span style={{ fontSize: "11px", color: colors.mutedForeground, display: "block", marginBottom: "6px", fontWeight: 500 }}>Hujjatlar:</span>
+            <span style={{ fontSize: "11px", color: colors.mutedForeground, display: "block", marginBottom: "6px", fontWeight: 500 }}>{t("Hujjatlar:")}</span>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "8px" }}>
               {DOC_ACTIONS.map((d) => (
                 <div key={d.type} style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
-                  <span style={{ fontSize: "10px", textAlign: "center", color: colors.mutedForeground, fontWeight: 600 }}>{d.label}</span>
+                  <span style={{ fontSize: "10px", textAlign: "center", color: colors.mutedForeground, fontWeight: 600 }}>{t(d.label)}</span>
                   <div style={{ display: "flex", gap: "2px" }}>
                     <button
                       type="button"
@@ -212,7 +214,7 @@ function SaleCard({
 
           {/* Items Table list */}
           <div style={{ display: "flex", flexDirection: "column", gap: "6px", borderTop: `1px solid ${colors.border}`, paddingTop: "8px" }}>
-            <span style={{ fontSize: "11px", color: colors.mutedForeground, fontWeight: 500 }}>Sotilgan tovarlar:</span>
+            <span style={{ fontSize: "11px", color: colors.mutedForeground, fontWeight: 500 }}>{t("Sotilgan tovarlar:")}</span>
             {sale.items.map((item, idx) => (
               <div
                 key={item.id}
@@ -231,7 +233,7 @@ function SaleCard({
                   <div className="text-muted" style={{ fontSize: "10px" }}>{item.brand}</div>
                 </div>
                 <div style={{ textAlign: "right" }}>
-                  <div>{item.quantity} dona × {item.unitPrice.toLocaleString("uz-UZ")} UZS</div>
+                  <div>{item.quantity} {t("dona")} × {item.unitPrice.toLocaleString("uz-UZ")} UZS</div>
                   <div style={{ fontWeight: 700, color: colors.primary }}>{formatMoney(item.totalPrice)}</div>
                 </div>
               </div>
@@ -242,13 +244,13 @@ function SaleCard({
           {sale.note && (
             <div style={{ display: "flex", gap: "6px", fontSize: "11px", color: colors.mutedForeground, borderTop: `1px solid ${colors.border}`, paddingTop: "8px" }}>
               <span className="material-icons" style={{ fontSize: "14px" }}>notes</span>
-              <span style={{ fontStyle: "italic" }}>Izoh: {sale.note}</span>
+              <span style={{ fontStyle: "italic" }}>{t("Izoh:")} {sale.note}</span>
             </div>
           )}
 
           {/* Financial summary */}
           <div style={{ display: "flex", justifyContent: "space-between", fontSize: "12px", fontWeight: 700, borderTop: `1px solid ${colors.border}`, paddingTop: "8px", color: colors.foreground }}>
-            <span>Jami to'lov:</span>
+            <span>{t("Jami to'lov:")}</span>
             <span>{formatMoney(sale.totalAmount)}</span>
           </div>
         </div>
@@ -263,6 +265,7 @@ function HistoryScreenInner() {
   const { role, workerName, managerId, managerPhone, username } = useAuth();
   const isWorker = role === "worker";
   const { settings } = useSettings(managerId);
+  const { t } = useTranslation();
 
   const [selectionMode, setSelectionMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
@@ -299,7 +302,7 @@ function HistoryScreenInner() {
         setConfirmType(null);
       },
       onError: (err: any) => {
-        alert(err.message || "O'chirishda xatolik yuz berdi");
+        alert(err.message || t("O'chirishda xatolik yuz berdi"));
       }
     },
   });
@@ -316,7 +319,7 @@ function HistoryScreenInner() {
         }, 2000);
       },
       onError: (err: any) => {
-        alert(err.message || "So'rov yuborishda xatolik");
+        alert(err.message || t("So'rov yuborishda xatolik"));
       }
     },
   });
@@ -393,19 +396,19 @@ function HistoryScreenInner() {
           >
             <span className="material-icons">close</span>
           </button>
-          <span style={{ fontSize: "15px", fontWeight: 700 }}>{selectedIds.size} ta tanlandi</span>
+          <span style={{ fontSize: "15px", fontWeight: 700 }}>{selectedIds.size} {t("ta tanlandi")}</span>
           <button
             onClick={handleSelectAll}
             style={{ background: "none", border: "none", color: "white", cursor: "pointer", fontSize: "12px", fontWeight: 600 }}
           >
-            {allSelected ? "Bekor qilish" : "Hammasini tanlash"}
+            {allSelected ? t("Bekor qilish") : t("Hammasini tanlash")}
           </button>
         </div>
       ) : (
         <div>
-          <h2 style={{ fontSize: "20px", color: colors.foreground }}>Savdo tarixi</h2>
+          <h2 style={{ fontSize: "20px", color: colors.foreground }}>{t("Savdo tarixi")}</h2>
           <p className="text-muted" style={{ fontSize: "12px", marginTop: "2px" }}>
-            Tranzaksiyalar va sotuv fakturalarini boshqarish
+            {t("Tranzaksiyalar va sotuv fakturalarini boshqarish")}
           </p>
         </div>
       )}
@@ -414,15 +417,15 @@ function HistoryScreenInner() {
       {!selectionMode && (
         <div className="card-standard" style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "8px", textAlign: "center", padding: "12px" }}>
           <div>
-            <span style={{ fontSize: "10px", color: colors.mutedForeground, display: "block" }}>Sotuvlar</span>
-            <span style={{ fontSize: "14px", fontWeight: 700 }}>{sales?.length ?? 0} ta</span>
+            <span style={{ fontSize: "10px", color: colors.mutedForeground, display: "block" }}>{t("Sotuvlar")}</span>
+            <span style={{ fontSize: "14px", fontWeight: 700 }}>{sales?.length ?? 0} {t("ta")}</span>
           </div>
           <div style={{ borderLeft: `1px solid ${colors.border}`, borderRight: `1px solid ${colors.border}` }}>
-            <span style={{ fontSize: "10px", color: colors.mutedForeground, display: "block" }}>Bugungi tushum</span>
+            <span style={{ fontSize: "10px", color: colors.mutedForeground, display: "block" }}>{t("Bugungi tushum")}</span>
             <span style={{ fontSize: "14px", fontWeight: 700, color: colors.success }}>{formatMoney(todayRevenue)}</span>
           </div>
           <div>
-            <span style={{ fontSize: "10px", color: colors.mutedForeground, display: "block" }}>Jami tushum</span>
+            <span style={{ fontSize: "10px", color: colors.mutedForeground, display: "block" }}>{t("Jami tushum")}</span>
             <span style={{ fontSize: "14px", fontWeight: 700, color: colors.primary }}>{formatMoney(totalRevenue)}</span>
           </div>
         </div>
@@ -445,12 +448,12 @@ function HistoryScreenInner() {
             }}
           >
             <span className="material-icons">{isWorker ? "send" : "delete_sweep"}</span>
-            <span>{isWorker ? `O'chirish so'rovi (${selectedIds.size})` : `O'chirish (${selectedIds.size})`}</span>
+            <span>{isWorker ? `${t("O'chirish so'rovi")} (${selectedIds.size})` : `${t("O'chirish")} (${selectedIds.size})`}</span>
           </button>
         ) : (
           <div style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "11px", color: colors.mutedForeground }}>
             <span className="material-icons" style={{ fontSize: "14px" }}>touch_app</span>
-            <span>Uzoq bosish orqali tanlang</span>
+            <span>{t("Uzoq bosish orqali tanlang")}</span>
           </div>
         )}
 
@@ -472,7 +475,7 @@ function HistoryScreenInner() {
               }}
             >
               <span className="material-icons" style={{ fontSize: "15px", marginRight: "4px" }}>{isWorker ? "send" : "delete_forever"}</span>
-              <span>Jami o'chirish</span>
+              <span>{t("Jami o'chirish")}</span>
             </button>
           )}
 
@@ -486,7 +489,7 @@ function HistoryScreenInner() {
             style={{ fontSize: "12px", padding: "8px 10px" }}
           >
             <span className="material-icons" style={{ fontSize: "15px", marginRight: "4px" }}>checklist</span>
-            <span>{selectionMode ? "Yopish" : "Tanlash"}</span>
+            <span>{selectionMode ? t("Yopish") : t("Tanlash")}</span>
           </button>
         </div>
       </div>
@@ -495,15 +498,15 @@ function HistoryScreenInner() {
       {isLoading ? (
         <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "60px", gap: "12px" }}>
           <div className="spinner" style={{ width: "30px", height: "30px", border: `3px solid ${colors.border}`, borderTopColor: colors.primary, borderRadius: "50%", animation: "spin 1s linear infinite" }}></div>
-          <span style={{ fontSize: "13px", color: colors.mutedForeground }}>Savdolar yuklanmoqda...</span>
+          <span style={{ fontSize: "13px", color: colors.mutedForeground }}>{t("Savdolar yuklanmoqda...")}</span>
         </div>
       ) : (sales ?? []).length === 0 ? (
         <div className="card-standard" style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "50px 20px", textAlign: "center", gap: "10px" }}>
           <span className="material-icons" style={{ fontSize: "48px", color: colors.border }}>receipt_long</span>
           <div>
-            <h4 style={{ fontSize: "15px", color: colors.foreground }}>Sotuvlar tarixi bo'sh</h4>
+            <h4 style={{ fontSize: "15px", color: colors.foreground }}>{t("Sotuvlar tarixi bo'sh")}</h4>
             <p className="text-muted" style={{ fontSize: "12px", marginTop: "4px" }}>
-              POS kassa bo'limidan birinchi sotuvni amalga oshiring
+              {t("POS kassa bo'limidan birinchi sotuvni amalga oshiring")}
             </p>
           </div>
         </div>
@@ -535,21 +538,21 @@ function HistoryScreenInner() {
               <div style={{ width: "40px", height: "40px", borderRadius: "50%", backgroundColor: "rgba(239, 68, 68, 0.1)", color: colors.destructive, display: "flex", alignItems: "center", justifyContent: "center" }}>
                 <span className="material-icons">delete_forever</span>
               </div>
-              <h3 style={{ fontSize: "17px" }}>Savdo tarixini o'chirish</h3>
+              <h3 style={{ fontSize: "17px" }}>{t("Savdo tarixini o'chirish")}</h3>
             </div>
             <p style={{ fontSize: "13.5px", lineHeight: "1.5" }}>
               {confirmType === "all"
-                ? "Haqiqatdan ham barcha sotuvlar tarixini butunlay o'chirib tashlaysizmi? Tovar qoldiqlari avtomatik ravishda tiklanadi."
-                : `Tanlangan ${selectedIds.size} ta sotuv tarixini o'chirasizmi? Tovar qoldiqlari tiklanadi.`}
+                ? t("Haqiqatdan ham barcha sotuvlar tarixini butunlay o'chirib tashlaysizmi? Tovar qoldiqlari avtomatik ravishda tiklanadi.")
+                : `${selectedIds.size} ${t("ta sotuv tarixini o'chirasizmi? Tovar qoldiqlari tiklanadi.")}`}
               <br />
-              <strong style={{ color: colors.destructive }}>Ushbu amalni ortga qaytarib bo'lmaydi!</strong>
+              <strong style={{ color: colors.destructive }}>{t("Ushbu amalni ortga qaytarib bo'lmaydi!")}</strong>
             </p>
             <div style={{ display: "flex", gap: "10px", marginTop: "16px" }}>
               <button className="btn-secondary" onClick={() => setConfirmType(null)} disabled={bulkDeleting} style={{ flex: 1 }}>
-                Bekor qilish
+                {t("Bekor qilish")}
               </button>
               <button className="btn-primary" onClick={handleConfirmDelete} disabled={bulkDeleting} style={{ flex: 1, backgroundColor: colors.destructive, borderColor: colors.destructive }}>
-                {bulkDeleting ? "O'chirilmoqda..." : "Ha, o'chirilsin"}
+                {bulkDeleting ? t("O'chirilmoqda...") : t("Ha, o'chirilsin")}
               </button>
             </div>
           </div>
@@ -566,9 +569,9 @@ function HistoryScreenInner() {
                 <div style={{ width: "65px", height: "65px", borderRadius: "50%", backgroundColor: "rgba(16, 185, 129, 0.1)", color: colors.success, display: "flex", alignItems: "center", justifyContent: "center" }}>
                   <span className="material-icons" style={{ fontSize: "32px" }}>check_circle</span>
                 </div>
-                <h3 style={{ fontSize: "17px" }}>So'rov yuborildi!</h3>
+                <h3 style={{ fontSize: "17px" }}>{t("So'rov yuborildi!")}</h3>
                 <p className="text-muted" style={{ fontSize: "13px" }}>
-                  Rahbar so'rovni ko'rib chiqib tasdiqlaganidan so'ng ushbu savdo ma'lumotlari o'chiriladi.
+                  {t("Rahbar so'rovni ko'rib chiqib tasdiqlaganidan so'ng ushbu savdo ma'lumotlari o'chiriladi.")}
                 </p>
               </div>
             ) : (
@@ -578,21 +581,21 @@ function HistoryScreenInner() {
                     <span className="material-icons">send</span>
                   </div>
                   <div>
-                    <h3 style={{ fontSize: "16px" }}>O'chirish so'rovi yuborish</h3>
-                    <p className="text-muted" style={{ fontSize: "11px" }}>Rahbar tasdig'i lozim</p>
+                    <h3 style={{ fontSize: "16px" }}>{t("O'chirish so'rovi yuborish")}</h3>
+                    <p className="text-muted" style={{ fontSize: "11px" }}>{t("Rahbar tasdig'i lozim")}</p>
                   </div>
                 </div>
                 <p style={{ fontSize: "13.5px", lineHeight: "1.5" }}>
                   {workerRequestModal === "all"
-                    ? "Barcha savdolar tarixini o'chirish bo'yicha rahbariyatga so'rov yuborilsinmi?"
-                    : `Tanlangan ${selectedIds.size} ta savdo tarixini o'chirish bo'yicha rahbariyatga so'rov yuborilsinmi?`}
+                    ? t("Barcha savdolar tarixini o'chirish bo'yicha rahbariyatga so'rov yuborilsinmi?")
+                    : `${selectedIds.size} ${t("ta savdo tarixini o'chirish bo'yicha rahbariyatga so'rov yuborilsinmi?")}`}
                 </p>
                 <div style={{ display: "flex", gap: "10px", marginTop: "12px" }}>
                   <button className="btn-secondary" onClick={() => setWorkerRequestModal(null)} disabled={sendingRequest} style={{ flex: 1 }}>
-                    Bekor qilish
+                    {t("Bekor qilish")}
                   </button>
                   <button className="btn-primary" onClick={handleSendWorkerRequest} disabled={sendingRequest} style={{ flex: 1, backgroundColor: "#E65100", borderColor: "#E65100" }}>
-                    {sendingRequest ? "Yuborilmoqda..." : "Ha, yuborish"}
+                    {sendingRequest ? t("Yuborilmoqda...") : t("Ha, yuborish")}
                   </button>
                 </div>
               </div>
@@ -606,6 +609,7 @@ function HistoryScreenInner() {
 
 export default function History() {
   const { subscriptionActive } = useAuth();
-  if (!subscriptionActive) return <SubscriptionLockScreen screenName="Tarix" />;
+  const { t } = useTranslation();
+  if (!subscriptionActive) return <SubscriptionLockScreen screenName={t("Tarix")} />;
   return <HistoryScreenInner />;
 }

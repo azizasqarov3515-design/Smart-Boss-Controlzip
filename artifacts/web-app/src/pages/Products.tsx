@@ -12,6 +12,7 @@ import {
 import { useAuth } from "../contexts/AuthContext";
 import { useColors } from "../hooks/useColors";
 import { SubscriptionLockScreen } from "../components/SubscriptionLockScreen";
+import { useTranslation } from "../contexts/LanguageContext";
 
 type SortKey = "name" | "brand" | "costPrice" | "salePrice" | "quantity";
 
@@ -48,6 +49,7 @@ function ProductsScreenInner() {
   const queryClient = useQueryClient();
   const { role, subscriptionActive } = useAuth();
   const isWorker = role === "worker";
+  const { t } = useTranslation();
 
   const [search, setSearch] = useState("");
   const [sortKey, setSortKey] = useState<SortKey>("name");
@@ -69,7 +71,7 @@ function ProductsScreenInner() {
         queryClient.invalidateQueries({ queryKey: getGetDashboardStatsQueryKey() });
       },
       onError: (err: any) => {
-        alert(err.message || "Mahsulotni o'chirishda xato yuz berdi");
+        alert(err.message || t("Mahsulotni o'chirishda xato yuz berdi"));
       }
     },
   });
@@ -80,7 +82,7 @@ function ProductsScreenInner() {
         setRequestSent(true);
       },
       onError: (err: any) => {
-        alert(err.message || "So'rov yuborishda xato yuz berdi");
+        alert(err.message || t("So'rov yuborishda xato yuz berdi"));
       }
     },
   });
@@ -175,9 +177,9 @@ function ProductsScreenInner() {
       {/* Header */}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
         <div>
-          <h2 style={{ fontSize: "20px", color: colors.foreground }}>Mahsulotlar</h2>
+          <h2 style={{ fontSize: "20px", color: colors.foreground }}>{t("Mahsulotlar")}</h2>
           <p className="text-muted" style={{ fontSize: "12px", marginTop: "2px" }}>
-            Do'kon omboridagi barcha tovarlar ro'yxati
+            {t("Do'kon omboridagi barcha tovarlar ro'yxati")}
           </p>
         </div>
         <button
@@ -186,7 +188,7 @@ function ProductsScreenInner() {
           style={{ padding: "10px 14px", borderRadius: "12px", gap: "6px" }}
         >
           <span className="material-icons">add</span>
-          <span>Yangi tovar</span>
+          <span>{t("Yangi tovar")}</span>
         </button>
       </div>
 
@@ -198,7 +200,7 @@ function ProductsScreenInner() {
           className="input-field"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          placeholder="Nomi, brendi yoki shtrix-kodi bo'yicha qidirish..."
+          placeholder={t("Nomi, brendi yoki shtrix-kodi bo'yicha qidirish...")}
           style={{ paddingLeft: "45px" }}
         />
         {search && (
@@ -228,20 +230,20 @@ function ProductsScreenInner() {
           <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
             <span className="material-icons" style={{ color: "#D97706" }}>warning</span>
             <span style={{ fontSize: "13px", color: "#B45309", fontWeight: 500 }}>
-              {lowStockCount} ta mahsulot omborda kam qoldi (5 tadan kam)
+              {lowStockCount} {t("ta mahsulot omborda kam qoldi (5 tadan kam)")}
             </span>
           </div>
-          <span style={{ fontSize: "12px", color: colors.primary, fontWeight: 600 }}>Ko'rish</span>
+          <span style={{ fontSize: "12px", color: colors.primary, fontWeight: 600 }}>{t("Ko'rish")}</span>
         </div>
       )}
 
       {/* Unit Filter tabs */}
       <div style={{ display: "flex", gap: "8px", overflowX: "auto", paddingBottom: "4px" }}>
         {([
-          { key: "all", label: "Barchasi", icon: "📦" },
-          { key: "dona", label: "Dona", icon: "🔢" },
-          { key: "kg", label: "Kilogramm", icon: "⚖️" },
-          { key: "m", label: "Metr", icon: "📏" },
+          { key: "all", label: t("Barchasi"), icon: "📦" },
+          { key: "dona", label: t("Dona"), icon: "🔢" },
+          { key: "kg", label: t("Kilogramm"), icon: "⚖️" },
+          { key: "m", label: t("Metr"), icon: "📏" },
         ] as const).map((ut) => {
           const isActive = unitFilter === ut.key;
           return (
@@ -274,13 +276,13 @@ function ProductsScreenInner() {
       {/* Meta sorting line */}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: "12px" }}>
         <span style={{ color: colors.mutedForeground, fontWeight: 500 }}>
-          Natija: {filtered.length} / {products?.length ?? 0} ta tovar
+          {t("Natija:")} {filtered.length} / {products?.length ?? 0} {t("ta tovar")}
         </span>
         <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
-          <span style={{ color: colors.mutedForeground }}>Tartiblash:</span>
-          <SortBtn col="name" label="Nom" />
-          <SortBtn col="salePrice" label="Sotuv" />
-          <SortBtn col="quantity" label="Soni" />
+          <span style={{ color: colors.mutedForeground }}>{t("Tartiblash:")}</span>
+          <SortBtn col="name" label={t("Nom")} />
+          <SortBtn col="salePrice" label={t("Sotuv")} />
+          <SortBtn col="quantity" label={t("Soni")} />
         </div>
       </div>
 
@@ -288,20 +290,20 @@ function ProductsScreenInner() {
       {isLoading ? (
         <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "60px", gap: "12px" }}>
           <div className="spinner" style={{ width: "30px", height: "30px", border: `3px solid ${colors.border}`, borderTopColor: colors.primary, borderRadius: "50%", animation: "spin 1s linear infinite" }}></div>
-          <span style={{ fontSize: "13px", color: colors.mutedForeground }}>Mahsulotlar yuklanmoqda...</span>
+          <span style={{ fontSize: "13px", color: colors.mutedForeground }}>{t("Mahsulotlar yuklanmoqda...")}</span>
         </div>
       ) : filtered.length === 0 ? (
         <div className="card-standard" style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "40px 20px", textAlign: "center", gap: "12px" }}>
           <span className="material-icons" style={{ fontSize: "48px", color: colors.border }}>inventory_2</span>
           <div>
-            <h4 style={{ fontSize: "15px", color: colors.foreground }}>Hech narsa topilmadi</h4>
+            <h4 style={{ fontSize: "15px", color: colors.foreground }}>{t("Hech narsa topilmadi")}</h4>
             <p className="text-muted" style={{ fontSize: "12px", marginTop: "4px" }}>
-              {search ? `"${search}" qidiruviga mos mahsulot yo'q` : "Hozircha mahsulot qo'shilmagan"}
+              {search ? `"${search}" ${t("qidiruviga mos mahsulot yo'q")}` : t("Hozircha mahsulot qo'shilmagan")}
             </p>
           </div>
           {!search && (
             <button className="btn-primary" onClick={() => setLocation("/product-form")} style={{ marginTop: "8px" }}>
-              Tovar qo'shish
+              {t("Tovar qo'shish")}
             </button>
           )}
         </div>
@@ -375,7 +377,7 @@ function ProductsScreenInner() {
                         borderRadius: "6px",
                         textTransform: "uppercase"
                       }}>
-                        Kam qoldi
+                        {t("Kam qoldi")}
                       </span>
                     )}
                   </div>
@@ -384,11 +386,11 @@ function ProductsScreenInner() {
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderTop: `1px solid ${colors.border}`, paddingTop: "8px", marginTop: "2px" }}>
                   <div style={{ display: "flex", gap: "12px", fontSize: "12px" }}>
                     <div>
-                      <span className="text-muted" style={{ marginRight: "4px" }}>Tan:</span>
+                      <span className="text-muted" style={{ marginRight: "4px" }}>{t("Tan:")}</span>
                       <span style={{ fontWeight: 600 }}>{product.costPrice.toLocaleString("uz-UZ")} UZS</span>
                     </div>
                     <div>
-                      <span className="text-muted" style={{ marginRight: "4px" }}>Sotuv:</span>
+                      <span className="text-muted" style={{ marginRight: "4px" }}>{t("Sotuv:")}</span>
                       <span style={{ color: colors.primary, fontWeight: 700 }}>{product.salePrice.toLocaleString("uz-UZ")} UZS</span>
                     </div>
                   </div>
@@ -415,7 +417,7 @@ function ProductsScreenInner() {
                       padding: "3px 8px",
                       borderRadius: "8px"
                     }}>
-                      {product.quantity} {product.unit || "dona"}
+                      {product.quantity} {product.unit ? t(product.unit.charAt(0).toUpperCase() + product.unit.slice(1)) : t("Dona")}
                     </div>
 
                     {/* Action buttons */}
@@ -503,12 +505,12 @@ function ProductsScreenInner() {
                 <div style={{ width: "60px", height: "60px", borderRadius: "50%", backgroundColor: "rgba(16, 185, 129, 0.1)", color: colors.success, display: "flex", alignItems: "center", justifyContent: "center" }}>
                   <span className="material-icons" style={{ fontSize: "32px" }}>check_circle</span>
                 </div>
-                <h3 style={{ fontSize: "18px", color: colors.foreground }}>So'rov yuborildi!</h3>
+                <h3 style={{ fontSize: "18px", color: colors.foreground }}>{t("So'rov yuborildi!")}</h3>
                 <p className="text-muted" style={{ fontSize: "13px" }}>
-                  Tizim raxbari so'rovni ko'rib chiqib tasdiqlagach, ushbu mahsulot ro'yxatdan o'chiriladi.
+                  {t("Tizim raxbari so'rovni ko'rib chiqib tasdiqlagach, ushbu mahsulot ro'yxatdan o'chiriladi.")}
                 </p>
                 <button className="btn-primary" onClick={handleCloseModal} style={{ width: "100%", marginTop: "10px" }}>
-                  Yaxshi
+                  {t("Yaxshi")}
                 </button>
               </div>
             ) : isWorker ? (
@@ -518,21 +520,21 @@ function ProductsScreenInner() {
                     <span className="material-icons">send</span>
                   </div>
                   <div>
-                    <h3 style={{ fontSize: "16px" }}>O'chirish so'rovi</h3>
-                    <p className="text-muted" style={{ fontSize: "12px" }}>Raxbardan ruxsat so'rash</p>
+                    <h3 style={{ fontSize: "16px" }}>{t("O'chirish so'rovi")}</h3>
+                    <p className="text-muted" style={{ fontSize: "12px" }}>{t("Raxbardan ruxsat so'rash")}</p>
                   </div>
                 </div>
 
                 <p style={{ fontSize: "14px", lineHeight: "1.5" }}>
-                  Haqiqatdan ham <strong style={{ color: colors.foreground }}>"{confirmProduct.name}"</strong> mahsulotini o'chirish bo'yicha rahbariyatga so'rov yuborilsinmi?
+                  {t("Haqiqatdan ham")} <strong style={{ color: colors.foreground }}>"{confirmProduct.name}"</strong> {t("mahsulotini o'chirish bo'yicha rahbariyatga so'rov yuborilsinmi?")}
                 </p>
 
                 <div style={{ display: "flex", gap: "10px", marginTop: "12px" }}>
                   <button className="btn-secondary" onClick={handleCloseModal} style={{ flex: 1 }} disabled={sendingRequest}>
-                    Yo'q, bekor qilish
+                    {t("Yo'q, bekor qilish")}
                   </button>
                   <button className="btn-primary" onClick={handleConfirm} style={{ flex: 1, backgroundColor: "#E65100", borderColor: "#E65100" }} disabled={sendingRequest}>
-                    {sendingRequest ? "Yuborilmoqda..." : "Ha, yuborish"}
+                    {sendingRequest ? t("Yuborilmoqda...") : t("Ha, yuborish")}
                   </button>
                 </div>
               </div>
@@ -543,21 +545,21 @@ function ProductsScreenInner() {
                     <span className="material-icons">delete_forever</span>
                   </div>
                   <div>
-                    <h3 style={{ fontSize: "16px" }}>Tovarni o'chirish</h3>
-                    <p className="text-muted" style={{ fontSize: "12px" }}>Ushbu amalni ortga qaytarib bo'lmaydi</p>
+                    <h3 style={{ fontSize: "16px" }}>{t("Tovarni o'chirish")}</h3>
+                    <p className="text-muted" style={{ fontSize: "12px" }}>{t("Ushbu amalni ortga qaytarib bo'lmaydi")}</p>
                   </div>
                 </div>
 
                 <p style={{ fontSize: "14px", lineHeight: "1.5" }}>
-                  Haqiqatdan ham <strong style={{ color: colors.foreground }}>"{confirmProduct.name}"</strong> mahsulotini do'kon bazasidan butunlay o'chirasizmi?
+                  {t("Haqiqatdan ham")} <strong style={{ color: colors.foreground }}>"{confirmProduct.name}"</strong> {t("mahsulotini do'kon bazasidan butunlay o'chirasizmi?")}
                 </p>
 
                 <div style={{ display: "flex", gap: "10px", marginTop: "12px" }}>
                   <button className="btn-secondary" onClick={handleCloseModal} style={{ flex: 1 }} disabled={deleting}>
-                    Bekor qilish
+                    {t("Bekor qilish")}
                   </button>
                   <button className="btn-primary" onClick={handleConfirm} style={{ flex: 1, backgroundColor: colors.destructive, borderColor: colors.destructive }} disabled={deleting}>
-                    {deleting ? "O'chirilmoqda..." : "Ha, o'chirilsin"}
+                    {deleting ? t("O'chirilmoqda...") : t("Ha, o'chirilsin")}
                   </button>
                 </div>
               </div>
@@ -571,6 +573,7 @@ function ProductsScreenInner() {
 
 export default function Products() {
   const { subscriptionActive } = useAuth();
-  if (!subscriptionActive) return <SubscriptionLockScreen screenName="Mahsulotlar" />;
+  const { t } = useTranslation();
+  if (!subscriptionActive) return <SubscriptionLockScreen screenName={t("Mahsulotlar")} />;
   return <ProductsScreenInner />;
 }

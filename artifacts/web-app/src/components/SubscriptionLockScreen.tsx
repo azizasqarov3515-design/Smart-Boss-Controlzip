@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { useColors } from "../hooks/useColors";
+import { useTranslation } from "../contexts/LanguageContext";
 
 interface Props {
   screenName?: string;
@@ -7,6 +8,7 @@ interface Props {
 
 export function SubscriptionLockScreen({ screenName }: Props) {
   const colors = useColors();
+  const { t } = useTranslation();
   const [phone, setPhone] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [fetched, setFetched] = useState(false);
@@ -64,10 +66,10 @@ export function SubscriptionLockScreen({ screenName }: Props) {
         </div>
 
         <h3 style={{ fontSize: "20px", color: colors.foreground, marginBottom: "4px" }}>
-          {screenName ? `"${screenName}" bo'limi` : "Bu bo'lim"}
+          {screenName ? `"${screenName}" ${t("bo'limi")}` : t("Bu bo'lim")}
         </h3>
         <p className="text-muted" style={{ fontSize: "14px", marginBottom: "20px" }}>
-          faqat faol obuna bilan ishlaydi
+          {t("faqat faol obuna bilan ishlaydi")}
         </p>
 
         <div style={{
@@ -87,7 +89,7 @@ export function SubscriptionLockScreen({ screenName }: Props) {
         }}>
           <span className="material-icons" style={{ fontSize: "16px", marginTop: "2px" }}>info_outline</span>
           <span>
-            Avval obuna paketini sotib oling, so'ng admin tomonidan faollashtiriladi
+            {t("Avval obuna paketini sotib oling, so'ng admin tomonidan faollashtiriladi")}
           </span>
         </div>
 
@@ -99,11 +101,11 @@ export function SubscriptionLockScreen({ screenName }: Props) {
             style={{ width: "100%" }}
           >
             {loading ? (
-              <span>Yuklanmoqda…</span>
+              <span>{t("Yuklanmoqda...")}</span>
             ) : (
               <>
                 <span className="material-icons">shopping_cart</span>
-                <span>Obuna sotib olish</span>
+                <span>{t("Obuna sotib olish")}</span>
               </>
             )}
           </button>
@@ -112,7 +114,7 @@ export function SubscriptionLockScreen({ screenName }: Props) {
             {phone ? (
               <>
                 <span style={{ fontSize: "13px", color: colors.mutedForeground, fontWeight: 500 }}>
-                  Admin telefon raqami:
+                  {t("Admin telefon raqami:")}
                 </span>
                 <a
                   href={`tel:${phone}`}
@@ -136,7 +138,7 @@ export function SubscriptionLockScreen({ screenName }: Props) {
                   <span>{phone}</span>
                 </a>
                 <span style={{ fontSize: "12px", color: colors.mutedForeground, lineHeight: "18px" }}>
-                  To'lovni amalga oshiring, admin obunangizni faollashtiradi
+                  {t("To'lovni amalga oshiring, admin obunangizni faollashtiradi")}
                 </span>
               </>
             ) : (
@@ -155,7 +157,7 @@ export function SubscriptionLockScreen({ screenName }: Props) {
               }}>
                 <span className="material-icons">phone_disabled</span>
                 <span>
-                  Admin telefon raqami hali kiritilmagan.<br />Keyinroq urinib ko'ring.
+                  {t("Admin telefon raqami hali kiritilmagan.")}<br />{t("Keyinroq urinib ko'ring.")}
                 </span>
               </div>
             )}
@@ -177,7 +179,7 @@ export function SubscriptionLockScreen({ screenName }: Props) {
               }}
             >
               <span className="material-icons" style={{ fontSize: "16px" }}>refresh</span>
-              <span>Qayta urinish</span>
+              <span>{t("Qayta urinish")}</span>
             </button>
           </div>
         )}

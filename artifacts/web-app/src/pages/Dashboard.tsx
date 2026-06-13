@@ -8,8 +8,8 @@ import {
   useGetDeleteRequests,
 } from "@workspace/api-client-react";
 import { useAuth } from "../contexts/AuthContext";
-import { useColors } from "../hooks/useColors";
 import { useSettings } from "../hooks/useSettings";
+import { useTranslation } from "../contexts/LanguageContext";
 
 function formatMoney(amount: number) {
   if (amount >= 1_000_000_000) return (amount / 1_000_000_000).toFixed(1) + " mlrd UZS";
@@ -22,6 +22,7 @@ function formatTime(iso: string) {
 }
 
 export function Dashboard() {
+  const { t } = useTranslation();
   const [, setLocation] = useLocation();
   const colors = useColors();
   const { username, role, managerId, downloadBackup } = useAuth();
@@ -105,7 +106,7 @@ export function Dashboard() {
       a.click();
       URL.revokeObjectURL(url);
     } catch (e: any) {
-      alert(e.message || "Xato yuz berdi");
+      alert(e.message || t("Xato yuz berdi"));
     } finally {
       setBackupLoading(false);
     }
@@ -115,7 +116,7 @@ export function Dashboard() {
     return (
       <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", flex: 1, gap: "12px", height: "80vh" }}>
         <div className="spinner" style={{ width: "30px", height: "30px", border: `3px solid ${colors.border}`, borderTopColor: colors.primary, borderRadius: "50%", animation: "spin 1s linear infinite" }}></div>
-        <span style={{ fontSize: "14px", color: colors.mutedForeground }}>Yuklanmoqda...</span>
+        <span style={{ fontSize: "14px", color: colors.mutedForeground }}>{t("Yuklanmoqda...")}</span>
       </div>
     );
   }
@@ -127,7 +128,7 @@ export function Dashboard() {
         <div>
           <h2 style={{ fontSize: "20px", color: colors.foreground }}>SMARTBOSScontrol</h2>
           <p className="text-muted" style={{ fontSize: "12px", marginTop: "2px" }}>
-            Bugungi sana: {dateStr}
+            {t("Bugungi sana:")} {dateStr}
           </p>
         </div>
         {settings.managerProfilePic && (
@@ -155,21 +156,21 @@ export function Dashboard() {
         <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
           {/* Stats Cards */}
           <div>
-            <h3 style={{ fontSize: "15px", color: colors.foreground, marginBottom: "10px" }}>Bugungi savdo</h3>
+            <h3 style={{ fontSize: "15px", color: colors.foreground, marginBottom: "10px" }}>{t("Bugungi savdo")}</h3>
             <div className="dashboard-stats-grid">
               <div className="card-glow-blue" style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
                 <span className="material-icons" style={{ color: colors.primary, fontSize: "24px" }}>point_of_sale</span>
-                <span style={{ fontSize: "11px", color: colors.mutedForeground }}>Sotuv soni</span>
-                <span style={{ fontSize: "20px", fontWeight: 700 }}>{todaySales.length} ta</span>
+                <span style={{ fontSize: "11px", color: colors.mutedForeground }}>{t("Sotuv soni")}</span>
+                <span style={{ fontSize: "20px", fontWeight: 700 }}>{todaySales.length} {t("ta")}</span>
               </div>
               <div className="card-glow-green" style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
                 <span className="material-icons" style={{ color: colors.success, fontSize: "24px" }}>trending_up</span>
-                <span style={{ fontSize: "11px", color: colors.mutedForeground }}>Bugungi tushum</span>
+                <span style={{ fontSize: "11px", color: colors.mutedForeground }}>{t("Bugungi tushum")}</span>
                 <span style={{ fontSize: "20px", fontWeight: 700, color: colors.success }}>{formatMoney(todayRevenue)}</span>
               </div>
               <div className="card-glow-green" style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
                 <span className="material-icons" style={{ color: colors.success, fontSize: "24px" }}>savings</span>
-                <span style={{ fontSize: "11px", color: colors.mutedForeground }}>Bugungi sof foyda</span>
+                <span style={{ fontSize: "11px", color: colors.mutedForeground }}>{t("Bugungi sof foyda")}</span>
                 <span style={{ fontSize: "20px", fontWeight: 700, color: colors.success }}>{formatMoney(stats?.todayNetProfit ?? 0)}</span>
               </div>
             </div>
@@ -178,7 +179,7 @@ export function Dashboard() {
           {/* SVG Chart */}
           <div className="card-standard" style={{ padding: "18px 0" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "0 16px", marginBottom: "12px" }}>
-              <h4 style={{ fontSize: "14px", color: colors.foreground }}>Savdo tendensiyasi</h4>
+              <h4 style={{ fontSize: "14px", color: colors.foreground }}>{t("Savdo tendensiyasi")}</h4>
               <span style={{ fontSize: "12px", color: colors.mutedForeground }}>{dateStr}</span>
             </div>
             <div style={{ height: `${chartHeight}px`, width: "100%", overflow: "hidden" }}>
@@ -272,7 +273,7 @@ export function Dashboard() {
           {/* Recent Sales */}
           {recentSales.length > 0 && (
             <div>
-              <h3 style={{ fontSize: "15px", color: colors.foreground, marginBottom: "10px" }}>So'nggi savdolar</h3>
+              <h3 style={{ fontSize: "15px", color: colors.foreground, marginBottom: "10px" }}>{t("So'nggi savdolar")}</h3>
               <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
                 {recentSales.map((sale) => (
                   <div key={sale.id} className="card-standard" style={{ display: "flex", alignItems: "center", gap: "12px" }}>
@@ -291,7 +292,7 @@ export function Dashboard() {
                       #{sale.id}
                     </div>
                     <div style={{ flex: 1 }}>
-                      <h4 style={{ fontSize: "14px", color: colors.foreground }}>{sale.itemCount} dona mahsulot</h4>
+                      <h4 style={{ fontSize: "14px", color: colors.foreground }}>{sale.itemCount} {t("dona mahsulot")}</h4>
                       <p style={{ fontSize: "11px", color: colors.mutedForeground, marginTop: "2px" }}>{formatTime(sale.createdAt)}</p>
                     </div>
                     <span style={{ fontSize: "15px", fontWeight: 700, color: colors.primary }}>{formatMoney(sale.totalAmount)}</span>
@@ -311,7 +312,7 @@ export function Dashboard() {
                   fontSize: "14px"
                 }}
               >
-                <span>Barcha tranzaksiyalar</span>
+                <span>{t("Barcha tranzaksiyalar")}</span>
                 <span className="material-icons">arrow_forward</span>
               </button>
             </div>
@@ -338,11 +339,11 @@ export function Dashboard() {
                 <div className="pulse-dot"></div>
                 <span className="material-icons" style={{ color: "#D97706" }}>notifications_active</span>
                 <div>
-                  <h4 style={{ fontSize: "13px", color: "#92400E" }}>Kutayotgan so'rovlar</h4>
+                  <h4 style={{ fontSize: "13px", color: "#92400E" }}>{t("Kutayotgan so'rovlar")}</h4>
                   <p style={{ fontSize: "11px", color: "#B45309", marginTop: "2px" }}>
-                    {pendingWorkers.length > 0 && `${pendingWorkers.length} ta ishchi arizasi`}
+                    {pendingWorkers.length > 0 && `${pendingWorkers.length} ${t("Ishchi arizalari")}`}
                     {pendingWorkers.length > 0 && pendingDeleteRequests.length > 0 && " • "}
-                    {pendingDeleteRequests.length > 0 && `${pendingDeleteRequests.length} ta o'chirish so'rovi`}
+                    {pendingDeleteRequests.length > 0 && `${pendingDeleteRequests.length} ${t("O'chirish so'rovlari")}`}
                   </p>
                 </div>
               </div>
@@ -352,26 +353,26 @@ export function Dashboard() {
 
           {/* Ombor holati */}
           <div>
-            <h3 style={{ fontSize: "15px", color: colors.foreground, marginBottom: "10px" }}>Ombor holati</h3>
+            <h3 style={{ fontSize: "15px", color: colors.foreground, marginBottom: "10px" }}>{t("Ombor holati")}</h3>
             <div className="dashboard-warehouse-grid">
               <div className="card-standard" style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
                 <span className="material-icons" style={{ color: colors.primary, fontSize: "22px" }}>inventory_2</span>
-                <span style={{ fontSize: "11px", color: colors.mutedForeground }}>Tovarlar turi</span>
-                <span style={{ fontSize: "18px", fontWeight: 700 }}>{stats?.totalProducts ?? 0} xil</span>
+                <span style={{ fontSize: "11px", color: colors.mutedForeground }}>{t("Tovarlar turi")}</span>
+                <span style={{ fontSize: "18px", fontWeight: 700 }}>{stats?.totalProducts ?? 0} {t("xil")}</span>
               </div>
               <div className="card-standard" style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
                 <span className="material-icons" style={{ color: colors.warning, fontSize: "22px" }}>widgets</span>
-                <span style={{ fontSize: "11px", color: colors.mutedForeground }}>Jami dona</span>
-                <span style={{ fontSize: "18px", fontWeight: 700 }}>{stats?.totalItems ?? 0} dona</span>
+                <span style={{ fontSize: "11px", color: colors.mutedForeground }}>{t("Jami dona")}</span>
+                <span style={{ fontSize: "18px", fontWeight: 700 }}>{stats?.totalItems ?? 0} {t("dona")}</span>
               </div>
               <div className="card-standard" style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
                 <span className="material-icons" style={{ color: colors.primary, fontSize: "22px" }}>account_balance_wallet</span>
-                <span style={{ fontSize: "11px", color: colors.mutedForeground }}>Ombor tan narxi</span>
+                <span style={{ fontSize: "11px", color: colors.mutedForeground }}>{t("Ombor tan narxi")}</span>
                 <span style={{ fontSize: "16px", fontWeight: 700 }}>{formatMoney(stats?.totalCostValue ?? 0)}</span>
               </div>
               <div className="card-standard" style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
                 <span className="material-icons" style={{ color: colors.warning, fontSize: "22px" }}>monetization_on</span>
-                <span style={{ fontSize: "11px", color: colors.mutedForeground }}>Sotuv qiymati</span>
+                <span style={{ fontSize: "11px", color: colors.mutedForeground }}>{t("Sotuv qiymati")}</span>
                 <span style={{ fontSize: "16px", fontWeight: 700 }}>{formatMoney(stats?.totalSaleValue ?? 0)}</span>
               </div>
             </div>
@@ -383,10 +384,10 @@ export function Dashboard() {
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "12px" }}>
                 <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
                   <span className="material-icons" style={{ color: "#E65100" }}>warning</span>
-                  <h4 style={{ fontSize: "14px", color: "#BF360C" }}>Kam qolgan tovarlar</h4>
+                  <h4 style={{ fontSize: "14px", color: "#BF360C" }}>{t("Kam qolgan tovarlar")}</h4>
                 </div>
                 <div style={{ backgroundColor: "#E65100", color: "white", padding: "2px 8px", borderRadius: "6px", fontSize: "11px", fontWeight: 700 }}>
-                  {lowStockProducts.length} ta
+                  {lowStockProducts.length} {t("ta")}
                 </div>
               </div>
 
@@ -419,12 +420,11 @@ export function Dashboard() {
                       fontSize: "12px",
                       fontWeight: 700
                     }}>
-                      {p.quantity === 0 ? "Tugagan" : `${p.quantity} dona`}
+                      {p.quantity === 0 ? t("Tugagan") : `${p.quantity} ${t("dona")}`}
                     </div>
                   </div>
                 ))}
               </div>
-
               <div
                 onClick={() => setLocation("/products")}
                 style={{
@@ -441,16 +441,16 @@ export function Dashboard() {
                   cursor: "pointer"
                 }}
               >
-                <span>Mahsulotlar ro'yxatiga o'tish</span>
+                <span>{t("Mahsulotlar ro'yxatiga o'tish")}</span>
                 <span className="material-icons" style={{ fontSize: "14px" }}>arrow_forward</span>
               </div>
             </div>
           )}
-
+ 
           {/* Backup Section */}
           <div style={{ borderTop: `1px solid ${colors.border}`, paddingTop: "20px" }}>
             <p style={{ fontSize: "12px", color: colors.mutedForeground, marginBottom: "10px", fontWeight: 500 }}>
-              Ma'lumotlar zaxirasi
+              {t("Ma'lumotlar zaxirasi")}
             </p>
             <button
               onClick={handleBackup}
@@ -464,7 +464,7 @@ export function Dashboard() {
                 <span className="material-icons" style={{ color: colors.primary }}>cloud_download</span>
               )}
               <span style={{ color: colors.primary }}>
-                {backupLoading ? "Tayyorlanmoqda..." : "Backup yuklab olish"}
+                {backupLoading ? t("Tayyorlanmoqda...") : t("Backup yuklab olish")}
               </span>
             </button>
           </div>

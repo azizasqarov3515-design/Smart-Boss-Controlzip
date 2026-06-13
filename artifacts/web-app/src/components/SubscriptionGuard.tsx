@@ -1,16 +1,19 @@
 import React, { useState } from "react";
 import { useAuth } from "../contexts/AuthContext";
+import { useTranslation } from "../contexts/LanguageContext";
 
 interface SubscriptionGuardProps {
   children: React.ReactNode;
 }
 
-function formatDate(d: Date | null): string {
+function formatDate(d: Date | null, lang: string = "uz"): string {
   if (!d) return "";
-  return d.toLocaleDateString("uz-UZ", { year: "numeric", month: "long", day: "numeric" });
+  const locale = lang === "ru" ? "ru-RU" : "uz-UZ";
+  return d.toLocaleDateString(locale, { year: "numeric", month: "long", day: "numeric" });
 }
 
 export function SubscriptionGuard({ children }: SubscriptionGuardProps) {
+  const { t, language } = useTranslation();
   const {
     subscriptionPlan,
     subscriptionExpired,
@@ -31,14 +34,14 @@ export function SubscriptionGuard({ children }: SubscriptionGuardProps) {
   if (blocked) {
     const handleDeleteProfile = async () => {
       const confirmDelete = window.confirm(
-        "Profilni yo'q qilish\n\nBarcha ma'lumotlaringiz — login, parol, do'kon ID, sotuvchilar — butunlay o'chiriladi. Bu amal qaytarib bo'lmaydi!"
+        `${t("Profilni yo'q qilish")}\n\n${t("Barcha ma'lumotlaringiz — login, parol, do'kon ID, sotuvchilar — butunlay o'chiriladi. Bu amal qaytarib bo'lmaydi!")}`
       );
       if (confirmDelete) {
         setDeleting(true);
         try {
           await deleteAccount();
         } catch (err) {
-          alert("Profilni o'chirishda xato yuz berdi. Qayta urinib ko'ring.");
+          alert(t("Profilni o'chirishda xato yuz berdi. Qayta urinib ko'ring."));
         } finally {
           setDeleting(false);
         }
@@ -79,11 +82,11 @@ export function SubscriptionGuard({ children }: SubscriptionGuardProps) {
             <span className="material-icons" style={{ fontSize: "48px", color: "#EF4444" }}>gpp_bad</span>
           </div>
           <h2 style={{ color: "#EF4444", marginBottom: "12px", fontSize: "20px" }}>
-            Siz tizim tomonidan<br />to'liq bloklandingiz
+            {t("Siz tizim tomonidan")}<br />{t("to'liq bloklandingiz")}
           </h2>
           <p className="text-muted" style={{ fontSize: "14px", lineHeight: "22px", marginBottom: "20px" }}>
-            Barcha imkoniyatlar cheklangan.<br />
-            Faqat profilingizni butunlay o'chirishingiz mumkin.
+            {t("Barcha imkoniyatlar cheklangan.")}<br />
+            {t("Faqat profilingizni butunlay o'chirishingiz mumkin.")}
           </p>
           <div style={{
             display: "flex",
@@ -99,7 +102,7 @@ export function SubscriptionGuard({ children }: SubscriptionGuardProps) {
             marginBottom: "28px"
           }}>
             <span className="material-icons" style={{ fontSize: "16px" }}>block</span>
-            <span>Administrator tomonidan bloklangan</span>
+            <span>{t("Administrator tomonidan bloklangan")}</span>
           </div>
           <button
             className="btn-primary"
@@ -114,11 +117,11 @@ export function SubscriptionGuard({ children }: SubscriptionGuardProps) {
             }}
           >
             {deleting ? (
-              <span>O'chirilmoqda…</span>
+              <span>{t("O'chirilmoqda...")}</span>
             ) : (
               <>
                 <span className="material-icons">delete_forever</span>
-                <span>Profilni yo'q qilish</span>
+                <span>{t("Profilni yo'q qilish")}</span>
               </>
             )}
           </button>
@@ -130,7 +133,7 @@ export function SubscriptionGuard({ children }: SubscriptionGuardProps) {
   // Show subscription expired screen
   if ((subscriptionEnd !== null || subscriptionPlan === "unlimited") && (subscriptionExpired || !subscriptionActive)) {
     const handleLogout = async () => {
-      const confirmLogout = window.confirm("Tizimdan chiqishni xohlaysizmi?");
+      const confirmLogout = window.confirm(t("Tizimdan chiqishni xohlaysizmi?"));
       if (confirmLogout) {
         await logout();
       }
@@ -169,11 +172,11 @@ export function SubscriptionGuard({ children }: SubscriptionGuardProps) {
             <span className="material-icons" style={{ fontSize: "48px", color: "#EF4444" }}>block</span>
           </div>
           <h2 style={{ color: "#EF4444", marginBottom: "12px", fontSize: "20px" }}>
-            Obuna muddati tugagan
+            {t("Obuna muddati tugagan")}
           </h2>
           <p className="text-muted" style={{ fontSize: "14px", lineHeight: "22px", marginBottom: "20px" }}>
-            Tizimdan foydalanish uchun obunangizni yangilang.<br />
-            Administrator bilan bog'laning.
+            {t("Tizimdan foydalanish uchun obunangizni yangilang.")}<br />
+            {t("Administrator bilan bog'laning.")}
           </p>
           {subscriptionEnd && (
             <div style={{
@@ -190,12 +193,12 @@ export function SubscriptionGuard({ children }: SubscriptionGuardProps) {
               marginBottom: "24px"
             }}>
               <span className="material-icons" style={{ fontSize: "16px" }}>event_busy</span>
-              <span>Tugagan: {formatDate(subscriptionEnd)}</span>
+              <span>{t("Tugagan:")} {formatDate(subscriptionEnd, language)}</span>
             </div>
           )}
           <button className="btn-secondary" onClick={handleLogout} style={{ gap: "8px" }}>
             <span className="material-icons">logout</span>
-            <span>Chiqish</span>
+            <span>{t("Chiqish")}</span>
           </button>
         </div>
       </div>
@@ -221,8 +224,8 @@ export function SubscriptionGuard({ children }: SubscriptionGuardProps) {
           <span className="material-icons" style={{ fontSize: "18px" }}>warning</span>
           <span style={{ flex: 1 }}>
             {subscriptionDaysLeft === 1
-              ? "⚠️ Obuna bugun tugaydi! Yangilang."
-              : `⚠️ Obuna ${subscriptionDaysLeft} kun ichida tugaydi (${formatDate(subscriptionEnd)})`}
+              ? `⚠️ ${t("Obuna bugun tugaydi! Yangilang.")}`
+              : `⚠️ ${t("Obuna")} ${subscriptionDaysLeft} ${t("kun ichida tugaydi")} (${formatDate(subscriptionEnd, language)})`}
           </span>
         </div>
       )}

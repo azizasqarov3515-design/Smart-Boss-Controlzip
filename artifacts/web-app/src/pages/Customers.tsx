@@ -12,6 +12,7 @@ import {
 import { useAuth } from "../contexts/AuthContext";
 import { useColors } from "../hooks/useColors";
 import { SubscriptionLockScreen } from "../components/SubscriptionLockScreen";
+import { useTranslation } from "../contexts/LanguageContext";
 
 function formatMoney(n: number) {
   return n.toLocaleString("uz-UZ") + " UZS";
@@ -53,37 +54,37 @@ function CustomerCard({
   colors: ReturnType<typeof useColors>;
   onClick: () => void;
 }) {
+  const { t } = useTranslation();
   const status = getDebtStatus(customer);
   const statusColor = status === "over" ? "#DC2626" : status === "warning" ? "#D97706" : colors.success;
 
   return (
     <div
-      className="card-standard"
       onClick={onClick}
+      className="card-standard"
       style={{
         display: "flex",
         alignItems: "center",
-        gap: "12px",
+        padding: "16px",
+        gap: "14px",
         cursor: "pointer",
-        padding: "14px"
+        transition: "transform 0.15s, box-shadow 0.15s",
+        borderLeft: customer.totalDebt > 0 ? `4px solid ${statusColor}` : `1px solid ${colors.border}`
       }}
     >
-      <div style={{
-        width: "46px",
-        height: "46px",
-        borderRadius: "50%",
-        border: customer.imageUrl ? `2px solid ${colors.primary}` : "none",
-        padding: customer.imageUrl ? "2px" : "0",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        flexShrink: 0
-      }}>
+      {/* Avatar / Photo */}
+      <div style={{ flexShrink: 0 }}>
         {customer.imageUrl ? (
           <img
             src={customer.imageUrl}
             alt={customer.name}
-            style={{ width: "100%", height: "100%", borderRadius: "50%", objectFit: "cover", backgroundColor: colors.muted }}
+            style={{
+              width: "44px",
+              height: "44px",
+              borderRadius: "50%",
+              objectFit: "cover",
+              border: `1px solid ${colors.border}`
+            }}
           />
         ) : (
           <div style={{
@@ -141,7 +142,7 @@ function CustomerCard({
               <span className="material-icons" style={{ fontSize: "11px" }}>
                 {status === "over" ? "warning" : "account_balance_wallet"}
               </span>
-              <span>{status === "over" ? "LIMIT!" : "QARZ"}</span>
+              <span>{status === "over" ? t("LIMIT!") : t("QARZ")}</span>
             </div>
             <span style={{ fontSize: "13px", fontWeight: 700, color: statusColor }}>
               {formatMoney(customer.totalDebt)}
@@ -165,7 +166,7 @@ function CustomerCard({
             borderRadius: "6px"
           }}>
             <span className="material-icons" style={{ fontSize: "13px" }}>check_circle</span>
-            <span>Qarz yo'q</span>
+            <span>{t("Qarz yo'q")}</span>
           </div>
         )}
         <span className="material-icons" style={{ color: colors.mutedForeground, fontSize: "18px", marginTop: "4px" }}>chevron_right</span>
@@ -175,6 +176,7 @@ function CustomerCard({
 }
 
 function CustomersScreenInner() {
+  const { t } = useTranslation();
   const colors = useColors();
   const [, setLocation] = useLocation();
   const queryClient = useQueryClient();
@@ -203,7 +205,7 @@ function CustomersScreenInner() {
         resetForm();
       },
       onError: (err: any) => {
-        setFormError(err.message || "Mijoz qo'shishda xatolik yuz berdi");
+        setFormError(err.message || t("Mijoz qo'shishda xatolik yuz berdi"));
       },
     },
   });
@@ -241,13 +243,13 @@ function CustomersScreenInner() {
       });
 
       if (!response.ok) {
-        throw new Error(`Rasm yuklash xatoligi: ${response.status}`);
+        throw new Error(t("Rasm yuklash xatoligi:") + ` ${response.status}`);
       }
 
       const data = await response.json();
       setFormImage(data.url);
     } catch (err: any) {
-      setFormError(err.message || "Rasmni yuklashda xatolik yuz berdi");
+      setFormError(err.message || t("Rasmni yuklashda xatolik yuz berdi"));
     } finally {
       setImageUploading(false);
     }
@@ -256,12 +258,12 @@ function CustomersScreenInner() {
   const handleSave = () => {
     setFormError(null);
     if (!formName.trim()) {
-      setFormError("Mijoz ismi kiritilishi shart");
+      setFormError(t("Mijoz ismi kiritilishi shart"));
       return;
     }
     const cleanPhone = formPhone.replace(/[\s+]/g, "");
     if (cleanPhone.length !== 12 || !cleanPhone.startsWith("998")) {
-      setFormError("Telefon raqami noto'g'ri (998xxxxxxxxx shaklida bo'lishi shart)");
+      setFormError(t("Telefon raqami noto'g'ri (998xxxxxxxxx shaklida bo'lishi shart)"));
       return;
     }
     const limit = formLimit ? parseFloat(formLimit.replace(/\s/g, "")) : 0;
@@ -297,9 +299,9 @@ function CustomersScreenInner() {
       {/* Header */}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
         <div>
-          <h2 style={{ fontSize: "20px", color: colors.foreground }}>Mijozlar</h2>
+          <h2 style={{ fontSize: "20px", color: colors.foreground }}>{t("Mijozlar")}</h2>
           <p className="text-muted" style={{ fontSize: "12px", marginTop: "2px" }}>
-            Haridorlar hisobi va qarz limitsiyasi boshqaruvi
+            {t("Haridorlar hisobi va qarz limitsiyasi boshqaruvi")}
           </p>
         </div>
         <button
@@ -308,7 +310,7 @@ function CustomersScreenInner() {
           style={{ padding: "10px 14px", borderRadius: "12px", gap: "6px" }}
         >
           <span className="material-icons">person_add</span>
-          <span>Yangi mijoz</span>
+          <span>{t("Yangi mijoz")}</span>
         </button>
       </div>
 
@@ -316,15 +318,15 @@ function CustomersScreenInner() {
       {(customers?.length ?? 0) > 0 && (
         <div className="card-standard" style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "8px", textAlign: "center", padding: "12px" }}>
           <div>
-            <span style={{ fontSize: "10px", color: colors.mutedForeground, display: "block" }}>Jami mijozlar</span>
-            <span style={{ fontSize: "15px", fontWeight: 700 }}>{customers?.length ?? 0} ta</span>
+            <span style={{ fontSize: "10px", color: colors.mutedForeground, display: "block" }}>{t("Jami mijozlar")}</span>
+            <span style={{ fontSize: "15px", fontWeight: 700 }}>{customers?.length ?? 0} {t("ta")}</span>
           </div>
           <div style={{ borderLeft: `1px solid ${colors.border}`, borderRight: `1px solid ${colors.border}` }}>
-            <span style={{ fontSize: "10px", color: colors.mutedForeground, display: "block" }}>Qarzdorlar</span>
-            <span style={{ fontSize: "15px", fontWeight: 700, color: debtorsCount > 0 ? "#D97706" : colors.foreground }}>{debtorsCount} ta</span>
+            <span style={{ fontSize: "10px", color: colors.mutedForeground, display: "block" }}>{t("Qarzdorlar")}</span>
+            <span style={{ fontSize: "15px", fontWeight: 700, color: debtorsCount > 0 ? "#D97706" : colors.foreground }}>{debtorsCount} {t("ta")}</span>
           </div>
           <div>
-            <span style={{ fontSize: "10px", color: colors.mutedForeground, display: "block" }}>Jami qarz</span>
+            <span style={{ fontSize: "10px", color: colors.mutedForeground, display: "block" }}>{t("Jami qarz")}</span>
             <span style={{ fontSize: "15px", fontWeight: 700, color: totalDebt > 0 ? "#DC2626" : colors.foreground }}>{formatMoney(totalDebt)}</span>
           </div>
         </div>
@@ -338,7 +340,7 @@ function CustomersScreenInner() {
           className="input-field"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          placeholder="Mijoz ismi yoki telefon raqami bo'yicha..."
+          placeholder={t("Mijoz ismi yoki telefon raqami bo'yicha...")}
           style={{ paddingLeft: "45px" }}
         />
         {search && (
@@ -355,20 +357,20 @@ function CustomersScreenInner() {
       {isLoading ? (
         <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "60px", gap: "12px" }}>
           <div className="spinner" style={{ width: "30px", height: "30px", border: `3px solid ${colors.border}`, borderTopColor: colors.primary, borderRadius: "50%", animation: "spin 1s linear infinite" }}></div>
-          <span style={{ fontSize: "13px", color: colors.mutedForeground }}>Mijozlar yuklanmoqda...</span>
+          <span style={{ fontSize: "13px", color: colors.mutedForeground }}>{t("Mijozlar yuklanmoqda...")}</span>
         </div>
       ) : filtered.length === 0 ? (
         <div className="card-standard" style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "45px 20px", textAlign: "center", gap: "10px" }}>
           <span className="material-icons" style={{ fontSize: "48px", color: colors.border }}>people</span>
           <div>
-            <h4 style={{ fontSize: "15px", color: colors.foreground }}>Hech kim topilmadi</h4>
+            <h4 style={{ fontSize: "15px", color: colors.foreground }}>{t("Hech kim topilmadi")}</h4>
             <p className="text-muted" style={{ fontSize: "12px", marginTop: "4px" }}>
-              {search ? `"${search}" so'rovi bo'yicha mijoz yo'q` : "Tizimda hozircha mijozlar mavjud emas"}
+              {search ? `"${search}" ` + t("so'rovi bo'yicha mijoz yo'q") : t("Tizimda hozircha mijozlar mavjud emas")}
             </p>
           </div>
           {!search && (
             <button className="btn-primary" onClick={() => setAddOpen(true)} style={{ marginTop: "6px" }}>
-              Mijoz qo'shish
+              {t("Mijoz qo'shish")}
             </button>
           )}
         </div>
@@ -393,7 +395,7 @@ function CustomersScreenInner() {
             
             <div style={{ display: "flex", gap: "10px", alignItems: "center", marginBottom: "16px" }}>
               <span className="material-icons" style={{ color: colors.primary, fontSize: "24px" }}>person_add</span>
-              <h3 style={{ fontSize: "18px", color: colors.foreground }}>Yangi mijoz qo'shish</h3>
+              <h3 style={{ fontSize: "18px", color: colors.foreground }}>{t("Yangi mijoz qo'shish")}</h3>
             </div>
 
             <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
@@ -424,7 +426,7 @@ function CustomersScreenInner() {
                       ) : (
                         <>
                           <span className="material-icons" style={{ fontSize: "26px" }}>photo_camera</span>
-                          <span style={{ fontSize: "10px", marginTop: "2px", fontWeight: 600 }}>Rasm yuklash</span>
+                          <span style={{ fontSize: "10px", marginTop: "2px", fontWeight: 600 }}>{t("Rasm yuklash")}</span>
                         </>
                       )}
                     </div>
@@ -469,28 +471,28 @@ function CustomersScreenInner() {
                   onClick={() => document.getElementById("customer-avatar-file")?.click()}
                   style={{ fontSize: "11px", padding: "6px 12px", borderRadius: "8px" }}
                 >
-                  Rasm tanlash
+                  {t("Rasm tanlash")}
                 </button>
               </div>
 
               {/* Form Input fields */}
               <div>
                 <label style={{ display: "block", fontSize: "12px", color: colors.mutedForeground, marginBottom: "4px", fontWeight: 500 }}>
-                  To'liq ism *
+                  {t("To'liq ism")} *
                 </label>
                 <input
                   type="text"
                   className="input-field"
                   value={formName}
                   onChange={(e) => setFormName(e.target.value)}
-                  placeholder="Mijoz F.I.Sh..."
+                  placeholder={t("Mijoz F.I.Sh...")}
                   autoFocus
                 />
               </div>
 
               <div>
                 <label style={{ display: "block", fontSize: "12px", color: colors.mutedForeground, marginBottom: "4px", fontWeight: 500 }}>
-                  Telefon raqami *
+                  {t("Telefon raqami")} *
                 </label>
                 <input
                   type="tel"
@@ -504,53 +506,53 @@ function CustomersScreenInner() {
 
               <div>
                 <label style={{ display: "block", fontSize: "12px", color: colors.mutedForeground, marginBottom: "4px", fontWeight: 500 }}>
-                  Telegram ID raqami
+                  {t("Telegram ID raqami")}
                 </label>
                 <input
                   type="text"
                   className="input-field"
                   value={formTelegramId}
                   onChange={(e) => setFormTelegramId(e.target.value.replace(/\D/g, ""))}
-                  placeholder="Masalan: 123456789"
+                  placeholder={`${t("Masalan:")} 123456789`}
                 />
               </div>
 
               <div>
                 <label style={{ display: "block", fontSize: "12px", color: colors.mutedForeground, marginBottom: "4px", fontWeight: 500 }}>
-                  Yashash joyi (Manzil)
+                  {t("Yashash joyi (Manzil)")}
                 </label>
                 <input
                   type="text"
                   className="input-field"
                   value={formAddress}
                   onChange={(e) => setFormAddress(e.target.value)}
-                  placeholder="Shahar, ko'cha, uy raqami..."
+                  placeholder={t("Shahar, ko'cha, uy raqami...")}
                 />
               </div>
 
               <div>
                 <label style={{ display: "block", fontSize: "12px", color: colors.mutedForeground, marginBottom: "4px", fontWeight: 500 }}>
-                  Qarz limiti (UZS)
+                  {t("Qarz limiti (UZS)")}
                 </label>
                 <input
                   type="text"
                   className="input-field"
                   value={formLimit}
                   onChange={(e) => setFormLimit(e.target.value.replace(/\D/g, ""))}
-                  placeholder="0 = limitsiz qarz"
+                  placeholder={t("0 = limitsiz qarz")}
                 />
               </div>
 
               <div>
                 <label style={{ display: "block", fontSize: "12px", color: colors.mutedForeground, marginBottom: "4px", fontWeight: 500 }}>
-                  Izoh / Eslatma
+                  {t("Izoh / Eslatma")}
                 </label>
                 <input
                   type="text"
                   className="input-field"
                   value={formNote}
                   onChange={(e) => setFormNote(e.target.value)}
-                  placeholder="Mijoz haqida qo'shimcha ma'lumot..."
+                  placeholder={t("Mijoz haqida qo'shimcha ma'lumot...")}
                 />
               </div>
 
@@ -568,7 +570,7 @@ function CustomersScreenInner() {
                   style={{ flex: 1 }}
                   disabled={creating}
                 >
-                  Bekor qilish
+                  {t("Bekor qilish")}
                 </button>
                 <button
                   className="btn-primary"
@@ -576,7 +578,7 @@ function CustomersScreenInner() {
                   style={{ flex: 1 }}
                   disabled={creating}
                 >
-                  {creating ? "Saqlanmoqda..." : "Saqlash"}
+                  {creating ? t("Saqlanmoqda...") : t("Saqlash")}
                 </button>
               </div>
             </div>
@@ -589,6 +591,7 @@ function CustomersScreenInner() {
 
 export default function Customers() {
   const { subscriptionActive } = useAuth();
-  if (!subscriptionActive) return <SubscriptionLockScreen screenName="Mijozlar" />;
+  const { t } = useTranslation();
+  if (!subscriptionActive) return <SubscriptionLockScreen screenName={t("Mijozlar")} />;
   return <CustomersScreenInner />;
 }

@@ -22,6 +22,8 @@ import WorkerLogin from "./pages/auth/WorkerLogin";
 import WorkerRegister from "./pages/auth/WorkerRegister";
 import WorkerPending from "./pages/auth/WorkerPending";
 
+import { LanguageProvider } from "./contexts/LanguageContext";
+
 export default function App() {
   const { isAuthenticated, role, workerStatus } = useAuth();
   const [location, setLocation] = useLocation();
@@ -58,14 +60,15 @@ export default function App() {
   }, [isAuthenticated, role, workerStatus, location, setLocation, isAuthPage]);
 
   return (
-    <SubscriptionGuard>
-      <div style={{
-        display: "flex",
-        flexDirection: "column",
-        minHeight: "100vh",
-        backgroundColor: "var(--background)",
-        color: "var(--foreground)"
-      }}>
+    <LanguageProvider>
+      <SubscriptionGuard>
+        <div style={{
+          display: "flex",
+          flexDirection: "column",
+          minHeight: "100vh",
+          backgroundColor: "var(--background)",
+          color: "var(--foreground)"
+        }}>
         <div style={{ flex: 1 }}>
           <Switch>
             {/* Auth Routes */}
@@ -103,7 +106,8 @@ export default function App() {
           <BottomNav />
         )}
       </div>
-    </SubscriptionGuard>
+      </SubscriptionGuard>
+    </LanguageProvider>
   );
 }
 export { App };

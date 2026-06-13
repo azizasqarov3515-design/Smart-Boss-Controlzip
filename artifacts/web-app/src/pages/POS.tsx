@@ -167,7 +167,7 @@ export function POS() {
   const addToCart = useCallback(
     (product: Product, qty = 1) => {
       if (product.quantity <= 0) {
-        alert(`"${product.name}" mahsulotida stok qolmagan`);
+        alert(t('"${name}" mahsulotida stok qolmagan').replace("${name}", product.name));
         return;
       }
       setCart((prev) => {
@@ -175,14 +175,14 @@ export function POS() {
         const existing = next.get(product.id);
         const newQty = Math.round(((existing?.quantity ?? 0) + qty) * 1000) / 1000;
         if (newQty > product.quantity) {
-          alert(`Stok yetarli emas. Faqat ${product.quantity} ${product.unit || "dona"} mavjud`);
+          alert(t("Stok yetarli emas. Faqat ${quantity} ${unit} mavjud").replace("${quantity}", String(product.quantity)).replace("${unit}", t(product.unit || "dona")));
           return prev;
         }
         next.set(product.id, { product, quantity: newQty });
         return next;
       });
     },
-    []
+    [t]
   );
 
   const setQty = useCallback((productId: number, qty: number) => {
@@ -194,13 +194,13 @@ export function POS() {
       if (rounded <= 0) {
         next.delete(productId);
       } else if (rounded > item.product.quantity) {
-        alert(`Stok yetarli emas. Faqat ${item.product.quantity} ${item.product.unit || "dona"} mavjud`);
+        alert(t("Stok yetarli emas. Faqat ${quantity} ${unit} mavjud").replace("${quantity}", String(item.product.quantity)).replace("${unit}", t(item.product.unit || "dona")));
       } else {
         next.set(productId, { ...item, quantity: rounded });
       }
       return next;
     });
-  }, []);
+  }, [t]);
 
   const handleScanned = useCallback(
     (data: string) => {
@@ -222,10 +222,10 @@ export function POS() {
       if (found) {
         addToCart(found);
       } else {
-        alert(`"${barcode}" shtrix-kodi bo'yicha mahsulot topilmadi.`);
+        alert(t('"${barcode}" shtrix-kodi bo\'yicha mahsulot topilmadi.').replace("${barcode}", barcode));
       }
     },
-    [products, addToCart]
+    [products, addToCart, t]
   );
 
   const cartItems = Array.from(cart.values());
@@ -316,16 +316,16 @@ export function POS() {
         });
 
         if (response.ok) {
-          alert("Chek Telegram orqali mijozga muvaffaqiyatli yuborildi!");
+          alert(t("Chek Telegram orqali mijozga muvaffaqiyatli yuborildi!"));
         } else {
           const errData = await response.json();
           console.error("Telegram send error:", errData);
-          alert("Chekni yuborib bo'lmadi. Telegram orqali qo'lda ulash oynasini ochamiz.");
+          alert(t("Chekni yuborib bo'lmadi. Telegram orqali qo'lda ulash oynasini ochamiz."));
           window.open(getTelegramShareUrl(sale), "_blank");
         }
       } catch (err) {
         console.error("Telegram send catch:", err);
-        alert("Telegram-ga yuborishda xatolik yuz berdi. Qo'lda ulash oynasini ochamiz.");
+        alert(t("Telegram-ga yuborishda xatolik yuz berdi. Qo'lda ulash oynasini ochamiz."));
         window.open(getTelegramShareUrl(sale), "_blank");
       } finally {
         setTelegramSending(false);
@@ -346,7 +346,7 @@ export function POS() {
     if (!qtyPromptProduct) return;
     const qty = parseFloat(qtyPromptValue.replace(",", "."));
     if (isNaN(qty) || qty <= 0) {
-      alert("To'g'ri miqdor kiriting (masalan: 1.5)");
+      alert(t("To'g'ri miqdor kiriting (masalan: 1.5)"));
       return;
     }
     addToCart(qtyPromptProduct, qty);
@@ -544,13 +544,13 @@ export function POS() {
           {cartItems.length === 0 ? (
             <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "40px", gap: "10px", marginTop: "60px" }}>
               <span className="material-icons" style={{ fontSize: "64px", color: colors.border }}>shopping_cart</span>
-              <h3 style={{ fontSize: "16px" }}>Savat bo'sh</h3>
+              <h3 style={{ fontSize: "16px" }}>{t("Savat bo'sh")}</h3>
               <p className="text-muted" style={{ fontSize: "13px", textAlign: "center" }}>
-                Tovarlar bo'limidan mahsulot qo'shing yoki yuqoridagi skaner tugmasini bosing
+                {t("Tovarlar bo'limidan mahsulot qo'shing yoki yuqoridagi skaner tugmasini bosing")}
               </p>
               <button className="btn-primary" onClick={() => setTab("products")} style={{ marginTop: "10px" }}>
                 <span className="material-icons">add</span>
-                <span>Tovar tanlash</span>
+                <span>{t("Tovar tanlash")}</span>
               </button>
             </div>
           ) : (
@@ -975,14 +975,14 @@ export function POS() {
 
                 <div>
                   <label style={{ display: "block", fontSize: "12px", color: colors.mutedForeground, marginBottom: "4px" }}>
-                    Telegram ID raqami
+                    {t("Telegram ID raqami")}
                   </label>
                   <input
                     type="text"
                     className="input-field"
                     value={newCustomerTelegramId}
                     onChange={(e) => setNewCustomerTelegramId(e.target.value.replace(/\D/g, ""))}
-                    placeholder="Masalan: 123456789"
+                    placeholder={t("Masalan:") + " 123456789"}
                   />
                 </div>
 
