@@ -954,38 +954,7 @@ export default function SettingsScreen() {
             )}
           </View>
 
-          {/* Sellers */}
-          <SectionCard title="Sotuvchilar" icon="people" colors={colors}>
-            {sellers.length === 0 && (
-              <View style={styles.emptyRow}>
-                <MaterialIcons name="person-off" size={32} color={colors.border} />
-                <Text style={[styles.emptyText, { color: colors.mutedForeground }]}>Sotuvchi yo'q</Text>
-              </View>
-            )}
-            {sellers.map((s, idx) => (
-              <View key={s.id} style={[styles.sellerRow, { backgroundColor: colors.muted, borderColor: colors.border, borderTopWidth: idx === 0 ? 0 : 1 }]}>
-                <View style={[styles.sellerAvatar, { backgroundColor: colors.primary + "22" }]}>
-                  <Text style={[styles.sellerAvatarText, { color: colors.primary }]}>{s.name.charAt(0).toUpperCase()}</Text>
-                </View>
-                <View style={styles.sellerInfo}>
-                  <Text style={[styles.sellerName, { color: colors.foreground }]}>{s.name}</Text>
-                  <Text style={[styles.sellerPhone, { color: colors.mutedForeground }]}>{s.phone}</Text>
-                </View>
-                <View style={styles.sellerActions}>
-                  <TouchableOpacity style={[styles.sellerActionBtn, { backgroundColor: colors.primary + "18" }]} onPress={() => openEditSeller(s)} activeOpacity={0.8}>
-                    <MaterialIcons name="edit" size={16} color={colors.primary} />
-                  </TouchableOpacity>
-                  <TouchableOpacity style={[styles.sellerActionBtn, { backgroundColor: "#FEE2E2" }]} onPress={() => setDeleteSellerConfirm(s)} activeOpacity={0.8}>
-                    <MaterialIcons name="delete" size={16} color="#DC2626" />
-                  </TouchableOpacity>
-                </View>
-              </View>
-            ))}
-            <TouchableOpacity style={[styles.addSellerBtn, { borderColor: colors.primary }]} onPress={openAddSeller} activeOpacity={0.85}>
-              <MaterialIcons name="person-add" size={18} color={colors.primary} />
-              <Text style={[styles.addSellerText, { color: colors.primary }]}>Yangi sotuvchi qo'shish</Text>
-            </TouchableOpacity>
-          </SectionCard>
+
 
           {themeSection}
 

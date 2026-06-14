@@ -13,6 +13,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "../contexts/AuthContext";
 import { useColors } from "../hooks/useColors";
 import { useSettings } from "../hooks/useSettings";
+import { useTranslation } from "../contexts/LanguageContext";
 import {
   autoSelectFormat,
   buildPrintHtml,
@@ -31,6 +32,7 @@ function formatMoney(n: number) {
 }
 
 export function POS() {
+  const { t } = useTranslation();
   const queryClient = useQueryClient();
   const colors = useColors();
   const [, setLocation] = useLocation();
@@ -1045,8 +1047,8 @@ export function POS() {
             <p style={{ fontSize: "12px", color: colors.mutedForeground, marginBottom: "8px", fontWeight: 500 }}>
               Chek formatini tanlang:
             </p>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "6px", marginBottom: "16px" }}>
-              {(["a4", "a5", "thermal"] as const).map((fmt) => {
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "6px", marginBottom: "16px" }}>
+              {(["a4", "a5", "waybill", "thermal"] as const).map((fmt) => {
                 const active = printFormat === fmt;
                 return (
                   <button

@@ -228,7 +228,7 @@ router.post("/auth/login", async (req, res) => {
 
 const workerRegisterSchema = z.object({
   name: z.string().min(2),
-  phone: z.string().regex(/^\+998 \d{2} \d{3} \d{2} \d{2}$/),
+  phone: z.string(),
   password: z.string().min(4),
   address: z.string().optional().default(""),
   storeName: z.string().trim().min(2, "Do'kon nomini kiriting"),
@@ -238,6 +238,12 @@ const workerRegisterSchema = z.object({
 router.post("/auth/worker-register", async (req, res) => {
   try {
     const body = workerRegisterSchema.parse(req.body);
+    const cleanPhone = body.phone.replace(/[\s+]/g, "");
+
+    if (cleanPhone.length !== 12 || !cleanPhone.startsWith("998")) {
+      res.status(400).json({ error: "Telefon raqami noto'g'ri (masalan: +998 90 123 45 67)" });
+      return;
+    }
 
     const [manager] = await db
       .select({ id: managersTable.id, storeName: managersTable.storeName })
@@ -257,7 +263,7 @@ router.post("/auth/worker-register", async (req, res) => {
     const [existing] = await db
       .select({ id: workersTable.id, status: workersTable.status })
       .from(workersTable)
-      .where(eq(workersTable.phone, body.phone));
+      .where(eq(workersTable.phone, cleanPhone));
 
     if (existing) {
       if (existing.status === "pending") {
@@ -277,7 +283,7 @@ router.post("/auth/worker-register", async (req, res) => {
         managerId: manager.id,
         name: body.name,
         address: body.address,
-        phone: body.phone,
+        phone: cleanPhone,
         passwordHash,
         status: "pending",
       })
@@ -303,8 +309,9 @@ const workerLoginSchema = z.object({
 router.post("/auth/worker-login", async (req, res) => {
   try {
     const body = workerLoginSchema.parse(req.body);
+    const cleanPhone = body.phone.replace(/[\s+]/g, "");
 
-    const [worker] = await db.select().from(workersTable).where(eq(workersTable.phone, body.phone));
+    const [worker] = await db.select().from(workersTable).where(eq(workersTable.phone, cleanPhone));
 
     if (!worker || !verifyPassword(body.password, worker.passwordHash)) {
       res.status(401).json({ error: "Telefon raqam yoki parol noto'g'ri" });

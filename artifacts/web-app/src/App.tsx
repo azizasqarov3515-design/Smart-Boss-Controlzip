@@ -23,10 +23,17 @@ import WorkerRegister from "./pages/auth/WorkerRegister";
 import WorkerPending from "./pages/auth/WorkerPending";
 
 import { LanguageProvider } from "./contexts/LanguageContext";
+import { useSettings } from "./hooks/useSettings";
 
 export default function App() {
-  const { isAuthenticated, role, workerStatus } = useAuth();
+  const { isAuthenticated, role, workerStatus, managerId } = useAuth();
   const [location, setLocation] = useLocation();
+  const { settings } = useSettings(managerId);
+
+  useEffect(() => {
+    const scale = (settings?.uiFontSizePercent ?? 50) / 50;
+    document.body.style.zoom = String(scale);
+  }, [settings?.uiFontSizePercent]);
 
   const isAuthPage = [
     "/role-select",

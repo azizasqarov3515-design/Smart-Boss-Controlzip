@@ -20,6 +20,7 @@ import { useAuth } from "../contexts/AuthContext";
 import { useTheme } from "../contexts/ThemeContext";
 import { useColors } from "../hooks/useColors";
 import { useSettings, type Seller, type StoreSettings } from "../hooks/useSettings";
+import { useTranslation } from "../contexts/LanguageContext";
 
 function formatMoney(n: number) {
   return n.toLocaleString("uz-UZ") + " UZS";
@@ -116,9 +117,10 @@ export function Settings() {
   const [sellers, setSellers] = useState<Seller[]>([]);
   const [profilePic, setProfilePic] = useState<string | undefined>(undefined);
   const [telegramBotToken, setTelegramBotToken] = useState("");
-  const [telegramChatId, setTelegramChatId] = useState("");
   const [appLanguage, setAppLanguage] = useState<"uz" | "ru">("uz");
   const [disabledUnits, setDisabledUnits] = useState<string[]>([]);
+  const [printFontSizePercent, setPrintFontSizePercent] = useState(100);
+  const [uiFontSizePercent, setUiFontSizePercent] = useState(50);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
 
@@ -189,11 +191,12 @@ export function Settings() {
       setSellers(settings.sellers || []);
       setProfilePic(settings.managerProfilePic);
       setTelegramBotToken(settings.telegramBotToken || "");
-      setTelegramChatId(settings.telegramChatId || "");
       const lang = settings.appLanguage || "uz";
       setAppLanguage(lang);
       setLanguage(lang);
       setDisabledUnits(settings.disabledUnits || []);
+      setPrintFontSizePercent(settings.printFontSizePercent ?? 100);
+      setUiFontSizePercent(settings.uiFontSizePercent ?? 50);
     }
   }, [settingsLoading, settings, setLanguage]);
 
@@ -207,9 +210,11 @@ export function Settings() {
       sellers,
       managerProfilePic: profilePic,
       telegramBotToken: telegramBotToken.trim(),
-      telegramChatId: telegramChatId.trim(),
+      telegramChatId: "",
       appLanguage,
       disabledUnits,
+      printFontSizePercent,
+      uiFontSizePercent,
     };
     saveSettings(next);
     setSaving(false);
@@ -520,11 +525,11 @@ export function Settings() {
         <SectionCard title="Do'kon ma'lumotlari" icon="storefront" colors={colors}>
           {/* Profile Picture */}
           <div style={{ display: "flex", alignItems: "center", gap: "16px", marginBottom: "6px" }}>
-            <div style={{ position: "relative", width: "70px", height: "70px", borderRadius: "50%", overflow: "hidden", backgroundColor: colors.muted, border: `1.5px solid ${colors.border}`, display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <div style={{ position: "relative", width: "210px", height: "210px", borderRadius: "50%", overflow: "hidden", backgroundColor: colors.muted, border: `1.5px solid ${colors.border}`, display: "flex", alignItems: "center", justifyContent: "center" }}>
               {profilePic ? (
-                <img src={profilePic} alt="Store logo" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                <img src={profilePic} alt="Store logo" style={{ width: "100%", height: "100%", objectFit: "cover", transform: "scale(1.35)" }} />
               ) : (
-                <span className="material-icons" style={{ color: colors.mutedForeground, fontSize: "28px" }}>store</span>
+                <span className="material-icons" style={{ color: colors.mutedForeground, fontSize: "84px" }}>store</span>
               )}
             </div>
             <div>
@@ -569,33 +574,61 @@ export function Settings() {
         </SectionCard>
       )}
 
-      {/* 3. Sellers list */}
+      {/* 2.5. Shriftlar o'lchami */}
       {isManager && (
-        <SectionCard title="Sotuvchilar ro'yxati" icon="people" colors={colors}>
-          <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-            {sellers.map((s) => (
-              <div key={s.id} className="card-standard" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 12px", backgroundColor: colors.muted }}>
-                <div>
-                  <div style={{ fontSize: "13px", fontWeight: 600 }}>{s.name}</div>
-                  <div className="text-muted" style={{ fontSize: "11px" }}>{s.phone}</div>
-                </div>
-                <div style={{ display: "flex", gap: "4px" }}>
-                  <button className="btn-secondary" onClick={() => openEditSeller(s)} style={{ padding: "6px", borderRadius: "8px" }}>
-                    <span className="material-icons" style={{ fontSize: "15px", color: colors.primary }}>edit</span>
-                  </button>
-                  <button className="btn-secondary" onClick={() => handleDeleteSeller(s)} style={{ padding: "6px", borderRadius: "8px", borderColor: "rgba(239, 68, 68, 0.15)" }}>
-                    <span className="material-icons" style={{ fontSize: "15px", color: colors.destructive }}>delete</span>
-                  </button>
-                </div>
-              </div>
-            ))}
-            <button className="btn-secondary" onClick={openAddSeller} style={{ borderStyle: "dashed", justifyContent: "center", marginTop: "4px" }}>
-              <span className="material-icons">add</span>
-              <span>Sotuvchi qo'shish</span>
-            </button>
+        <SectionCard title="Shriftlar o'lchami" icon="format_size" colors={colors}>
+          <div>
+            <label style={{ display: "block", fontSize: "11px", color: colors.mutedForeground, marginBottom: "4px" }}>
+              Dastur interfeysini shriftini o'lchamini o'zgartirish
+            </label>
+            <select
+              className="input-field"
+              value={uiFontSizePercent}
+              onChange={(e) => setUiFontSizePercent(Number(e.target.value))}
+              style={{ width: "100%", cursor: "pointer", backgroundColor: colors.card, color: colors.foreground, border: `1px solid ${colors.border}` }}
+            >
+              <option value="50">50% (Joriy / Standart)</option>
+              <option value="60">60%</option>
+              <option value="70">70%</option>
+              <option value="80">80%</option>
+              <option value="90">90%</option>
+              <option value="100">100%</option>
+            </select>
           </div>
+
+          <div style={{ marginTop: "12px" }}>
+            <label style={{ display: "block", fontSize: "11px", color: colors.mutedForeground, marginBottom: "4px" }}>
+              Hujjatlar shriftini o'lchamini o'zgartirish
+            </label>
+            <select
+              className="input-field"
+              value={printFontSizePercent}
+              onChange={(e) => setPrintFontSizePercent(Number(e.target.value))}
+              style={{ width: "100%", cursor: "pointer", backgroundColor: colors.card, color: colors.foreground, border: `1px solid ${colors.border}` }}
+            >
+              <option value="80">80%</option>
+              <option value="90">90%</option>
+              <option value="100">100% (Joriy / Standart)</option>
+              <option value="110">110%</option>
+              <option value="120">120%</option>
+              <option value="130">130%</option>
+              <option value="140">140%</option>
+              <option value="150">150%</option>
+            </select>
+          </div>
+
+          <button
+            className="btn-primary"
+            onClick={handleSaveStoreSettings}
+            disabled={saving}
+            style={{ marginTop: "16px", width: "100%" }}
+          >
+            {saving ? "Saqlanmoqda..." : saved ? "Saqlandi ✓" : "Shrift sozlamalarini saqlash"}
+          </button>
         </SectionCard>
       )}
+
+
 
       {/* 4. Pending Worker Approvals (Manager only) */}
       {isManager && (
@@ -772,10 +805,6 @@ export function Settings() {
             <label style={{ display: "block", fontSize: "11px", color: colors.mutedForeground, marginBottom: "4px" }}>Telegram Bot Token</label>
             <input type="text" className="input-field" value={telegramBotToken} onChange={(e) => setTelegramBotToken(e.target.value)} placeholder="Bot tokenini kiriting..." />
           </div>
-          <div>
-            <label style={{ display: "block", fontSize: "11px", color: colors.mutedForeground, marginBottom: "4px" }}>Telegram Chat ID</label>
-            <input type="text" className="input-field" value={telegramChatId} onChange={(e) => setTelegramChatId(e.target.value)} placeholder="Chat ID sini kiriting..." />
-          </div>
           <button
             className="btn-primary"
             onClick={handleSaveStoreSettings}
@@ -897,12 +926,12 @@ export function Settings() {
             borderTop: `1px solid ${colors.border}`,
             paddingTop: "12px",
             marginTop: "6px",
-            fontSize: "14px",
-            fontWeight: 500,
+            fontSize: "16px",
+            fontWeight: 700,
             color: colors.foreground,
             lineHeight: "1.4"
           }}>
-            Barcha Ishni bizga qo'yib bering siz esa dam oling!
+            Dastur yaratuvchisi: Azizbek Asqarov
           </div>
         </div>
       </SectionCard>

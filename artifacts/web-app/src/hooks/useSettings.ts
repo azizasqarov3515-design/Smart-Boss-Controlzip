@@ -16,6 +16,8 @@ export interface StoreSettings {
   telegramChatId?: string;
   appLanguage?: "uz" | "ru";
   disabledUnits?: string[];
+  printFontSizePercent?: number;
+  uiFontSizePercent?: number;
 }
 
 function settingsKey(managerId: number | null | undefined): string {
@@ -32,6 +34,8 @@ export const DEFAULT_SETTINGS: StoreSettings = {
   telegramChatId: "",
   appLanguage: "uz",
   disabledUnits: [],
+  printFontSizePercent: 100,
+  uiFontSizePercent: 50,
 };
 
 export function clearManagerSettings(managerId: number): void {
@@ -42,7 +46,7 @@ export function useSettings(managerId?: number | null) {
   const [settings, setSettings] = useState<StoreSettings>(DEFAULT_SETTINGS);
   const [isLoading, setIsLoading] = useState(true);
 
-  useEffect(() => {
+  const loadSettings = useCallback(() => {
     setIsLoading(true);
     const val = localStorage.getItem(settingsKey(managerId));
     if (val) {
@@ -58,9 +62,26 @@ export function useSettings(managerId?: number | null) {
     setIsLoading(false);
   }, [managerId]);
 
+  useEffect(() => {
+    loadSettings();
+
+    const handleUpdate = () => {
+      loadSettings();
+    };
+
+    window.addEventListener("store-settings-updated", handleUpdate);
+    window.addEventListener("storage", handleUpdate);
+
+    return () => {
+      window.removeEventListener("store-settings-updated", handleUpdate);
+      window.removeEventListener("storage", handleUpdate);
+    };
+  }, [managerId, loadSettings]);
+
   const saveSettings = useCallback((next: StoreSettings) => {
     setSettings(next);
     localStorage.setItem(settingsKey(managerId), JSON.stringify(next));
+    window.dispatchEvent(new Event("store-settings-updated"));
   }, [managerId]);
 
   return { settings, saveSettings, isLoading };

@@ -6,29 +6,33 @@ import {
   buildInvoiceHtml,
   buildA5InvoiceHtml,
   buildThermalHtml,
+  buildWaybillHtml,
   type PdfCustomer,
   type PdfSeller,
 } from "./pdfTemplates";
 
 export type { PdfSeller };
 
-export type PrintFormat = "a4" | "a5" | "thermal";
+export type PrintFormat = "a4" | "a5" | "thermal" | "waybill";
 
 export const FORMAT_LABELS: Record<PrintFormat, string> = {
   a4: "A4 Faktura",
   a5: "A5 Faktura",
+  waybill: "Yuk xati",
   thermal: "80mm Termal",
 };
 
 export const FORMAT_DESC: Record<PrintFormat, string> = {
   a4: "Katta, to'liq hujjat",
   a5: "Kichik, tez chiqarish",
+  waybill: "Yuk tashish hujjati",
   thermal: "POS printer cheki",
 };
 
 export const FORMAT_ICON: Record<PrintFormat, string> = {
   a4: "description",
   a5: "article",
+  waybill: "local_shipping",
   thermal: "receipt",
 };
 
@@ -47,6 +51,7 @@ export function buildPrintHtml(
     case "a4": return buildInvoiceHtml(sale, settings, customer, seller);
     case "a5": return buildA5InvoiceHtml(sale, settings, customer, seller);
     case "thermal": return buildThermalHtml(sale, settings, customer, seller);
+    case "waybill": return buildWaybillHtml(sale, settings, customer, seller);
   }
 }
 
@@ -133,31 +138,55 @@ export async function generateReceiptPdfBlob(html: string): Promise<Blob> {
       logging: false,
     });
 
-    const imgData = canvas.toDataURL("image/png");
-    
-    // A4 dimensions (A4 is 210mm x 297mm)
     const pdf = new jsPDF({
       orientation: "portrait",
       unit: "mm",
       format: "a4",
     });
 
-    const imgWidth = 210;
-    const pageHeight = 297;
-    const imgHeight = (canvas.height * imgWidth) / canvas.width;
-    let heightLeft = imgHeight;
-    let position = 0;
+    const margin = 15; // 1.5cm = 15mm margin
+    const printableWidth = 210 - (margin * 2); // 180mm
+    const printableHeight = 297 - (margin * 2); // 267mm
 
-    // Add first page
-    pdf.addImage(imgData, "PNG", 0, position, imgWidth, imgHeight);
-    heightLeft -= pageHeight;
+    const canvasWidth = canvas.width;
+    const canvasHeight = canvas.height;
 
-    // Handle multi-page if receipt is longer than A4 height
-    while (heightLeft >= 0) {
-      position = heightLeft - imgHeight;
-      pdf.addPage();
-      pdf.addImage(imgData, "PNG", 0, position, imgWidth, imgHeight);
-      heightLeft -= pageHeight;
+    // Calculate how many pixels on the canvas correspond to the printable height
+    const pxPageHeight = (canvasWidth * printableHeight) / printableWidth;
+
+    let srcY = 0;
+    let pageNum = 0;
+
+    while (srcY < canvasHeight) {
+      if (pageNum > 0) {
+        pdf.addPage();
+      }
+
+      // Height of the chunk to crop
+      const currentChunkHeight = Math.min(pxPageHeight, canvasHeight - srcY);
+
+      // Create a temporary canvas for this page chunk
+      const tempCanvas = document.createElement("canvas");
+      tempCanvas.width = canvasWidth;
+      tempCanvas.height = currentChunkHeight;
+      const ctx = tempCanvas.getContext("2d");
+
+      if (ctx) {
+        // Draw the chunk from the main canvas onto the temp canvas
+        ctx.drawImage(
+          canvas,
+          0, srcY, canvasWidth, currentChunkHeight, // source rect
+          0, 0, canvasWidth, currentChunkHeight     // dest rect
+        );
+      }
+
+      const chunkImgData = tempCanvas.toDataURL("image/png");
+      const destHeight = (currentChunkHeight * printableWidth) / canvasWidth;
+
+      pdf.addImage(chunkImgData, "PNG", margin, margin, printableWidth, destHeight);
+
+      srcY += pxPageHeight;
+      pageNum++;
     }
 
     return pdf.output("blob");

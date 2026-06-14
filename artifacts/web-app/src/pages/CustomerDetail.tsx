@@ -179,6 +179,7 @@ function CustomerDetailScreenInner() {
   const [editAddress, setEditAddress] = useState("");
   const [editLimit, setEditLimit] = useState("");
   const [editNote, setEditNote] = useState("");
+  const [editTelegramId, setEditTelegramId] = useState("");
   const [editError, setEditError] = useState<string | null>(null);
 
   const { data: customer, isLoading: loadingCustomer, refetch } = useGetCustomer(customerId);
@@ -281,6 +282,7 @@ function CustomerDetailScreenInner() {
     setEditAddress(customer.address ?? "");
     setEditLimit(customer.debtLimit > 0 ? String(customer.debtLimit) : "");
     setEditNote(customer.note ?? "");
+    setEditTelegramId(customer.telegramId ?? "");
     setEditError(null);
     setEditOpen(true);
   };
@@ -298,6 +300,7 @@ function CustomerDetailScreenInner() {
         address: editAddress.trim() || undefined,
         debtLimit: isNaN(limit) ? 0 : limit,
         note: editNote.trim() || undefined,
+        telegramId: editTelegramId.trim() || null,
       },
     });
   };
@@ -430,6 +433,12 @@ function CustomerDetailScreenInner() {
             <p className="text-muted" style={{ fontSize: "12px", marginTop: "2px", display: "flex", alignItems: "center", gap: "4px" }}>
               <span className="material-icons" style={{ fontSize: "14px" }}>location_on</span>
               <span>{customer.address}</span>
+            </p>
+          )}
+          {customer.telegramId && (
+            <p className="text-muted" style={{ fontSize: "12px", marginTop: "2px", display: "flex", alignItems: "center", gap: "4px" }}>
+              <span className="material-icons" style={{ fontSize: "14px" }}>send</span>
+              <span>Telegram ID: {customer.telegramId}</span>
             </p>
           )}
           {customer.note && (
@@ -755,6 +764,19 @@ function CustomerDetailScreenInner() {
                   value={editLimit}
                   onChange={(e) => setEditLimit(e.target.value.replace(/\D/g, ""))}
                   placeholder={t("0 = cheksiz limit")}
+                />
+              </div>
+
+              <div>
+                <label style={{ display: "block", fontSize: "12px", color: colors.mutedForeground, marginBottom: "4px" }}>
+                  {t("Telegram ID raqami")}
+                </label>
+                <input
+                  type="text"
+                  className="input-field"
+                  value={editTelegramId}
+                  onChange={(e) => setEditTelegramId(e.target.value.replace(/\D/g, ""))}
+                  placeholder={`${t("Masalan:")} 123456789`}
                 />
               </div>
 

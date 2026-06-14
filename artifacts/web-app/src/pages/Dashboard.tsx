@@ -8,8 +8,10 @@ import {
   useGetDeleteRequests,
 } from "@workspace/api-client-react";
 import { useAuth } from "../contexts/AuthContext";
+import { useColors } from "../hooks/useColors";
 import { useSettings } from "../hooks/useSettings";
 import { useTranslation } from "../contexts/LanguageContext";
+import { LiveClock } from "../components/LiveClock";
 
 function formatMoney(amount: number) {
   if (amount >= 1_000_000_000) return (amount / 1_000_000_000).toFixed(1) + " mlrd UZS";
@@ -125,16 +127,14 @@ export function Dashboard() {
     <div style={{ padding: "16px", paddingBottom: "100px", display: "flex", flexDirection: "column", gap: "20px" }}>
       {/* Header */}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-        <div>
-          <h2 style={{ fontSize: "20px", color: colors.foreground }}>SMARTBOSScontrol</h2>
-          <p className="text-muted" style={{ fontSize: "12px", marginTop: "2px" }}>
-            {t("Bugungi sana:")} {dateStr}
-          </p>
+        <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+          <h2 style={{ fontSize: "20px", color: colors.foreground, margin: 0, fontWeight: 800 }}>SMARTBOSScontrol</h2>
+          <LiveClock />
         </div>
         {settings.managerProfilePic && (
           <div style={{
-            width: "44px",
-            height: "44px",
+            width: "132px",
+            height: "132px",
             borderRadius: "50%",
             padding: "2px",
             background: "linear-gradient(135deg, #fbbf24, #ef4444, #c026d3, #3b82f6)",
@@ -142,11 +142,23 @@ export function Dashboard() {
             alignItems: "center",
             justifyContent: "center"
           }}>
-            <img
-              src={settings.managerProfilePic}
-              alt="Profile"
-              style={{ width: "38px", height: "38px", borderRadius: "50%", objectFit: "cover", backgroundColor: colors.muted, border: `2px solid ${colors.background}` }}
-            />
+            <div style={{
+              width: "124px",
+              height: "124px",
+              borderRadius: "50%",
+              overflow: "hidden",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              backgroundColor: colors.muted,
+              border: `2px solid ${colors.background}`
+            }}>
+              <img
+                src={settings.managerProfilePic}
+                alt="Profile"
+                style={{ width: "100%", height: "100%", objectFit: "cover", transform: "scale(1.35)" }}
+              />
+            </div>
           </div>
         )}
       </div>
