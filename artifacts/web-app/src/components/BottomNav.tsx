@@ -11,12 +11,8 @@ export default function BottomNav() {
 
   const isWorker = role === "worker";
 
-  // Workers only see POS, History, Customers, Products, and Settings
-  // Managers see all 6 tabs
   const tabs = [
-    ...(!isWorker
-      ? [{ path: "/", label: t("Asosiy"), icon: "dashboard" }]
-      : []),
+    { path: "/", label: t("Asosiy"), icon: "dashboard" },
     { path: "/pos", label: t("Kassa"), icon: "shopping_cart" },
     { path: "/products", label: t("Tovarlar"), icon: "inventory_2" },
     { path: "/history", label: t("Tarix"), icon: "history" },

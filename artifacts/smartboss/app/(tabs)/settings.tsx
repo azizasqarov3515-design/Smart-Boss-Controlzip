@@ -425,7 +425,7 @@ function DeleteRequestsSection({ colors }: { colors: ReturnType<typeof useColors
                 )}
               </View>
               <Text style={[styles.requestDate, { color: colors.mutedForeground }]}>
-                {new Date(r.createdAt).toLocaleDateString("uz-UZ")}
+                {new Date(r.createdAt).toLocaleDateString("uz-UZ", { day: "2-digit", month: "2-digit", year: "numeric" })} {new Date(r.createdAt).toLocaleTimeString("uz-UZ", { hour: "2-digit", minute: "2-digit" })}
               </Text>
             </View>
             <View style={styles.requestBtns}>

@@ -178,109 +178,115 @@ export function Dashboard() {
               <div className="card-glow-green" style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
                 <span className="material-icons" style={{ color: colors.success, fontSize: "24px" }}>trending_up</span>
                 <span style={{ fontSize: "11px", color: colors.mutedForeground }}>{t("Bugungi tushum")}</span>
-                <span style={{ fontSize: "20px", fontWeight: 700, color: colors.success }}>{formatMoney(todayRevenue)}</span>
+                <span style={{ fontSize: "20px", fontWeight: 700, color: colors.success }}>
+                  {isManager ? formatMoney(todayRevenue) : "*** UZS"}
+                </span>
               </div>
-              <div className="card-glow-green" style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-                <span className="material-icons" style={{ color: colors.success, fontSize: "24px" }}>savings</span>
-                <span style={{ fontSize: "11px", color: colors.mutedForeground }}>{t("Bugungi sof foyda")}</span>
-                <span style={{ fontSize: "20px", fontWeight: 700, color: colors.success }}>{formatMoney(stats?.todayNetProfit ?? 0)}</span>
-              </div>
+              {isManager && (
+                <div className="card-glow-green" style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                  <span className="material-icons" style={{ color: colors.success, fontSize: "24px" }}>savings</span>
+                  <span style={{ fontSize: "11px", color: colors.mutedForeground }}>{t("Bugungi sof foyda")}</span>
+                  <span style={{ fontSize: "20px", fontWeight: 700, color: colors.success }}>{formatMoney(stats?.todayNetProfit ?? 0)}</span>
+                </div>
+              )}
             </div>
           </div>
 
           {/* SVG Chart */}
-          <div className="card-standard" style={{ padding: "18px 0" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "0 16px", marginBottom: "12px" }}>
-              <h4 style={{ fontSize: "14px", color: colors.foreground }}>{t("Savdo tendensiyasi")}</h4>
-              <span style={{ fontSize: "12px", color: colors.mutedForeground }}>{dateStr}</span>
-            </div>
-            <div style={{ height: `${chartHeight}px`, width: "100%", overflow: "hidden" }}>
-              <svg width="100%" height="100%" viewBox={`0 0 ${chartWidth} ${chartHeight}`} preserveAspectRatio="xMidYMid meet">
-                {/* Horizontal Grid Lines */}
-                {yAxisValues.map((val, i) => {
-                  const y = pT + (i / 3) * dH;
-                  return (
-                    <g key={`h-${i}`}>
-                      <text
-                        x={pL - 8}
-                        y={y + 4}
-                        fill={colors.mutedForeground}
-                        fontSize="10"
-                        fontFamily="Inter"
-                        textAnchor="end"
-                      >
-                        {formatCompact(val)}
-                      </text>
-                      <line
-                        x1={pL}
-                        y1={y}
-                        x2={pL + dW}
-                        y2={y}
-                        stroke="rgba(255, 255, 255, 0.08)"
-                        strokeWidth="1"
-                        strokeDasharray="4 4"
+          {isManager && (
+            <div className="card-standard" style={{ padding: "18px 0" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "0 16px", marginBottom: "12px" }}>
+                <h4 style={{ fontSize: "14px", color: colors.foreground }}>{t("Savdo tendensiyasi")}</h4>
+                <span style={{ fontSize: "12px", color: colors.mutedForeground }}>{dateStr}</span>
+              </div>
+              <div style={{ height: `${chartHeight}px`, width: "100%", overflow: "hidden" }}>
+                <svg width="100%" height="100%" viewBox={`0 0 ${chartWidth} ${chartHeight}`} preserveAspectRatio="xMidYMid meet">
+                  {/* Horizontal Grid Lines */}
+                  {yAxisValues.map((val, i) => {
+                    const y = pT + (i / 3) * dH;
+                    return (
+                      <g key={`h-${i}`}>
+                        <text
+                          x={pL - 8}
+                          y={y + 4}
+                          fill={colors.mutedForeground}
+                          fontSize="10"
+                          fontFamily="Inter"
+                          textAnchor="end"
+                        >
+                          {formatCompact(val)}
+                        </text>
+                        <line
+                          x1={pL}
+                          y1={y}
+                          x2={pL + dW}
+                          y2={y}
+                          stroke="rgba(255, 255, 255, 0.08)"
+                          strokeWidth="1"
+                          strokeDasharray="4 4"
+                        />
+                      </g>
+                    );
+                  })}
+
+                  {/* Vertical Grid Lines */}
+                  {xLabels.map((label, i) => {
+                    const x = pL + (i / 6) * dW;
+                    return (
+                      <g key={`v-${i}`}>
+                        <text
+                          x={x}
+                          y={chartHeight - 5}
+                          fill={colors.mutedForeground}
+                          fontSize="10"
+                          fontFamily="Inter"
+                          textAnchor="middle"
+                        >
+                          {label}
+                        </text>
+                        <line
+                          x1={x}
+                          y1={pT}
+                          x2={x}
+                          y2={pT + dH}
+                          stroke="rgba(255, 255, 255, 0.08)"
+                          strokeWidth="1"
+                          strokeDasharray="4 4"
+                        />
+                      </g>
+                    );
+                  })}
+
+                  {/* Polyline path */}
+                  <polyline
+                    points={points}
+                    fill="none"
+                    stroke={colors.primary}
+                    strokeWidth="3"
+                    strokeLinejoin="round"
+                    strokeLinecap="round"
+                  />
+
+                  {/* Points dots */}
+                  {chartData.map((val, i) => {
+                    const x = pL + (i / 6) * dW;
+                    const y = pT + dH - ((val - minVal) / yRange) * dH;
+                    return (
+                      <circle
+                        key={`dot-${i}`}
+                        cx={x}
+                        cy={y}
+                        r="4"
+                        fill="#111827"
+                        stroke={colors.primary}
+                        strokeWidth="2.5"
                       />
-                    </g>
-                  );
-                })}
-
-                {/* Vertical Grid Lines */}
-                {xLabels.map((label, i) => {
-                  const x = pL + (i / 6) * dW;
-                  return (
-                    <g key={`v-${i}`}>
-                      <text
-                        x={x}
-                        y={chartHeight - 5}
-                        fill={colors.mutedForeground}
-                        fontSize="10"
-                        fontFamily="Inter"
-                        textAnchor="middle"
-                      >
-                        {label}
-                      </text>
-                      <line
-                        x1={x}
-                        y1={pT}
-                        x2={x}
-                        y2={pT + dH}
-                        stroke="rgba(255, 255, 255, 0.08)"
-                        strokeWidth="1"
-                        strokeDasharray="4 4"
-                      />
-                    </g>
-                  );
-                })}
-
-                {/* Polyline path */}
-                <polyline
-                  points={points}
-                  fill="none"
-                  stroke={colors.primary}
-                  strokeWidth="3"
-                  strokeLinejoin="round"
-                  strokeLinecap="round"
-                />
-
-                {/* Points dots */}
-                {chartData.map((val, i) => {
-                  const x = pL + (i / 6) * dW;
-                  const y = pT + dH - ((val - minVal) / yRange) * dH;
-                  return (
-                    <circle
-                      key={`dot-${i}`}
-                      cx={x}
-                      cy={y}
-                      r="4"
-                      fill="#111827"
-                      stroke={colors.primary}
-                      strokeWidth="2.5"
-                    />
-                  );
-                })}
-              </svg>
+                    );
+                  })}
+                </svg>
+              </div>
             </div>
-          </div>
+          )}
 
           {/* Recent Sales */}
           {recentSales.length > 0 && (
@@ -307,7 +313,9 @@ export function Dashboard() {
                       <h4 style={{ fontSize: "14px", color: colors.foreground }}>{sale.itemCount} {t("dona mahsulot")}</h4>
                       <p style={{ fontSize: "11px", color: colors.mutedForeground, marginTop: "2px" }}>{formatTime(sale.createdAt)}</p>
                     </div>
-                    <span style={{ fontSize: "15px", fontWeight: 700, color: colors.primary }}>{formatMoney(sale.totalAmount)}</span>
+                    <span style={{ fontSize: "15px", fontWeight: 700, color: colors.primary }}>
+                      {isManager ? formatMoney(sale.totalAmount) : "*** UZS"}
+                    </span>
                   </div>
                 ))}
               </div>
@@ -334,7 +342,7 @@ export function Dashboard() {
         {/* Right Column (Side Alerts & Warehouse Stats) */}
         <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
           {/* Pending requests */}
-          {totalPending > 0 && (
+          {isManager && totalPending > 0 && (
             <div
               className="alert-card"
               onClick={() => setLocation("/settings")}
@@ -380,12 +388,16 @@ export function Dashboard() {
               <div className="card-standard" style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
                 <span className="material-icons" style={{ color: colors.primary, fontSize: "22px" }}>account_balance_wallet</span>
                 <span style={{ fontSize: "11px", color: colors.mutedForeground }}>{t("Ombor tan narxi")}</span>
-                <span style={{ fontSize: "16px", fontWeight: 700 }}>{formatMoney(stats?.totalCostValue ?? 0)}</span>
+                <span style={{ fontSize: "16px", fontWeight: 700 }}>
+                  {isManager ? formatMoney(stats?.totalCostValue ?? 0) : "*** UZS"}
+                </span>
               </div>
               <div className="card-standard" style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
                 <span className="material-icons" style={{ color: colors.warning, fontSize: "22px" }}>monetization_on</span>
                 <span style={{ fontSize: "11px", color: colors.mutedForeground }}>{t("Sotuv qiymati")}</span>
-                <span style={{ fontSize: "16px", fontWeight: 700 }}>{formatMoney(stats?.totalSaleValue ?? 0)}</span>
+                <span style={{ fontSize: "16px", fontWeight: 700 }}>
+                  {isManager ? formatMoney(stats?.totalSaleValue ?? 0) : "*** UZS"}
+                </span>
               </div>
             </div>
           </div>
@@ -460,26 +472,28 @@ export function Dashboard() {
           )}
  
           {/* Backup Section */}
-          <div style={{ borderTop: `1px solid ${colors.border}`, paddingTop: "20px" }}>
-            <p style={{ fontSize: "12px", color: colors.mutedForeground, marginBottom: "10px", fontWeight: 500 }}>
-              {t("Ma'lumotlar zaxirasi")}
-            </p>
-            <button
-              onClick={handleBackup}
-              className="btn-secondary"
-              disabled={backupLoading}
-              style={{ width: "100%", gap: "10px" }}
-            >
-              {backupLoading ? (
-                <div className="spinner" style={{ width: "16px", height: "16px", border: `2px solid ${colors.border}`, borderTopColor: colors.primary, borderRadius: "50%", animation: "spin 1s linear infinite" }}></div>
-              ) : (
-                <span className="material-icons" style={{ color: colors.primary }}>cloud_download</span>
-              )}
-              <span style={{ color: colors.primary }}>
-                {backupLoading ? t("Tayyorlanmoqda...") : t("Backup yuklab olish")}
-              </span>
-            </button>
-          </div>
+          {isManager && (
+            <div style={{ borderTop: `1px solid ${colors.border}`, paddingTop: "20px" }}>
+              <p style={{ fontSize: "12px", color: colors.mutedForeground, marginBottom: "10px", fontWeight: 500 }}>
+                {t("Ma'lumotlar zaxirasi")}
+              </p>
+              <button
+                onClick={handleBackup}
+                className="btn-secondary"
+                disabled={backupLoading}
+                style={{ width: "100%", gap: "10px" }}
+              >
+                {backupLoading ? (
+                  <div className="spinner" style={{ width: "16px", height: "16px", border: `2px solid ${colors.border}`, borderTopColor: colors.primary, borderRadius: "50%", animation: "spin 1s linear infinite" }}></div>
+                ) : (
+                  <span className="material-icons" style={{ color: colors.primary }}>cloud_download</span>
+                )}
+                <span style={{ color: colors.primary }}>
+                  {backupLoading ? t("Tayyorlanmoqda...") : t("Backup yuklab olish")}
+                </span>
+              </button>
+            </div>
+          )}
         </div>
       </div>
     </div>

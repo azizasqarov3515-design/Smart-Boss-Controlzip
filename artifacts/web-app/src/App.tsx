@@ -55,8 +55,8 @@ export default function App() {
           setLocation("/worker-pending");
         }
       } else if (role === "worker" && workerStatus === "approved") {
-        if (location === "/" || isAuthPage) {
-          setLocation("/pos");
+        if (isAuthPage) {
+          setLocation("/");
         }
       } else if (role === "manager") {
         if (isAuthPage) {
@@ -87,9 +87,7 @@ export default function App() {
             <Route path="/worker-pending" component={WorkerPending} />
 
             {/* Core Protected Routes */}
-            <Route path="/">
-              {role === "worker" ? <Redirect to="/pos" /> : <Dashboard />}
-            </Route>
+            <Route path="/" component={Dashboard} />
             <Route path="/pos" component={POS} />
             <Route path="/products" component={Products} />
             <Route path="/product-form" component={ProductForm} />
@@ -101,7 +99,7 @@ export default function App() {
             {/* Fallback Route */}
             <Route>
               {isAuthenticated ? (
-                role === "worker" ? <Redirect to="/pos" /> : <Redirect to="/" />
+                <Redirect to="/" />
               ) : (
                 <Redirect to="/role-select" />
               )}

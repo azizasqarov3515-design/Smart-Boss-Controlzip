@@ -575,8 +575,7 @@ export function Settings() {
       )}
 
       {/* 2.5. Shriftlar o'lchami */}
-      {isManager && (
-        <SectionCard title="Shriftlar o'lchami" icon="format_size" colors={colors}>
+      <SectionCard title="Shriftlar o'lchami" icon="format_size" colors={colors}>
           <div>
             <label style={{ display: "block", fontSize: "11px", color: colors.mutedForeground, marginBottom: "4px" }}>
               Dastur interfeysini shriftini o'lchamini o'zgartirish
@@ -626,7 +625,6 @@ export function Settings() {
             {saving ? "Saqlanmoqda..." : saved ? "Saqlandi ✓" : "Shrift sozlamalarini saqlash"}
           </button>
         </SectionCard>
-      )}
 
 
 
@@ -774,7 +772,9 @@ export function Settings() {
                     <div>
                       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
                         <span style={{ fontSize: "13px", fontWeight: 700, color: colors.foreground }}>{titleText}</span>
-                        <span style={{ fontSize: "10px", color: colors.mutedForeground }}>{new Date(r.createdAt).toLocaleDateString("uz-UZ")}</span>
+                        <span style={{ fontSize: "10px", color: colors.mutedForeground }}>
+                          {new Date(r.createdAt).toLocaleString("uz-UZ", { day: "numeric", month: "numeric", year: "numeric", hour: "2-digit", minute: "2-digit" })}
+                        </span>
                       </div>
                       <p className="text-muted" style={{ fontSize: "11px", marginTop: "2px" }}>Ishchi: {r.workerName}</p>
                       <div style={{ fontSize: "12px", fontWeight: 600, marginTop: "4px" }}>
@@ -873,7 +873,8 @@ export function Settings() {
       </SectionCard>
 
       {/* Measurement Units Toggle Section */}
-      <SectionCard title="O'lchov birliklari" icon="straighten" colors={colors}>
+      {isManager && (
+        <SectionCard title="O'lchov birliklari" icon="straighten" colors={colors}>
         <p className="text-muted" style={{ fontSize: "12px", marginBottom: "8px" }}>
           Savat va savdoda ishlatiladigan o'lchov birliklarini boshqarish:
         </p>
@@ -923,6 +924,7 @@ export function Settings() {
           })}
         </div>
       </SectionCard>
+      )}
 
       {/* Biz haqimizda Section */}
       <SectionCard title="Biz haqimizda" icon="info" colors={colors}>
@@ -961,7 +963,8 @@ export function Settings() {
       </SectionCard>
 
       {/* 7. Manager Store info & Credentials */}
-      <SectionCard title="Hisob ma'lumotlari" icon="manage_accounts" colors={colors}>
+      {isManager && (
+        <SectionCard title="Hisob ma'lumotlari" icon="manage_accounts" colors={colors}>
         <div>
           <span className="text-muted" style={{ fontSize: "11px" }}>Roli:</span>
           <div style={{ fontSize: "13px", fontWeight: 700, textTransform: "capitalize" }}>{role}</div>
@@ -988,6 +991,7 @@ export function Settings() {
           </div>
         )}
       </SectionCard>
+      )}
 
       {/* Logout button */}
       <button className="btn-primary" onClick={logout} style={{ width: "100%", padding: "12px", gap: "8px", backgroundColor: "#374151", borderColor: "#374151" }}>
