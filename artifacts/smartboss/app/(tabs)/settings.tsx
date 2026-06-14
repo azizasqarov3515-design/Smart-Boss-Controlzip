@@ -175,6 +175,11 @@ function WorkersSection({ colors }: { colors: ReturnType<typeof useColors> }) {
                   <Text style={[styles.workerName, { color: colors.foreground }]}>{w.name}</Text>
                   <Text style={[styles.workerPhone, { color: colors.mutedForeground }]}>{w.phone}</Text>
                   <Text style={[styles.workerAddress, { color: colors.mutedForeground }]} numberOfLines={1}>{w.address}</Text>
+                  {(w as any).password && (
+                    <Text style={{ fontSize: 11, color: colors.mutedForeground, marginTop: 2, fontFamily: "Inter_500Medium" }}>
+                      Sotuvchi paroli: <Text style={{ fontFamily: "Inter_700Bold", color: colors.foreground }}>{(w as any).password}</Text>
+                    </Text>
+                  )}
                 </View>
                 <TouchableOpacity
                   style={[styles.pendingDeleteBtn, { backgroundColor: "#F3F4F6" }]}
@@ -235,8 +240,8 @@ function WorkersSection({ colors }: { colors: ReturnType<typeof useColors> }) {
                     <Text style={[styles.workerAvatarText, { color: colors.primary }]}>{w.name.charAt(0).toUpperCase()}</Text>
                   </View>
                   <View style={{
-                    position: "absolute", bottom: 0, right: 0,
-                    width: 11, height: 11, borderRadius: 6,
+                    position: "absolute", top: -2, right: -2,
+                    width: 13, height: 13, borderRadius: 7,
                     backgroundColor: isOnline ? "#22C55E" : "#EF4444",
                     borderWidth: 2, borderColor: colors.muted,
                   }} />
@@ -247,6 +252,11 @@ function WorkersSection({ colors }: { colors: ReturnType<typeof useColors> }) {
                     <WorkerStatusBadge status={w.status} colors={colors} />
                   </View>
                   <Text style={[styles.workerPhone, { color: colors.mutedForeground }]}>{w.phone}</Text>
+                  {(w as any).password && (
+                    <Text style={{ fontSize: 11, color: colors.mutedForeground, marginTop: 2, fontFamily: "Inter_500Medium" }}>
+                      Sotuvchi paroli: <Text style={{ fontFamily: "Inter_700Bold", color: colors.foreground }}>{(w as any).password}</Text>
+                    </Text>
+                  )}
                   {!isOnline && lastSeenLabel && (
                     <Text style={{ fontSize: 10, color: colors.mutedForeground, fontFamily: "Inter_400Regular" }}>
                       So'nggi: {lastSeenLabel}

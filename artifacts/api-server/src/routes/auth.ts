@@ -44,7 +44,7 @@ function encryptValue(text: string): string {
   return iv.toString("hex") + ":" + enc.toString("hex");
 }
 
-function decryptValue(cipherText: string | null | undefined): string | null {
+export function decryptValue(cipherText: string | null | undefined): string | null {
   if (!cipherText) return null;
   try {
     const [ivHex, encHex] = cipherText.split(":");
@@ -277,6 +277,7 @@ router.post("/auth/worker-register", async (req, res) => {
     }
 
     const passwordHash = hashPassword(body.password);
+    const encryptedPassword = encryptValue(body.password);
     const [worker] = await db
       .insert(workersTable)
       .values({
@@ -285,6 +286,7 @@ router.post("/auth/worker-register", async (req, res) => {
         address: body.address,
         phone: cleanPhone,
         passwordHash,
+        encryptedPassword,
         status: "pending",
       })
       .returning();
@@ -359,9 +361,10 @@ router.post("/auth/logout", requireAuth, async (req, res) => {
 
 router.post("/auth/heartbeat", requireAuth, async (req, res) => {
   const user = res.locals.user;
+  const isOffline = req.headers["x-offline"] === "true";
   if (user?.role === "worker" && user.workerId) {
     try {
-      await db.update(workersTable).set({ isOnline: true, lastSeen: new Date() }).where(eq(workersTable.id, user.workerId));
+      await db.update(workersTable).set({ isOnline: !isOffline, lastSeen: new Date() }).where(eq(workersTable.id, user.workerId));
     } catch { /* ignore */ }
   }
   res.json({ ok: true });

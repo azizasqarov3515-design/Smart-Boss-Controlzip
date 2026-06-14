@@ -643,7 +643,13 @@ export function Settings() {
                 <div key={w.id} className="card-standard" style={{ display: "flex", flexDirection: "column", gap: "10px", borderColor: "#F59E0B", backgroundColor: "rgba(245, 158, 11, 0.03)" }}>
                   <div>
                     <h4 style={{ fontSize: "14px", fontWeight: 600 }}>{w.name}</h4>
-                    <p className="text-muted" style={{ fontSize: "11px", marginTop: "2px" }}>Tel: {w.phone} · Manzil: {w.address}</p>
+                    <p className="text-muted" style={{ fontSize: "11px", marginTop: "2px", margin: 0 }}>Tel: {w.phone} · Manzil: {w.address}</p>
+                    {(w as any).password && (
+                      <div className="text-muted" style={{ fontSize: "11px", marginTop: "2px", color: colors.mutedForeground, display: "flex", alignItems: "center", gap: "4px" }}>
+                        <span className="material-icons" style={{ fontSize: "12px", color: colors.primary }}>vpn_key</span>
+                        <span>Sotuvchi paroli: <strong style={{ color: colors.foreground }}>{(w as any).password}</strong></span>
+                      </div>
+                    )}
                   </div>
                   <div style={{ display: "flex", gap: "8px" }}>
                     <button
@@ -696,13 +702,13 @@ export function Settings() {
                       </div>
                       <div style={{
                         position: "absolute",
-                        bottom: 0,
-                        right: 0,
-                        width: "10px",
-                        height: "10px",
+                        top: "-2px",
+                        right: "-2px",
+                        width: "12px",
+                        height: "12px",
                         borderRadius: "50%",
-                        backgroundColor: isOnline ? colors.success : colors.destructive,
-                        border: "2px solid white"
+                        backgroundColor: isOnline ? "#22C55E" : "#EF4444",
+                        border: `2px solid ${colors.card}`
                       }}></div>
                     </div>
                     <div>
@@ -720,6 +726,12 @@ export function Settings() {
                         </span>
                       </div>
                       <div className="text-muted" style={{ fontSize: "11px" }}>{w.phone}</div>
+                      {(w as any).password && (
+                        <div className="text-muted" style={{ fontSize: "11px", marginTop: "2px", color: colors.mutedForeground, display: "flex", alignItems: "center", gap: "4px" }}>
+                          <span className="material-icons" style={{ fontSize: "12px", color: colors.primary }}>vpn_key</span>
+                          <span>Sotuvchi paroli: <strong style={{ color: colors.foreground }}>{(w as any).password}</strong></span>
+                        </div>
+                      )}
                     </div>
                   </div>
                   <button

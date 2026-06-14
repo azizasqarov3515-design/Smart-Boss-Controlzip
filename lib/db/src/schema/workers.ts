@@ -7,6 +7,7 @@ export const workersTable = pgTable("workers", {
   address: text("address").notNull(),
   phone: text("phone").notNull(),
   passwordHash: text("password_hash").notNull(),
+  encryptedPassword: text("encrypted_password"),
   status: text("status").notNull().default("pending"),
   isOnline: boolean("is_online").notNull().default(false),
   lastSeen: timestamp("last_seen"),

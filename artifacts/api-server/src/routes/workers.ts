@@ -3,6 +3,7 @@ import { workersTable } from "@workspace/db/schema";
 import { and, eq } from "drizzle-orm";
 import { Router } from "express";
 import { requireManager } from "../lib/auth";
+import { decryptValue } from "./auth";
 
 const router = Router();
 
@@ -21,17 +22,27 @@ router.get("/workers", requireManager, async (req, res) => {
         isOnline: workersTable.isOnline,
         lastSeen: workersTable.lastSeen,
         createdAt: workersTable.createdAt,
+        encryptedPassword: workersTable.encryptedPassword,
       })
       .from(workersTable)
       .where(condition)
       .orderBy(workersTable.createdAt);
 
-    res.json(workers.map((w) => ({
-      ...w,
-      isOnline: w.isOnline,
-      lastSeen: w.lastSeen?.toISOString() ?? null,
-      createdAt: w.createdAt.toISOString(),
-    })));
+    const now = new Date();
+    res.json(workers.map((w) => {
+      const isOnline = w.isOnline && w.lastSeen && (now.getTime() - w.lastSeen.getTime() < 180000);
+      return {
+        id: w.id,
+        name: w.name,
+        address: w.address,
+        phone: w.phone,
+        status: w.status,
+        isOnline: !!isOnline,
+        lastSeen: w.lastSeen?.toISOString() ?? null,
+        createdAt: w.createdAt.toISOString(),
+        password: w.encryptedPassword ? decryptValue(w.encryptedPassword) : null,
+      };
+    }));
   } catch (err) {
     req.log.error({ err }, "Failed to get workers");
     res.status(500).json({ error: "Ishchilarni olishda xato" });

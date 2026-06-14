@@ -1,5 +1,8 @@
 import crypto from "crypto";
 import type { Request, Response, NextFunction } from "express";
+import { db } from "@workspace/db";
+import { workersTable } from "@workspace/db/schema";
+import { eq } from "drizzle-orm";
 
 const SESSION_SECRET = process.env["SESSION_SECRET"] ?? "smartboss-dev-secret-change-in-prod";
 const TOKEN_TTL_S = 30 * 24 * 60 * 60;
@@ -113,6 +116,14 @@ export function requireAuth(req: Request, res: Response, next: NextFunction): vo
     return;
   }
   res.locals.user = payload;
+
+  if (payload.role === "worker" && payload.workerId) {
+    db.update(workersTable)
+      .set({ isOnline: true, lastSeen: new Date() })
+      .where(eq(workersTable.id, payload.workerId))
+      .catch(() => {});
+  }
+
   next();
 }
 
