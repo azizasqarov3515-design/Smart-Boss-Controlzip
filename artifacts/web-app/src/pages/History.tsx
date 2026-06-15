@@ -249,9 +249,23 @@ function SaleCard({
           )}
 
           {/* Financial summary */}
-          <div style={{ display: "flex", justifyContent: "space-between", fontSize: "12px", fontWeight: 700, borderTop: `1px solid ${colors.border}`, paddingTop: "8px", color: colors.foreground }}>
-            <span>{t("Jami to'lov:")}</span>
-            <span>{formatMoney(sale.totalAmount)}</span>
+          <div style={{ display: "flex", flexDirection: "column", gap: "4px", borderTop: `1px solid ${colors.border}`, paddingTop: "8px", fontSize: "12px", color: colors.foreground }}>
+            {(sale.discountAmount ?? 0) > 0 && (
+              <>
+                <div style={{ display: "flex", justifyContent: "space-between", color: colors.mutedForeground }}>
+                  <span>{t("Mahsulotlar jami:")}</span>
+                  <span>{formatMoney(sale.items.reduce((s, item) => s + item.totalPrice, 0))}</span>
+                </div>
+                <div style={{ display: "flex", justifyContent: "space-between", color: colors.mutedForeground }}>
+                  <span>{t("Chegirma:")}</span>
+                  <span>-{formatMoney(sale.discountAmount ?? 0)}</span>
+                </div>
+              </>
+            )}
+            <div style={{ display: "flex", justifyContent: "space-between", fontWeight: 700 }}>
+              <span>{t("Jami to'lov:")}</span>
+              <span>{formatMoney(sale.totalAmount)}</span>
+            </div>
           </div>
         </div>
       )}

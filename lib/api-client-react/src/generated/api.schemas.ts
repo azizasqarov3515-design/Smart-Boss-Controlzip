@@ -152,6 +152,7 @@ export interface SaleWithItems {
   paidAmount?: number | null;
   debtAmount?: number | null;
   createdAt: string;
+  discountAmount?: number | null;
   items: SaleItem[];
 }
 
@@ -176,6 +177,7 @@ export interface CreateSale {
   paymentType?: CreateSalePaymentType;
   customerId?: number | null;
   paidAmount?: number | null;
+  discountAmount?: number | null;
 }
 
 export interface BulkDeleteSales {

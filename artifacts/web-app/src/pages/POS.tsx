@@ -48,6 +48,7 @@ export function POS() {
   const [paymentType, setPaymentType] = useState<"cash" | "card" | "debt">("cash");
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
   const [partialPayment, setPartialPayment] = useState("");
+  const [discountInput, setDiscountInput] = useState("");
   const [saleError, setSaleError] = useState<string | null>(null);
 
   // Customer Picker Modal State
@@ -231,12 +232,25 @@ export function POS() {
   );
 
   const cartItems = Array.from(cart.values());
-  const total = Math.round(cartItems.reduce((s, i) => s + i.product.salePrice * i.quantity, 0) * 100) / 100;
+  const grossTotal = Math.round(cartItems.reduce((s, i) => s + i.product.salePrice * i.quantity, 0) * 100) / 100;
+
+  let discountAmount = 0;
+  if (discountInput.trim()) {
+    const val = discountInput.trim();
+    if (val.endsWith("%")) {
+      const percent = parseFloat(val.slice(0, -1)) || 0;
+      discountAmount = Math.round((grossTotal * percent) / 100);
+    } else {
+      discountAmount = parseFloat(val.replace(/\D/g, "")) || 0;
+    }
+  }
+  const total = Math.max(0, grossTotal - discountAmount);
 
   const handleCheckout = () => {
     if (cartItems.length === 0) return;
     setSaleError(null);
     setPartialPayment("");
+    setDiscountInput("");
     setConfirmOpen(true);
   };
 
@@ -258,6 +272,7 @@ export function POS() {
         paymentType,
         customerId: selectedCustomer?.id ?? undefined,
         paidAmount: paid,
+        discountAmount,
       },
     });
   };
@@ -799,11 +814,40 @@ export function POS() {
                 </div>
               )}
 
+              {/* Discount Section */}
+              <div style={{ backgroundColor: "#F3F4F6", border: `1px solid ${colors.border}`, borderRadius: "12px", padding: "12px" }}>
+                <label style={{ display: "block", fontSize: "12px", color: colors.mutedForeground, marginBottom: "4px", fontWeight: 500 }}>
+                  Chegirma (ixtiyoriy)
+                </label>
+                <input
+                  type="text"
+                  className="input-field"
+                  value={discountInput}
+                  onChange={(e) => setDiscountInput(e.target.value)}
+                  placeholder="Masalan: 5% yoki 50000"
+                  style={{ backgroundColor: "white", color: "#000", borderColor: colors.border }}
+                />
+              </div>
+
               <hr style={{ border: "none", borderTop: `1px solid ${colors.border}` }} />
 
-              <div style={{ display: "flex", justifyContent: "space-between", fontSize: "15px", fontWeight: 700 }}>
-                <span>Jami summa:</span>
-                <span>{formatMoney(total)}</span>
+              <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                {discountAmount > 0 && (
+                  <>
+                    <div style={{ display: "flex", justifyContent: "space-between", fontSize: "13px", color: colors.mutedForeground }}>
+                      <span>Mahsulotlar jami:</span>
+                      <span>{formatMoney(grossTotal)}</span>
+                    </div>
+                    <div style={{ display: "flex", justifyContent: "space-between", fontSize: "13px", color: colors.mutedForeground }}>
+                      <span>Chegirma:</span>
+                      <span>-{formatMoney(discountAmount)}</span>
+                    </div>
+                  </>
+                )}
+                <div style={{ display: "flex", justifyContent: "space-between", fontSize: "15px", fontWeight: 700 }}>
+                  <span>Jami summa:</span>
+                  <span>{formatMoney(total)}</span>
+                </div>
               </div>
 
               {saleError && (

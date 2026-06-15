@@ -17,6 +17,7 @@ export const salesTable = pgTable("sales", {
   paidAmount: numeric("paid_amount", { precision: 14, scale: 2 }),
   debtAmount: numeric("debt_amount", { precision: 14, scale: 2 }),
   createdAt: timestamp("created_at").notNull().defaultNow(),
+  discountAmount: numeric("discount_amount", { precision: 14, scale: 2 }).notNull().default("0"),
 });
 
 export const saleItemsTable = pgTable("sale_items", {

@@ -15,4 +15,5 @@ export interface CreateSale {
   paymentType?: CreateSalePaymentType;
   customerId?: number | null;
   paidAmount?: number | null;
+  discountAmount?: number | null;
 }

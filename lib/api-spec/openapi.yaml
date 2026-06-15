@@ -844,6 +844,9 @@ components:
           nullable: true
         createdAt:
           type: string
+        discountAmount:
+          type: number
+          nullable: true
         items:
           type: array
           items:
@@ -875,6 +878,9 @@ components:
           type: integer
           nullable: true
         paidAmount:
+          type: number
+          nullable: true
+        discountAmount:
           type: number
           nullable: true
       required: [items]

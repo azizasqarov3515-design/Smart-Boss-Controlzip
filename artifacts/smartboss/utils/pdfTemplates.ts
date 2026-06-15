@@ -277,6 +277,16 @@ export function buildInvoiceHtml(
       <span class="total-val" style="color:#374151">${sale.itemCount} dona</span>
     </div>
     ${sale.note ? `<div class="total-row"><span class="total-label" style="color:#6B7280">Izoh:</span><span class="total-val" style="color:#374151">${sale.note}</span></div>` : ""}
+    ${sale.discountAmount && sale.discountAmount > 0 ? `
+    <div class="total-row">
+      <span class="total-label" style="color:#6B7280">Mahsulotlar jami:</span>
+      <span class="total-val" style="color:#374151">${fmtMoney(sale.items.reduce((sum, item) => sum + item.totalPrice, 0))}</span>
+    </div>
+    <div class="total-row">
+      <span class="total-label" style="color:#6B7280">Chegirma:</span>
+      <span class="total-val" style="color:#374151">-${fmtMoney(sale.discountAmount)}</span>
+    </div>
+    ` : ""}
     <div class="total-row grand">
       <span class="total-label">UMUMIY SUMMA:</span>
       <span class="total-val">${fmtMoney(sale.totalAmount)}</span>
@@ -403,6 +413,16 @@ export function buildReceiptHtml(
 
   <div class="total-section">
     ${sale.note ? `<div class="total-row"><span class="total-label" style="color:#6B7280;font-size:12px">Izoh:</span><span style="font-size:12px;color:#374151">${sale.note}</span></div>` : ""}
+    ${sale.discountAmount && sale.discountAmount > 0 ? `
+    <div class="total-row" style="margin-top:6px">
+      <span class="total-label" style="color:#6B7280;font-size:12px">Mahsulotlar jami:</span>
+      <span class="total-val" style="color:#374151;font-size:12px">${fmtMoney(sale.items.reduce((sum, item) => sum + item.totalPrice, 0))}</span>
+    </div>
+    <div class="total-row">
+      <span class="total-label" style="color:#6B7280;font-size:12px">Chegirma:</span>
+      <span class="total-val" style="color:#374151;font-size:12px">-${fmtMoney(sale.discountAmount)}</span>
+    </div>
+    ` : ""}
     <div class="total-row grand" style="margin-top:12px">
       <span class="total-label">UMUMIY SUMMA:</span>
       <span class="total-val">${fmtMoney(sale.totalAmount)}</span>
@@ -559,6 +579,16 @@ export function buildA5InvoiceHtml(
   </table>
   <div class="totals">
     ${sale.note ? `<div style="font-size:11px;color:#6B7280;margin-bottom:3px">Izoh: ${sale.note}</div>` : ""}
+    ${sale.discountAmount && sale.discountAmount > 0 ? `
+    <div style="display:flex;justify-content:space-between;min-width:260px;margin-bottom:3px;padding:2px 4px">
+      <span style="font-size:12px;color:#6B7280">Mahsulotlar jami:</span>
+      <span style="font-size:12px;color:#374151">${fmtMoney(sale.items.reduce((sum, item) => sum + item.totalPrice, 0))}</span>
+    </div>
+    <div style="display:flex;justify-content:space-between;min-width:260px;margin-bottom:3px;padding:2px 4px">
+      <span style="font-size:12px;color:#6B7280">Chegirma:</span>
+      <span style="font-size:12px;color:#374151">-${fmtMoney(sale.discountAmount)}</span>
+    </div>
+    ` : ""}
     <div class="grand-row">
       <span class="grand-label">UMUMIY SUMMA</span>
       <span class="grand-val">${fmtMoney(sale.totalAmount)}</span>
@@ -815,6 +845,16 @@ export function buildWaybillHtml(
       <span class="total-val" style="color:#374151">${sale.itemCount} dona</span>
     </div>
     ${sale.note ? `<div class="total-row"><span class="total-label" style="color:#6B7280">Izoh:</span><span class="total-val" style="color:#374151">${sale.note}</span></div>` : ""}
+    ${sale.discountAmount && sale.discountAmount > 0 ? `
+    <div class="total-row">
+      <span class="total-label" style="color:#6B7280">Mahsulotlar jami:</span>
+      <span class="total-val" style="color:#374151">${fmtMoney(sale.items.reduce((sum, item) => sum + item.totalPrice, 0))}</span>
+    </div>
+    <div class="total-row">
+      <span class="total-label" style="color:#6B7280">Chegirma:</span>
+      <span class="total-val" style="color:#374151">-${fmtMoney(sale.discountAmount)}</span>
+    </div>
+    ` : ""}
     <div class="total-row grand">
       <span class="total-label">UMUMIY SUMMA:</span>
       <span class="total-val">${fmtMoney(sale.totalAmount)}</span>

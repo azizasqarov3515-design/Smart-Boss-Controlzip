@@ -18,5 +18,6 @@ export interface SaleWithItems {
   paidAmount?: number | null;
   debtAmount?: number | null;
   createdAt: string;
+  discountAmount?: number | null;
   items: SaleItem[];
 }

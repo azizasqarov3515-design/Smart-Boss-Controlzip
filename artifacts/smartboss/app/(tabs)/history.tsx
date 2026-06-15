@@ -228,9 +228,31 @@ function SaleCard({
             </View>
           ) : null}
 
-          <View style={[styles.totalRow, { borderTopColor: colors.border }]}>
-            <Text style={[styles.totalLabel, { color: colors.mutedForeground }]}>Jami to'lov:</Text>
-            <Text style={[styles.totalVal, { color: colors.success }]}>{formatMoney(sale.totalAmount)}</Text>
+          <View style={[styles.totalRow, { borderTopColor: colors.border, flexDirection: "column", alignItems: "stretch", gap: 6, paddingVertical: 10 }]}>
+            {(sale.discountAmount ?? 0) > 0 && (
+              <>
+                <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
+                  <Text style={{ fontFamily: "Inter_500Medium", fontSize: 13, color: colors.mutedForeground }}>
+                    Mahsulotlar jami:
+                  </Text>
+                  <Text style={{ fontFamily: "Inter_600SemiBold", fontSize: 13, color: colors.foreground }}>
+                    {formatMoney(sale.items.reduce((sum, item) => sum + item.totalPrice, 0))}
+                  </Text>
+                </View>
+                <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
+                  <Text style={{ fontFamily: "Inter_500Medium", fontSize: 13, color: colors.mutedForeground }}>
+                    Chegirma:
+                  </Text>
+                  <Text style={{ fontFamily: "Inter_600SemiBold", fontSize: 13, color: colors.primary }}>
+                    -{formatMoney(sale.discountAmount ?? 0)}
+                  </Text>
+                </View>
+              </>
+            )}
+            <View style={{ flexDirection: "row", justifyContent: "space-between", marginTop: (sale.discountAmount ?? 0) > 0 ? 4 : 0 }}>
+              <Text style={[styles.totalLabel, { color: colors.mutedForeground, marginVertical: 0 }]}>Jami to'lov:</Text>
+              <Text style={[styles.totalVal, { color: colors.success }]}>{formatMoney(sale.totalAmount)}</Text>
+            </View>
           </View>
         </>
       )}

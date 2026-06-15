@@ -305,6 +305,7 @@ function POSScreenInner() {
   const [paymentType, setPaymentType] = useState<"cash" | "card" | "debt">("cash");
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
   const [partialPayment, setPartialPayment] = useState("");
+  const [discountInput, setDiscountInput] = useState("");
   const [customerPickerOpen, setCustomerPickerOpen] = useState(false);
   const [customerSearch, setCustomerSearch] = useState("");
   const [customerMode, setCustomerMode] = useState<"list" | "create">("list");
@@ -487,13 +488,26 @@ function POSScreenInner() {
   );
 
   const cartItems = Array.from(cart.values());
-  const total = Math.round(cartItems.reduce((s, i) => s + i.product.salePrice * i.quantity, 0) * 100) / 100;
+  const grossTotal = Math.round(cartItems.reduce((s, i) => s + i.product.salePrice * i.quantity, 0) * 100) / 100;
+
+  let discountAmount = 0;
+  if (discountInput.trim()) {
+    const val = discountInput.trim();
+    if (val.endsWith("%")) {
+      const percent = parseFloat(val.slice(0, -1)) || 0;
+      discountAmount = Math.round((grossTotal * percent) / 100);
+    } else {
+      discountAmount = parseFloat(val.replace(/\D/g, "")) || 0;
+    }
+  }
+  const total = Math.max(0, grossTotal - discountAmount);
   const totalItems = cartItems.reduce((s, i) => s + i.quantity, 0);
 
   const handleCheckout = () => {
     if (cartItems.length === 0) return;
     setSaleError(null);
     setPartialPayment("");
+    setDiscountInput("");
     setConfirmOpen(true);
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
   };
@@ -538,6 +552,7 @@ function POSScreenInner() {
         paymentType,
         customerId: selectedCustomer?.id ?? undefined,
         paidAmount: paid,
+        discountAmount,
       },
     });
   };
@@ -912,6 +927,19 @@ function POSScreenInner() {
             </View>
           )}
 
+          {/* Chegirma (Discount) Section */}
+          <View style={{ padding: 12, borderRadius: 12, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.muted, marginBottom: 10 }}>
+            <Text style={{ fontFamily: "Inter_600SemiBold", fontSize: 12, color: colors.mutedForeground, marginBottom: 6 }}>Chegirma (ixtiyoriy)</Text>
+            <TextInput
+              style={{ height: 40, borderRadius: 8, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.card, paddingHorizontal: 10, color: colors.foreground, fontSize: 13, fontFamily: "Inter_500Medium" }}
+              placeholder="Masalan: 5% yoki 50 000"
+              placeholderTextColor={colors.mutedForeground}
+              value={discountInput}
+              onChangeText={setDiscountInput}
+              editable={!checkingOut}
+            />
+          </View>
+
           {/* Debt partial payment section */}
           {paymentType === "debt" && (
             <View style={[styles.debtSection, { backgroundColor: "#FEF2F2", borderColor: "#FECACA" }]}>
@@ -960,13 +988,35 @@ function POSScreenInner() {
           </View>
 
           {/* Total */}
-          <View style={[styles.confirmTotalRow, { borderTopColor: colors.border }]}>
-            <Text style={[styles.confirmTotalLabel, { color: colors.mutedForeground }]}>
-              Jami ({cartItems.length} ta mahsulot):
-            </Text>
-            <Text style={[styles.confirmTotalVal, { color: colors.foreground }]}>
-              {formatMoney(total)}
-            </Text>
+          <View style={[styles.confirmTotalRow, { borderTopColor: colors.border, flexDirection: "column", alignItems: "stretch", gap: 6 }]}>
+            {discountAmount > 0 && (
+              <>
+                <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
+                  <Text style={{ fontFamily: "Inter_500Medium", fontSize: 13, color: colors.mutedForeground }}>
+                    Mahsulotlar jami:
+                  </Text>
+                  <Text style={{ fontFamily: "Inter_600SemiBold", fontSize: 13, color: colors.foreground }}>
+                    {formatMoney(grossTotal)}
+                  </Text>
+                </View>
+                <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
+                  <Text style={{ fontFamily: "Inter_500Medium", fontSize: 13, color: colors.mutedForeground }}>
+                    Chegirma:
+                  </Text>
+                  <Text style={{ fontFamily: "Inter_600SemiBold", fontSize: 13, color: colors.primary }}>
+                    -{formatMoney(discountAmount)}
+                  </Text>
+                </View>
+              </>
+            )}
+            <View style={{ flexDirection: "row", justifyContent: "space-between", marginTop: discountAmount > 0 ? 4 : 0 }}>
+              <Text style={[styles.confirmTotalLabel, { color: colors.mutedForeground }]}>
+                Jami ({cartItems.length} ta mahsulot):
+              </Text>
+              <Text style={[styles.confirmTotalVal, { color: colors.foreground }]}>
+                {formatMoney(total)}
+              </Text>
+            </View>
           </View>
 
           {/* Error banner */}

@@ -116,6 +116,7 @@ export const GetSalesResponseItem = zod.object({
   paidAmount: zod.number().nullish(),
   debtAmount: zod.number().nullish(),
   createdAt: zod.string(),
+  discountAmount: zod.number().nullish(),
   items: zod.array(
     zod.object({
       id: zod.number(),
@@ -148,6 +149,7 @@ export const CreateSaleBody = zod.object({
   paymentType: zod.enum(["cash", "card", "debt"]).optional(),
   customerId: zod.number().nullish(),
   paidAmount: zod.number().nullish(),
+  discountAmount: zod.number().nullish(),
 });
 
 /**

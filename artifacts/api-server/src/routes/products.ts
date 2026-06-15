@@ -236,12 +236,19 @@ router.get("/dashboard/stats", async (req, res) => {
       : sql`1=1`;
 
     const profitResult = await db.execute(sql`
-      SELECT COALESCE(SUM((si.unit_price::numeric - p.cost_price::numeric) * si.quantity::numeric), 0) AS today_net_profit
-      FROM ${saleItemsTable} si
-      JOIN ${salesTable} s ON si.sale_id = s.id
-      JOIN ${productsTable} p ON si.product_id = p.id
-      WHERE s.created_at::date = CURRENT_DATE
-        AND ${mgrSaleCond}
+      SELECT (
+        SELECT COALESCE(SUM((si.unit_price::numeric - p.cost_price::numeric) * si.quantity::numeric), 0)
+        FROM ${saleItemsTable} si
+        JOIN ${salesTable} s ON si.sale_id = s.id
+        JOIN ${productsTable} p ON si.product_id = p.id
+        WHERE s.created_at::date = CURRENT_DATE
+          AND ${mgrSaleCond}
+      ) - (
+        SELECT COALESCE(SUM(s.discount_amount::numeric), 0)
+        FROM ${salesTable} s
+        WHERE s.created_at::date = CURRENT_DATE
+          AND ${managerId !== undefined ? sql`s.manager_id = ${managerId}` : sql`1=1`}
+      ) AS today_net_profit
     `);
     const profitStats = profitResult.rows[0] as Record<string, unknown> | undefined;
 

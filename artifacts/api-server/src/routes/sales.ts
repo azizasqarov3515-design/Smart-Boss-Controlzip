@@ -19,6 +19,7 @@ const createSaleSchema = z.object({
   paymentType: z.enum(["cash", "card", "debt"]).optional().default("cash"),
   customerId: z.number().int().positive().optional().nullable(),
   paidAmount: z.number().min(0).optional().nullable(),
+  discountAmount: z.number().min(0).optional().nullable(),
 });
 
 function mapSaleRow(
@@ -37,6 +38,7 @@ function mapSaleRow(
     paidAmount: sale.paidAmount ? parseFloat(sale.paidAmount) : null,
     debtAmount: sale.debtAmount ? parseFloat(sale.debtAmount) : null,
     createdAt: sale.createdAt.toISOString(),
+    discountAmount: sale.discountAmount ? parseFloat(sale.discountAmount) : 0,
     items: items.map((i) => ({
       id: i.id,
       productId: i.productId ?? null,
@@ -145,16 +147,18 @@ router.post("/sales", async (req, res) => {
         totalPrice: String(totalPrice),
       };
     });
-    totalAmount = Math.round(totalAmount * 100) / 100;
+    const grossTotal = Math.round(totalAmount * 100) / 100;
+    const discountAmount = body.discountAmount ?? 0;
+    const netAmount = Math.max(0, grossTotal - discountAmount);
 
     const totalItemCount = body.items.length;
 
     const paidAmount =
       body.paymentType === "debt"
         ? (body.paidAmount ?? 0)
-        : totalAmount;
+        : netAmount;
     const debtAmount =
-      body.paymentType === "debt" ? totalAmount - paidAmount : 0;
+      body.paymentType === "debt" ? netAmount - paidAmount : 0;
 
     let customerName: string | null = null;
     if (body.customerId) {
@@ -182,13 +186,14 @@ router.post("/sales", async (req, res) => {
         .insert(salesTable)
         .values({
           managerId,
-          totalAmount: String(totalAmount),
+          totalAmount: String(netAmount),
           itemCount: totalItemCount,
           note: body.note ?? null,
           paymentType: body.paymentType,
           customerId: body.customerId ?? null,
           paidAmount: String(paidAmount),
           debtAmount: String(debtAmount),
+          discountAmount: String(discountAmount),
         })
         .returning();
 
