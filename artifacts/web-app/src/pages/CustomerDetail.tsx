@@ -165,6 +165,7 @@ function CustomerDetailScreenInner() {
   const customerId = idParam ? parseInt(idParam, 10) : 0;
 
   const [activeTab, setActiveTab] = useState<"sales" | "payments">("sales");
+  const [expandedSaleId, setExpandedSaleId] = useState<number | null>(null);
   const [paymentOpen, setPaymentOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
@@ -590,25 +591,117 @@ function CustomerDetailScreenInner() {
           ) : (
             <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
               {debtSales.map((s) => (
-                <div key={s.id} className="card-standard" style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                  <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
-                    <span className="material-icons" style={{ color: "#DC2626", fontSize: "20px" }}>shopping_bag</span>
-                    <div>
-                      <span className="text-muted" style={{ fontSize: "10px", display: "block" }}>{formatDate(s.createdAt)}</span>
-                      <span style={{ fontSize: "14px", fontWeight: 600 }}>#{s.id} · {s.itemCount} {t("ta tovar")}</span>
-                      {s.paidAmount != null && s.paidAmount > 0 && (
-                        <span style={{ fontSize: "11px", color: colors.success, display: "block", marginTop: "2px" }}>
-                          {t("Kassa to'lovi:")} {formatMoney(s.paidAmount)}
+                <div
+                  key={s.id}
+                  className="card-standard"
+                  onClick={() => setExpandedSaleId(expandedSaleId === s.id ? null : s.id)}
+                  style={{
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: "12px",
+                    cursor: "pointer",
+                    padding: "16px",
+                    transition: "all 0.2s"
+                  }}
+                >
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", width: "100%" }}>
+                    <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+                      <span className="material-icons" style={{ color: "#DC2626", fontSize: "20px" }}>shopping_bag</span>
+                      <div>
+                        <span className="text-muted" style={{ fontSize: "10px", display: "block" }}>{formatDate(s.createdAt)}</span>
+                        <span style={{ fontSize: "14px", fontWeight: 600 }}>#{s.id} · {s.itemCount} {t("ta tovar")}</span>
+                        {s.paidAmount != null && s.paidAmount > 0 && (
+                          <span style={{ fontSize: "11px", color: colors.success, display: "block", marginTop: "2px" }}>
+                            {t("Kassa to'lovi:")} {formatMoney(s.paidAmount)}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                    <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                      <div style={{ textAlign: "right" }}>
+                        <span style={{ fontSize: "14px", fontWeight: 700, color: "#DC2626", display: "block" }}>
+                          +{formatMoney(s.debtAmount ?? s.totalAmount)}
                         </span>
-                      )}
+                        <span style={{ fontSize: "9px", color: colors.mutedForeground, display: "block", textTransform: "uppercase" }}>{t("qarzga")}</span>
+                      </div>
+                      <span className="material-icons" style={{ color: colors.mutedForeground, fontSize: "20px", transition: "transform 0.2s", transform: expandedSaleId === s.id ? "rotate(180deg)" : "none" }}>
+                        expand_more
+                      </span>
                     </div>
                   </div>
-                  <div style={{ textAlign: "right" }}>
-                    <span style={{ fontSize: "14px", fontWeight: 700, color: "#DC2626" }}>
-                      +{formatMoney(s.debtAmount ?? s.totalAmount)}
-                    </span>
-                    <span style={{ fontSize: "9px", color: colors.mutedForeground, display: "block", textTransform: "uppercase" }}>{t("qarzga")}</span>
-                  </div>
+
+                  {expandedSaleId === s.id && (
+                    <div
+                      style={{
+                        marginTop: "4px",
+                        borderTop: `1px solid ${colors.border}`,
+                        paddingTop: "12px",
+                        display: "flex",
+                        flexDirection: "column",
+                        gap: "12px",
+                        width: "100%"
+                      }}
+                      onClick={(e) => e.stopPropagation() /* Prevent closing when clicking inner elements */}
+                    >
+                      <div style={{ fontSize: "11px", fontWeight: 700, color: colors.mutedForeground, textTransform: "uppercase", letterSpacing: "0.05em" }}>
+                        {t("Sotib olingan tovarlar:")}
+                      </div>
+                      
+                      <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+                        {((s as any).items ?? []).map((item: any) => (
+                          <div key={item.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", fontSize: "13px" }}>
+                            <div style={{ flex: 1, paddingRight: "10px" }}>
+                              <div style={{ fontWeight: 600, color: colors.foreground }}>{item.productName}</div>
+                              {item.brand && (
+                                <div style={{ fontSize: "11px", color: colors.mutedForeground, marginTop: "1px" }}>{item.brand}</div>
+                              )}
+                            </div>
+                            <div style={{ textAlign: "right", flexShrink: 0 }}>
+                              <div style={{ fontWeight: 500, color: colors.mutedForeground }}>
+                                {item.quantity} {t(item.unit)} × {formatMoney(item.unitPrice)}
+                              </div>
+                              <div style={{ fontSize: "12px", fontWeight: 700, color: colors.foreground, marginTop: "2px" }}>
+                                {formatMoney(item.totalPrice)}
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+
+                      <div
+                        style={{
+                          marginTop: "4px",
+                          paddingTop: "10px",
+                          borderTop: `1px dashed ${colors.border}`,
+                          display: "flex",
+                          flexDirection: "column",
+                          gap: "6px",
+                          fontSize: "12px"
+                        }}
+                      >
+                        <div style={{ display: "flex", justifyContent: "space-between", color: colors.mutedForeground }}>
+                          <span>{t("Jami summa:")}</span>
+                          <span style={{ fontWeight: 500, color: colors.foreground }}>{formatMoney(s.totalAmount + (s.discountAmount ?? 0))}</span>
+                        </div>
+                        {s.discountAmount != null && s.discountAmount > 0 && (
+                          <div style={{ display: "flex", justifyContent: "space-between", color: colors.destructive }}>
+                            <span>{t("Chegirma:")}</span>
+                            <span style={{ fontWeight: 600 }}>-{formatMoney(s.discountAmount)}</span>
+                          </div>
+                        )}
+                        {s.paidAmount != null && s.paidAmount > 0 && (
+                          <div style={{ display: "flex", justifyContent: "space-between", color: colors.success }}>
+                            <span>{t("To'langan (Kassa):")}</span>
+                            <span style={{ fontWeight: 600 }}>{formatMoney(s.paidAmount)}</span>
+                          </div>
+                        )}
+                        <div style={{ display: "flex", justifyContent: "space-between", fontSize: "13px", fontWeight: 700, marginTop: "2px", borderTop: `1px solid ${colors.border}`, paddingTop: "6px", color: "#DC2626" }}>
+                          <span>{t("Qarz summasi:")}</span>
+                          <span>{formatMoney(s.debtAmount ?? s.totalAmount)}</span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
               ))}
             </div>

@@ -1,6 +1,6 @@
 import { db } from "@workspace/db";
-import { customersTable, debtPaymentsTable, salesTable } from "@workspace/db/schema";
-import { and, eq, desc } from "drizzle-orm";
+import { customersTable, debtPaymentsTable, salesTable, saleItemsTable } from "@workspace/db/schema";
+import { and, eq, desc, sql } from "drizzle-orm";
 import { Router } from "express";
 import { z } from "zod";
 
@@ -48,7 +48,7 @@ const debtPaymentInputSchema = z.object({
     .transform((v) => v ?? null),
 });
 
-function mapCustomer(c: typeof customersTable.$inferSelect) {
+function mapCustomer(c: typeof customersTable.$inferSelect, oldestDebtDate?: string | null) {
   return {
     id: c.id,
     name: c.name,
@@ -60,6 +60,7 @@ function mapCustomer(c: typeof customersTable.$inferSelect) {
     imageUrl: c.imageUrl ?? null,
     telegramId: c.telegramId ?? null,
     createdAt: c.createdAt.toISOString(),
+    oldestDebtDate: oldestDebtDate ?? null,
   };
 }
 
@@ -68,12 +69,35 @@ router.get("/customers", async (req, res) => {
   try {
     const managerId = res.locals.user?.managerId;
     const condition = managerId !== undefined ? eq(customersTable.managerId, managerId) : undefined;
+    
     const customers = await db
       .select()
       .from(customersTable)
       .where(condition)
       .orderBy(desc(customersTable.createdAt));
-    res.json(customers.map(mapCustomer));
+
+    // Find oldest debt sale date for each customer
+    const salesCondition = managerId !== undefined 
+      ? and(eq(salesTable.paymentType, "debt"), eq(salesTable.managerId, managerId))
+      : eq(salesTable.paymentType, "debt");
+      
+    const oldestDebtSales = await db
+      .select({
+        customerId: salesTable.customerId,
+        oldestDebtDate: sql<string>`min(${salesTable.createdAt})`,
+      })
+      .from(salesTable)
+      .where(salesCondition)
+      .groupBy(salesTable.customerId);
+
+    const oldestDebtSalesMap = new Map<number, string>();
+    for (const row of oldestDebtSales) {
+      if (row.customerId && row.oldestDebtDate) {
+        oldestDebtSalesMap.set(row.customerId, new Date(row.oldestDebtDate).toISOString());
+      }
+    }
+
+    res.json(customers.map((c) => mapCustomer(c, oldestDebtSalesMap.get(c.id) || null)));
   } catch (err) {
     req.log.error({ err }, "Failed to get customers");
     res.status(500).json({ error: "Mijozlarni olishda xatolik" });
@@ -98,7 +122,7 @@ router.post("/customers", async (req, res) => {
         telegramId: body.telegramId,
       })
       .returning();
-    res.status(201).json(mapCustomer(customer));
+    res.status(201).json(mapCustomer(customer, null));
   } catch (err) {
     if (err instanceof z.ZodError) {
       res.status(400).json({ error: "Validatsiya xatosi", details: err.issues });
@@ -122,7 +146,15 @@ router.get("/customers/:id", async (req, res) => {
       res.status(404).json({ error: "Mijoz topilmadi" });
       return;
     }
-    res.json(mapCustomer(customer));
+
+    const [oldestDebtSale] = await db
+      .select({ oldestDebtDate: sql<string>`min(${salesTable.createdAt})` })
+      .from(salesTable)
+      .where(and(eq(salesTable.customerId, id), eq(salesTable.paymentType, "debt")));
+    
+    const oldestDebtDate = oldestDebtSale?.oldestDebtDate ? new Date(oldestDebtSale.oldestDebtDate).toISOString() : null;
+
+    res.json(mapCustomer(customer, oldestDebtDate));
   } catch (err) {
     req.log.error({ err }, "Failed to get customer");
     res.status(500).json({ error: "Mijozni olishda xatolik" });
@@ -155,7 +187,15 @@ router.put("/customers/:id", async (req, res) => {
       res.status(404).json({ error: "Mijoz topilmadi" });
       return;
     }
-    res.json(mapCustomer(updated));
+
+    const [oldestDebtSale] = await db
+      .select({ oldestDebtDate: sql<string>`min(${salesTable.createdAt})` })
+      .from(salesTable)
+      .where(and(eq(salesTable.customerId, id), eq(salesTable.paymentType, "debt")));
+    
+    const oldestDebtDate = oldestDebtSale?.oldestDebtDate ? new Date(oldestDebtSale.oldestDebtDate).toISOString() : null;
+
+    res.json(mapCustomer(updated, oldestDebtDate));
   } catch (err) {
     if (err instanceof z.ZodError) {
       res.status(400).json({ error: "Validatsiya xatosi", details: err.issues });
@@ -300,17 +340,38 @@ router.get("/customers/:id/statement", async (req, res) => {
       .where(eq(debtPaymentsTable.customerId, id))
       .orderBy(desc(debtPaymentsTable.createdAt));
 
+    const salesWithItems = await Promise.all(
+      sales.map(async (s) => {
+        const items = await db
+          .select()
+          .from(saleItemsTable)
+          .where(eq(saleItemsTable.saleId, s.id));
+        return {
+          id: s.id,
+          totalAmount: parseFloat(s.totalAmount),
+          itemCount: s.itemCount,
+          paymentType: s.paymentType,
+          paidAmount: s.paidAmount ? parseFloat(s.paidAmount) : null,
+          debtAmount: s.debtAmount ? parseFloat(s.debtAmount) : null,
+          discountAmount: s.discountAmount ? parseFloat(s.discountAmount) : 0,
+          createdAt: s.createdAt.toISOString(),
+          items: items.map((i) => ({
+            id: i.id,
+            productId: i.productId ?? null,
+            productName: i.productName,
+            brand: i.brand,
+            unitPrice: parseFloat(i.unitPrice),
+            quantity: parseFloat(i.quantity as unknown as string),
+            unit: i.unit ?? "dona",
+            totalPrice: parseFloat(i.totalPrice),
+          })),
+        };
+      })
+    );
+
     res.json({
       customer: mapCustomer(customer),
-      sales: sales.map((s) => ({
-        id: s.id,
-        totalAmount: parseFloat(s.totalAmount),
-        itemCount: s.itemCount,
-        paymentType: s.paymentType,
-        paidAmount: s.paidAmount ? parseFloat(s.paidAmount) : null,
-        debtAmount: s.debtAmount ? parseFloat(s.debtAmount) : null,
-        createdAt: s.createdAt.toISOString(),
-      })),
+      sales: salesWithItems,
       payments: payments.map((p) => ({
         id: p.id,
         amount: parseFloat(p.amount),

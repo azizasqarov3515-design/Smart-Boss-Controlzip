@@ -196,6 +196,7 @@ export interface Customer {
   imageUrl?: string | null;
   telegramId?: string | null;
   createdAt: string;
+  oldestDebtDate?: string | null;
 }
 
 export interface CreateCustomer {
@@ -228,7 +229,9 @@ export interface StatementSale {
   paymentType: string;
   paidAmount?: number | null;
   debtAmount?: number | null;
+  discountAmount?: number | null;
   createdAt: string;
+  items?: SaleItem[];
 }
 
 export interface StatementPayment {

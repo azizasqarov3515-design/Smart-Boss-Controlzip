@@ -37,6 +37,15 @@ function formatCustomerPhone(text: string): string {
   return formatted;
 }
 
+function formatOldestDebtDate(isoDate: string, t: (k: string) => string): string {
+  const d = new Date(isoDate);
+  const formattedDate = d.toLocaleDateString("uz-UZ", { day: "2-digit", month: "short" });
+  const diffTime = Math.abs(new Date().getTime() - d.getTime());
+  const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+  if (diffDays === 0) return t("Bugun");
+  return `${formattedDate} (${diffDays} kun oldin)`;
+}
+
 function getDebtStatus(customer: Customer): "ok" | "warning" | "over" {
   if (customer.totalDebt === 0) return "ok";
   if (customer.debtLimit <= 0) return "warning";
@@ -152,6 +161,11 @@ function CustomerCard({
                 Limit: {formatMoney(customer.debtLimit)}
               </span>
             )}
+            {customer.oldestDebtDate && (
+              <span style={{ fontSize: "10px", color: colors.mutedForeground, textAlign: "right", marginTop: "2px" }}>
+                ⏳ {formatOldestDebtDate(customer.oldestDebtDate, t)}
+              </span>
+            )}
           </>
         ) : (
           <div style={{
@@ -193,6 +207,8 @@ function CustomersScreenInner() {
   const [formImage, setFormImage] = useState<string | null>(null);
   const [imageUploading, setImageUploading] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
+  const [tab, setTab] = useState<"all" | "debtors">("all");
+  const [sortBy, setSortBy] = useState<"debt-desc" | "debt-asc" | "date-new" | "date-old" | "age-desc" | "age-asc">("debt-desc");
 
   const { data: customers, isLoading, refetch } = useGetCustomers();
 
@@ -281,15 +297,39 @@ function CustomersScreenInner() {
     createCustomer({ data });
   };
 
-  const filtered = (customers ?? []).filter((c) => {
-    if (!search.trim()) return true;
-    const q = search.toLowerCase();
-    return (
-      c.name.toLowerCase().includes(q) ||
-      c.phone.includes(q) ||
-      (c.note ?? "").toLowerCase().includes(q)
-    );
-  });
+  const filtered = (customers ?? [])
+    .filter((c) => {
+      // Tab filter
+      if (tab === "debtors" && c.totalDebt <= 0) return false;
+
+      // Search filter
+      if (!search.trim()) return true;
+      const q = search.toLowerCase();
+      return (
+        c.name.toLowerCase().includes(q) ||
+        c.phone.includes(q) ||
+        (c.note ?? "").toLowerCase().includes(q)
+      );
+    })
+    .sort((a, b) => {
+      if (tab === "debtors") {
+        if (sortBy === "debt-desc") return b.totalDebt - a.totalDebt;
+        if (sortBy === "debt-asc") return a.totalDebt - b.totalDebt;
+        if (sortBy === "age-desc") {
+          const dateA = a.oldestDebtDate ? new Date(a.oldestDebtDate).getTime() : Infinity;
+          const dateB = b.oldestDebtDate ? new Date(b.oldestDebtDate).getTime() : Infinity;
+          return dateA - dateB;
+        }
+        if (sortBy === "age-asc") {
+          const dateA = a.oldestDebtDate ? new Date(a.oldestDebtDate).getTime() : 0;
+          const dateB = b.oldestDebtDate ? new Date(b.oldestDebtDate).getTime() : 0;
+          return dateB - dateA;
+        }
+        if (sortBy === "date-new") return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+        if (sortBy === "date-old") return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+      }
+      return 0;
+    });
 
   const totalDebt = (customers ?? []).reduce((s, c) => s + c.totalDebt, 0);
   const debtorsCount = (customers ?? []).filter((c) => c.totalDebt > 0).length;
@@ -317,39 +357,119 @@ function CustomersScreenInner() {
       {/* Stats row */}
       {(customers?.length ?? 0) > 0 && (
         <div className="card-standard" style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "8px", textAlign: "center", padding: "12px" }}>
-          <div>
+          <div onClick={() => setTab("all")} style={{ cursor: "pointer", padding: "4px", borderRadius: "8px", backgroundColor: tab === "all" ? `${colors.primary}12` : "transparent", transition: "background-color 0.2s" }}>
             <span style={{ fontSize: "10px", color: colors.mutedForeground, display: "block" }}>{t("Jami mijozlar")}</span>
-            <span style={{ fontSize: "15px", fontWeight: 700 }}>{customers?.length ?? 0} {t("ta")}</span>
+            <span style={{ fontSize: "15px", fontWeight: 700, color: tab === "all" ? colors.primary : colors.foreground }}>{customers?.length ?? 0} {t("ta")}</span>
           </div>
-          <div style={{ borderLeft: `1px solid ${colors.border}`, borderRight: `1px solid ${colors.border}` }}>
+          <div onClick={() => setTab("debtors")} style={{ cursor: "pointer", padding: "4px", borderRadius: "8px", backgroundColor: tab === "debtors" ? `${colors.primary}12` : "transparent", transition: "background-color 0.2s", borderLeft: `1px solid ${colors.border}`, borderRight: `1px solid ${colors.border}` }}>
             <span style={{ fontSize: "10px", color: colors.mutedForeground, display: "block" }}>{t("Qarzdorlar")}</span>
-            <span style={{ fontSize: "15px", fontWeight: 700, color: debtorsCount > 0 ? "#D97706" : colors.foreground }}>{debtorsCount} {t("ta")}</span>
+            <span style={{ fontSize: "15px", fontWeight: 700, color: tab === "debtors" ? colors.primary : debtorsCount > 0 ? "#D97706" : colors.foreground }}>{debtorsCount} {t("ta")}</span>
           </div>
-          <div>
+          <div style={{ padding: "4px" }}>
             <span style={{ fontSize: "10px", color: colors.mutedForeground, display: "block" }}>{t("Jami qarz")}</span>
             <span style={{ fontSize: "15px", fontWeight: 700, color: totalDebt > 0 ? "#DC2626" : colors.foreground }}>{formatMoney(totalDebt)}</span>
           </div>
         </div>
       )}
 
-      {/* Search Input */}
-      <div style={{ position: "relative" }}>
-        <span className="material-icons" style={{ position: "absolute", left: "14px", top: "50%", transform: "translateY(-50%)", color: colors.mutedForeground }}>search</span>
-        <input
-          type="text"
-          className="input-field"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          placeholder={t("Mijoz ismi yoki telefon raqami bo'yicha...")}
-          style={{ paddingLeft: "45px" }}
-        />
-        {search && (
-          <button
-            onClick={() => setSearch("")}
-            style={{ position: "absolute", right: "14px", top: "50%", transform: "translateY(-50%)", background: "none", border: "none", color: colors.mutedForeground, cursor: "pointer" }}
-          >
-            <span className="material-icons" style={{ fontSize: "18px" }}>close</span>
-          </button>
+      {/* Sub-tabs for All / Debtors */}
+      <div style={{ display: "flex", gap: "8px", backgroundColor: colors.muted + "20", padding: "4px", borderRadius: "12px", border: `1px solid ${colors.border}` }}>
+        <button
+          onClick={() => setTab("all")}
+          style={{
+            flex: 1,
+            padding: "8px",
+            borderRadius: "10px",
+            border: "none",
+            backgroundColor: tab === "all" ? colors.primary : "transparent",
+            color: tab === "all" ? "white" : colors.mutedForeground,
+            fontWeight: 600,
+            fontSize: "13px",
+            cursor: "pointer",
+            transition: "all 0.2s"
+          }}
+        >
+          {t("Barchasi")}
+        </button>
+        <button
+          onClick={() => setTab("debtors")}
+          style={{
+            flex: 1,
+            padding: "8px",
+            borderRadius: "10px",
+            border: "none",
+            backgroundColor: tab === "debtors" ? colors.primary : "transparent",
+            color: tab === "debtors" ? "white" : colors.mutedForeground,
+            fontWeight: 600,
+            fontSize: "13px",
+            cursor: "pointer",
+            transition: "all 0.2s",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: "6px"
+          }}
+        >
+          <span>{t("Qarzdorlar")}</span>
+          {debtorsCount > 0 && (
+            <span style={{
+              backgroundColor: tab === "debtors" ? "white" : "#DC2626",
+              color: tab === "debtors" ? colors.primary : "white",
+              fontSize: "11px",
+              padding: "2px 6px",
+              borderRadius: "8px",
+              fontWeight: 700
+            }}>
+              {debtorsCount}
+            </span>
+          )}
+        </button>
+      </div>
+
+      {/* Search & Sort Row */}
+      <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
+        <div style={{ position: "relative", flex: 1 }}>
+          <span className="material-icons" style={{ position: "absolute", left: "14px", top: "50%", transform: "translateY(-50%)", color: colors.mutedForeground }}>search</span>
+          <input
+            type="text"
+            className="input-field"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder={t("Mijoz ismi yoki telefon raqami bo'yicha...")}
+            style={{ paddingLeft: "45px" }}
+          />
+          {search && (
+            <button
+              onClick={() => setSearch("")}
+              style={{ position: "absolute", right: "14px", top: "50%", transform: "translateY(-50%)", background: "none", border: "none", color: colors.mutedForeground, cursor: "pointer" }}
+            >
+              <span className="material-icons" style={{ fontSize: "18px" }}>close</span>
+            </button>
+          )}
+        </div>
+        
+        {tab === "debtors" && (
+          <div style={{ position: "relative", minWidth: "150px" }}>
+            <select
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value as any)}
+              className="input-field"
+              style={{
+                paddingRight: "10px",
+                fontSize: "13px",
+                height: "44px",
+                backgroundColor: colors.card,
+                cursor: "pointer"
+              }}
+            >
+              <option value="debt-desc">💰 {t("Qarz: kamayish")}</option>
+              <option value="debt-asc">💰 {t("Qarz: o'sish")}</option>
+              <option value="age-desc">⏳ {t("Muddati: eski qarzlar")}</option>
+              <option value="age-asc">⏳ {t("Muddati: yangi qarzlar")}</option>
+              <option value="date-new">📅 {t("Sana: yangi")}</option>
+              <option value="date-old">📅 {t("Sana: eski")}</option>
+            </select>
+          </div>
         )}
       </div>
 
@@ -361,14 +481,22 @@ function CustomersScreenInner() {
         </div>
       ) : filtered.length === 0 ? (
         <div className="card-standard" style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "45px 20px", textAlign: "center", gap: "10px" }}>
-          <span className="material-icons" style={{ fontSize: "48px", color: colors.border }}>people</span>
+          <span className="material-icons" style={{ fontSize: "48px", color: colors.border }}>
+            {tab === "debtors" ? "check_circle" : "people"}
+          </span>
           <div>
-            <h4 style={{ fontSize: "15px", color: colors.foreground }}>{t("Hech kim topilmadi")}</h4>
+            <h4 style={{ fontSize: "15px", color: colors.foreground }}>
+              {tab === "debtors" ? t("Qarzdorlar yo'q") : t("Hech kim topilmadi")}
+            </h4>
             <p className="text-muted" style={{ fontSize: "12px", marginTop: "4px" }}>
-              {search ? `"${search}" ` + t("so'rovi bo'yicha mijoz yo'q") : t("Tizimda hozircha mijozlar mavjud emas")}
+              {search 
+                ? `"${search}" ` + t("so'rovi bo'yicha mijoz yo'q") 
+                : tab === "debtors" 
+                  ? t("Hozirgi vaqtda qarzdor mijozlar mavjud emas") 
+                  : t("Tizimda hozircha mijozlar mavjud emas")}
             </p>
           </div>
-          {!search && (
+          {!search && tab !== "debtors" && (
             <button className="btn-primary" onClick={() => setAddOpen(true)} style={{ marginTop: "6px" }}>
               {t("Mijoz qo'shish")}
             </button>

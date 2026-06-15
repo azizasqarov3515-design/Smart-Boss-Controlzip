@@ -5,6 +5,7 @@
  * API specification for SMARTBOSScontrol
  * OpenAPI spec version: 0.1.0
  */
+import type { SaleItem } from "./saleItem";
 
 export interface StatementSale {
   id: number;
@@ -13,5 +14,7 @@ export interface StatementSale {
   paymentType: string;
   paidAmount?: number | null;
   debtAmount?: number | null;
+  discountAmount?: number | null;
   createdAt: string;
+  items?: SaleItem[];
 }

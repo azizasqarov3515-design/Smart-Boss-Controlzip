@@ -210,6 +210,7 @@ export const GetCustomersResponseItem = zod.object({
   imageUrl: zod.string().nullish(),
   telegramId: zod.string().nullish(),
   createdAt: zod.string(),
+  oldestDebtDate: zod.string().nullish(),
 });
 export const GetCustomersResponse = zod.array(GetCustomersResponseItem);
 
@@ -244,6 +245,7 @@ export const GetCustomerResponse = zod.object({
   imageUrl: zod.string().nullish(),
   telegramId: zod.string().nullish(),
   createdAt: zod.string(),
+  oldestDebtDate: zod.string().nullish(),
 });
 
 /**
@@ -274,6 +276,7 @@ export const UpdateCustomerResponse = zod.object({
   imageUrl: zod.string().nullish(),
   telegramId: zod.string().nullish(),
   createdAt: zod.string(),
+  oldestDebtDate: zod.string().nullish(),
 });
 
 /**
@@ -332,6 +335,7 @@ export const GetCustomerStatementResponse = zod.object({
     imageUrl: zod.string().nullish(),
     telegramId: zod.string().nullish(),
     createdAt: zod.string(),
+    oldestDebtDate: zod.string().nullish(),
   }),
   sales: zod.array(
     zod.object({
@@ -341,7 +345,22 @@ export const GetCustomerStatementResponse = zod.object({
       paymentType: zod.string(),
       paidAmount: zod.number().nullish(),
       debtAmount: zod.number().nullish(),
+      discountAmount: zod.number().nullish(),
       createdAt: zod.string(),
+      items: zod
+        .array(
+          zod.object({
+            id: zod.number(),
+            productId: zod.number().nullish(),
+            productName: zod.string(),
+            brand: zod.string(),
+            unitPrice: zod.number(),
+            quantity: zod.number(),
+            unit: zod.string(),
+            totalPrice: zod.number(),
+          }),
+        )
+        .optional(),
     }),
   ),
   payments: zod.array(

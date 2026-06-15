@@ -17,4 +17,5 @@ export interface Customer {
   imageUrl?: string | null;
   telegramId?: string | null;
   createdAt: string;
+  oldestDebtDate?: string | null;
 }

@@ -923,6 +923,9 @@ components:
           nullable: true
         createdAt:
           type: string
+        oldestDebtDate:
+          type: string
+          nullable: true
       required: [id, name, phone, debtLimit, totalDebt, createdAt]
     CreateCustomer:
       type: object
@@ -987,8 +990,15 @@ components:
         debtAmount:
           type: number
           nullable: true
+        discountAmount:
+          type: number
+          nullable: true
         createdAt:
           type: string
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/SaleItem"
       required: [id, totalAmount, itemCount, paymentType, createdAt]
     StatementPayment:
       type: object
