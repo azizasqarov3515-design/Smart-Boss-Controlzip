@@ -56,7 +56,7 @@ function getHolatText(sale: SaleWithItems): string {
 }
 
 function baseStyles(settings?: StoreSettings): string {
-  const scale = (settings?.printFontSizePercent ?? 100) / 100;
+  const scale = 1;
   const sz = (px: number) => `${(px * scale).toFixed(1)}px`;
 
   return `
@@ -201,7 +201,7 @@ export function buildInvoiceHtml(
 ): string {
   const paidAmt = sale.paidAmount ?? sale.totalAmount;
   const debtAmt = sale.debtAmount ?? 0;
-  const scale = (settings.printFontSizePercent ?? 100) / 100;
+  const scale = 1;
 
   const rows = sale.items
     .map(
@@ -341,7 +341,7 @@ export function buildReceiptHtml(
 ): string {
   const paidAmt = sale.paidAmount ?? sale.totalAmount;
   const debtAmt = sale.debtAmount ?? 0;
-  const scale = (settings.printFontSizePercent ?? 100) / 100;
+  const scale = 1;
   const sz = (px: number) => `${(px * scale).toFixed(1)}px`;
 
   const rows = sale.items
@@ -477,7 +477,7 @@ export function buildA5InvoiceHtml(
   customer?: PdfCustomer | null,
   seller?: PdfSeller | null
 ): string {
-  const scale = (settings.printFontSizePercent ?? 100) / 100;
+  const scale = 1;
   const sz = (px: number) => `${(px * scale).toFixed(1)}px`;
 
   const rows = sale.items
@@ -641,7 +641,7 @@ export function buildThermalHtml(
   customer?: PdfCustomer | null,
   seller?: PdfSeller | null
 ): string {
-  const scale = (settings.printFontSizePercent ?? 100) / 100;
+  const scale = 1;
   const sz = (px: number) => `${(px * scale).toFixed(1)}px`;
 
   const rows = sale.items
@@ -749,7 +749,7 @@ export function buildWaybillHtml(
 ): string {
   const paidAmt = sale.paidAmount ?? sale.totalAmount;
   const debtAmt = sale.debtAmount ?? 0;
-  const scale = (settings.printFontSizePercent ?? 100) / 100;
+  const scale = 1;
 
   const rows = sale.items
     .map(

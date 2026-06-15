@@ -16,7 +16,6 @@ export interface StoreSettings {
   telegramChatId?: string;
   appLanguage?: "uz" | "ru";
   disabledUnits?: string[];
-  printFontSizePercent?: number;
   uiFontSizePercent?: number;
 }
 
@@ -34,7 +33,6 @@ export const DEFAULT_SETTINGS: StoreSettings = {
   telegramChatId: "",
   appLanguage: "uz",
   disabledUnits: [],
-  printFontSizePercent: 100,
   uiFontSizePercent: 50,
 };
 

@@ -120,7 +120,6 @@ export function Settings() {
   const [telegramBotToken, setTelegramBotToken] = useState("");
   const [appLanguage, setAppLanguage] = useState<"uz" | "ru">("uz");
   const [disabledUnits, setDisabledUnits] = useState<string[]>([]);
-  const [printFontSizePercent, setPrintFontSizePercent] = useState(100);
   const [uiFontSizePercent, setUiFontSizePercent] = useState(50);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -196,7 +195,6 @@ export function Settings() {
       setAppLanguage(lang);
       setLanguage(lang);
       setDisabledUnits(settings.disabledUnits || []);
-      setPrintFontSizePercent(settings.printFontSizePercent ?? 100);
       setUiFontSizePercent(settings.uiFontSizePercent ?? 50);
     }
   }, [settingsLoading, settings, setLanguage]);
@@ -214,7 +212,6 @@ export function Settings() {
       telegramChatId: "",
       appLanguage,
       disabledUnits,
-      printFontSizePercent,
       uiFontSizePercent,
     };
     saveSettings(next);
@@ -610,26 +607,7 @@ export function Settings() {
             </select>
           </div>
 
-          <div style={{ marginTop: "12px" }}>
-            <label style={{ display: "block", fontSize: "11px", color: colors.mutedForeground, marginBottom: "4px" }}>
-              Hujjatlar shriftini o'lchamini o'zgartirish
-            </label>
-            <select
-              className="input-field"
-              value={printFontSizePercent}
-              onChange={(e) => setPrintFontSizePercent(Number(e.target.value))}
-              style={{ width: "100%", cursor: "pointer", backgroundColor: colors.card, color: colors.foreground, border: `1px solid ${colors.border}` }}
-            >
-              <option value="80">80%</option>
-              <option value="90">90%</option>
-              <option value="100">100% (Joriy / Standart)</option>
-              <option value="110">110%</option>
-              <option value="120">120%</option>
-              <option value="130">130%</option>
-              <option value="140">140%</option>
-              <option value="150">150%</option>
-            </select>
-          </div>
+
 
           <button
             className="btn-primary"
