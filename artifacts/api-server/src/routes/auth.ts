@@ -210,6 +210,7 @@ router.post("/auth/login", async (req, res) => {
         storeId: manager.storeId,
         phone: manager.phone,
         password: decryptValue(manager.encryptedPassword),
+        storeSettings: manager.storeSettings,
         ...buildSubscriptionInfo(manager),
       });
       return;
@@ -327,6 +328,17 @@ router.post("/auth/worker-login", async (req, res) => {
 
     await db.update(workersTable).set({ isOnline: true, lastSeen: new Date() }).where(eq(workersTable.id, worker.id));
 
+    let storeSettings = null;
+    if (worker.managerId) {
+      const [mgr] = await db
+        .select({ storeSettings: managersTable.storeSettings })
+        .from(managersTable)
+        .where(eq(managersTable.id, worker.managerId));
+      if (mgr) {
+        storeSettings = mgr.storeSettings;
+      }
+    }
+
     const token = generateToken({
       sub: `worker-${worker.id}`,
       role: "worker",
@@ -335,7 +347,15 @@ router.post("/auth/worker-login", async (req, res) => {
       managerId: worker.managerId ?? undefined,
     });
     req.log.info({ workerId: worker.id, status: worker.status }, "Worker logged in");
-    res.json({ token, workerId: worker.id, name: worker.name, status: worker.status, role: "worker" });
+    res.json({
+      token,
+      workerId: worker.id,
+      name: worker.name,
+      status: worker.status,
+      role: "worker",
+      managerId: worker.managerId,
+      storeSettings,
+    });
   } catch (err) {
     if (err instanceof z.ZodError) {
       res.status(400).json({ error: "Ma'lumotlar noto'g'ri" });
@@ -382,16 +402,33 @@ router.get("/auth/me", requireAuth, async (req, res) => {
         res.status(401).json({ error: "Ishchi topilmadi" });
         return;
       }
-      // Also get manager's subscription for worker info
+      // Also get manager's subscription and settings for worker info
       let subInfo = {};
+      let storeSettings = null;
       if (worker.managerId) {
         const [mgr] = await db
-          .select({ subscriptionPlan: managersTable.subscriptionPlan, subscriptionEnd: managersTable.subscriptionEnd, subscriptionActive: managersTable.subscriptionActive })
+          .select({
+            subscriptionPlan: managersTable.subscriptionPlan,
+            subscriptionEnd: managersTable.subscriptionEnd,
+            subscriptionActive: managersTable.subscriptionActive,
+            storeSettings: managersTable.storeSettings,
+          })
           .from(managersTable)
           .where(eq(managersTable.id, worker.managerId));
-        if (mgr) subInfo = buildSubscriptionInfo(mgr);
+        if (mgr) {
+          subInfo = buildSubscriptionInfo(mgr);
+          storeSettings = mgr.storeSettings;
+        }
       }
-      res.json({ name: worker.name, role: "worker", workerId: user.workerId, status: worker.status, ...subInfo });
+      res.json({
+        name: worker.name,
+        role: "worker",
+        workerId: user.workerId,
+        status: worker.status,
+        managerId: worker.managerId,
+        storeSettings,
+        ...subInfo,
+      });
     } catch {
       res.json({ name: user.name, role: "worker", workerId: user.workerId, status: "unknown" });
     }
@@ -415,6 +452,7 @@ router.get("/auth/me", requireAuth, async (req, res) => {
         storeId: manager.storeId,
         phone: manager.phone,
         password: decryptValue(manager.encryptedPassword),
+        storeSettings: manager.storeSettings,
         blocked: manager.blocked ?? false,
         ...buildSubscriptionInfo(manager),
       });
@@ -484,6 +522,26 @@ router.post("/auth/change-credentials", requireAuth, async (req, res) => {
       req.log.error({ err }, "Change credentials failed");
       res.status(500).json({ error: "Xato" });
     }
+  }
+});
+
+router.put("/auth/store-settings", requireAuth, async (req, res) => {
+  const user = res.locals.user;
+  if (!user.managerId) {
+    res.status(403).json({ error: "Faqat rahbar sozlamalarni o'zgartira oladi" });
+    return;
+  }
+  try {
+    const { settings } = req.body;
+    await db
+      .update(managersTable)
+      .set({ storeSettings: JSON.stringify(settings) })
+      .where(eq(managersTable.id, user.managerId));
+    
+    res.json({ ok: true });
+  } catch (err) {
+    req.log.error({ err }, "Failed to update store settings");
+    res.status(500).json({ error: "Sozlamalarni saqlashda xatolik" });
   }
 });
 

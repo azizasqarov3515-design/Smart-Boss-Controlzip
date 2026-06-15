@@ -95,6 +95,7 @@ export function Settings() {
   const { t, setLanguage } = useTranslation();
   const {
     role,
+    token,
     managerId,
     managerLogin,
     managerStoreId,
@@ -217,6 +218,20 @@ export function Settings() {
       uiFontSizePercent,
     };
     saveSettings(next);
+    
+    try {
+      await fetch("/api/auth/store-settings", {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ settings: next }),
+      });
+    } catch (err) {
+      console.error("Failed to save store settings to DB:", err);
+    }
+
     setSaving(false);
     setSaved(true);
     setTimeout(() => setSaved(false), 2000);

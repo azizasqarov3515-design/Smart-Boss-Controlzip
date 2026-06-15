@@ -19,6 +19,7 @@ export const managersTable = pgTable("managers", {
   subscriptionActive: boolean("subscription_active").notNull().default(false),
   // Block field
   blocked: boolean("blocked").notNull().default(false),
+  storeSettings: text("store_settings"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 

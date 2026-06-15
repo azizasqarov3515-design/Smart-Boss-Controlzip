@@ -31,6 +31,7 @@ export interface ManagerLoginData {
   subscriptionActive?: boolean;
   subscriptionDaysLeft?: number | null;
   subscriptionExpired?: boolean;
+  storeSettings?: string | null;
 }
 
 interface AuthContextType {
@@ -175,11 +176,22 @@ export function AuthProvider({ children, queryClient }: AuthProviderProps) {
               setManagerPhone(data.phone ?? null);
               setPassword(data.password ?? null);
               applySubscriptionData(data);
+              
+              if (data.storeSettings && data.managerId) {
+                localStorage.setItem(`smartboss_store_settings_${data.managerId}`, data.storeSettings);
+                window.dispatchEvent(new Event("store-settings-updated"));
+              }
             } else {
               setWorkerName(data.name ?? null);
               setWorkerId(data.workerId ?? null);
               setWorkerStatus(data.status ?? null);
+              setManagerId(data.managerId ?? null);
               applySubscriptionData(data);
+              
+              if (data.storeSettings && data.managerId) {
+                localStorage.setItem(`smartboss_store_settings_${data.managerId}`, data.storeSettings);
+                window.dispatchEvent(new Event("store-settings-updated"));
+              }
             }
           } else if (!cancelled) {
             clearAll();
@@ -202,6 +214,12 @@ export function AuthProvider({ children, queryClient }: AuthProviderProps) {
     if (data.login) localStorage.setItem(MANAGER_LOGIN_KEY, data.login);
     if (data.storeId) localStorage.setItem(MANAGER_STORE_ID_KEY, data.storeId);
     if (data.phone) localStorage.setItem(MANAGER_PHONE_KEY, data.phone);
+
+    if (data.storeSettings && data.managerId) {
+      localStorage.setItem(`smartboss_store_settings_${data.managerId}`, data.storeSettings);
+      window.dispatchEvent(new Event("store-settings-updated"));
+    }
+
     setToken(data.token);
     setUsername(data.username ?? data.name ?? "Rahbar");
     setManagerId(data.managerId ?? null);
@@ -243,13 +261,22 @@ export function AuthProvider({ children, queryClient }: AuthProviderProps) {
     if (!res.ok) throw new Error(data.error ?? "Kirishda xato");
 
     localStorage.setItem(TOKEN_KEY, data.token);
+    if (data.managerId) {
+      localStorage.setItem(MANAGER_ID_KEY, String(data.managerId));
+    }
+    
+    if (data.storeSettings && data.managerId) {
+      localStorage.setItem(`smartboss_store_settings_${data.managerId}`, data.storeSettings);
+      window.dispatchEvent(new Event("store-settings-updated"));
+    }
+
     setToken(data.token);
     setRole("worker");
     setWorkerName(data.name ?? null);
     setWorkerId(data.workerId ?? null);
     setWorkerStatus(data.status ?? "pending");
+    setManagerId(data.managerId ?? null);
     setUsername(null);
-    setManagerId(null);
     setStoreName(null);
     queryClient?.clear();
     return { status: data.status ?? "pending" };
@@ -298,6 +325,11 @@ export function AuthProvider({ children, queryClient }: AuthProviderProps) {
       } else if (res.ok) {
         const data = await res.json();
         setWorkerStatus(data.status ?? null);
+        setManagerId(data.managerId ?? null);
+        if (data.storeSettings && data.managerId) {
+          localStorage.setItem(`smartboss_store_settings_${data.managerId}`, data.storeSettings);
+          window.dispatchEvent(new Event("store-settings-updated"));
+        }
         applySubscriptionData(data);
         await sendHeartbeat(t);
       }
