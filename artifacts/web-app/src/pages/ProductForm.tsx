@@ -14,6 +14,7 @@ import { useColors } from "../hooks/useColors";
 import { useSettings } from "../hooks/useSettings";
 import { SubscriptionLockScreen } from "../components/SubscriptionLockScreen";
 import { useTranslation } from "../contexts/LanguageContext";
+import { BrowserMultiFormatReader } from "@zxing/library";
 
 interface FormValues {
   name: string;
@@ -67,6 +68,7 @@ function ProductFormScreenInner() {
   const [scanMessage, setScanMessage] = useState("");
   const videoRef = React.useRef<HTMLVideoElement | null>(null);
   const streamRef = React.useRef<MediaStream | null>(null);
+  const codeReaderRef = React.useRef<BrowserMultiFormatReader | null>(null);
 
   const { data: products, isLoading: productsLoading } = useGetProducts({
     query: { enabled: isEdit } as any,
@@ -206,37 +208,23 @@ function ProductFormScreenInner() {
 
       setScanMessage(t("Kamerani shtrix-kodga qarating"));
 
-      // Check if BarcodeDetector is supported
-      if ("BarcodeDetector" in window) {
-        const barcodeDetector = new (window as any).BarcodeDetector({
-          formats: ["code_128", "code_39", "code_93", "ean_13", "ean_8", "upc_a", "upc_e", "qr_code"],
-        });
-
-        const detectLoop = async () => {
-          if (!videoRef.current || videoRef.current.paused || videoRef.current.ended) return;
-          try {
-            const barcodes = await barcodeDetector.detect(videoRef.current);
-            if (barcodes.length > 0) {
-              const code = barcodes[0].rawValue;
+      // Initialize ZXing Multi Format Reader for ultra-sensitive real-time scanning
+      try {
+        const codeReader = new BrowserMultiFormatReader();
+        codeReaderRef.current = codeReader;
+        
+        if (videoRef.current) {
+          codeReader.decodeFromVideoElementContinuously(videoRef.current, (result: any, err: any) => {
+            if (result) {
+              const code = result.getText();
               setForm((prev) => ({ ...prev, barcode: code }));
               stopCameraScanner();
-              return;
             }
-          } catch (e) {
-            // Suppress frame read errors
-          }
-          if (cameraActive) {
-            requestAnimationFrame(detectLoop);
-          }
-        };
-
-        if (videoRef.current) {
-          videoRef.current.onplay = () => {
-            requestAnimationFrame(detectLoop);
-          };
+          });
         }
-      } else {
-        setScanMessage(t("Brauzeringiz kameradan shtrix-kodni o'qishni qo'llab-quvvatlamaydi. Jismoniy skaner qurolidan foydalaning."));
+      } catch (zxingErr) {
+        console.error("ZXing initialization error:", zxingErr);
+        setScanMessage(t("Skanerni faollashtirishda xatolik yuz berdi."));
       }
     } catch (err) {
       setScanMessage(t("Kameraga ulanib bo'lmadi. Ruxsatlarni tekshiring."));
@@ -246,6 +234,10 @@ function ProductFormScreenInner() {
   const stopCameraScanner = () => {
     setCameraActive(false);
     setCameraScannerOpen(false);
+    if (codeReaderRef.current) {
+      codeReaderRef.current.reset();
+      codeReaderRef.current = null;
+    }
     if (streamRef.current) {
       streamRef.current.getTracks().forEach((track) => track.stop());
       streamRef.current = null;
@@ -254,6 +246,9 @@ function ProductFormScreenInner() {
 
   useEffect(() => {
     return () => {
+      if (codeReaderRef.current) {
+        codeReaderRef.current.reset();
+      }
       if (streamRef.current) {
         streamRef.current.getTracks().forEach((track) => track.stop());
       }
