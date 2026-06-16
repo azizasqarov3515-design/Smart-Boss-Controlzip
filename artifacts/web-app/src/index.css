@@ -542,3 +542,16 @@ a:hover {
     border-radius: 12px 12px 0 0;
   }
 }
+
+/* Barcode scanning line animation */
+@keyframes scan-line {
+  0% {
+    top: 0%;
+  }
+  50% {
+    top: 100%;
+  }
+  100% {
+    top: 0%;
+  }
+}

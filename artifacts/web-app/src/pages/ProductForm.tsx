@@ -161,7 +161,12 @@ function ProductFormScreenInner() {
     setScanMessage(t("Kameraga ruxsat so'ralmoqda..."));
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: "environment" },
+        video: {
+          facingMode: "environment",
+          width: { ideal: 1920 },
+          height: { ideal: 1080 },
+          frameRate: { ideal: 30 }
+        },
       });
       streamRef.current = stream;
       if (videoRef.current) {
@@ -169,6 +174,26 @@ function ProductFormScreenInner() {
         videoRef.current.setAttribute("playsinline", "true");
         videoRef.current.play();
       }
+
+      // Optimize camera autofocus for close-up scanning (8-10 cm)
+      const track = stream.getVideoTracks()[0];
+      if (track) {
+        const capabilities = (track as any).getCapabilities?.() || {};
+        const advancedConstraints: any = {};
+        
+        if (capabilities.focusMode && capabilities.focusMode.includes("continuous")) {
+          advancedConstraints.focusMode = "continuous";
+        }
+        
+        if (Object.keys(advancedConstraints).length > 0) {
+          try {
+            await track.applyConstraints({ advanced: [advancedConstraints] });
+          } catch (e) {
+            console.warn("Advanced focus constraints not applied:", e);
+          }
+        }
+      }
+
       setScanMessage(t("Kamerani shtrix-kodga qarating"));
 
       // Check if BarcodeDetector is supported
@@ -551,10 +576,10 @@ function ProductFormScreenInner() {
       {/* Camera Scanner Modal Dialog */}
       {cameraScannerOpen && (
         <div className="modal-backdrop" onClick={stopCameraScanner}>
-          <div className="bottom-sheet" onClick={(e) => e.stopPropagation()} style={{ height: "450px" }}>
+          <div className="bottom-sheet" onClick={(e) => e.stopPropagation()} style={{ height: "540px", maxWidth: "500px" }}>
             <div className="sheet-handle"></div>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "12px" }}>
-              <h3 style={{ fontSize: "16px" }}>{t("Kamera orqali skanerlash")}</h3>
+              <h3 style={{ fontSize: "16px", fontWeight: 600 }}>{t("Kamera orqali skanerlash")}</h3>
               <button
                 onClick={stopCameraScanner}
                 style={{ background: "none", border: "none", color: colors.mutedForeground, cursor: "pointer" }}
@@ -566,10 +591,12 @@ function ProductFormScreenInner() {
             <div style={{
               position: "relative",
               width: "100%",
-              height: "260px",
+              height: "360px",
               backgroundColor: "black",
-              borderRadius: "12px",
-              overflow: "hidden"
+              borderRadius: "16px",
+              overflow: "hidden",
+              border: `1.5px solid ${colors.border}`,
+              boxShadow: "0 8px 32px rgba(0,0,0,0.5)"
             }}>
               <video
                 ref={videoRef}
@@ -581,11 +608,11 @@ function ProductFormScreenInner() {
                 top: "50%",
                 left: "50%",
                 transform: "translate(-50%, -50%)",
-                width: "200px",
-                height: "100px",
-                border: "2px solid #5C7CFA",
-                boxShadow: "0 0 0 9999px rgba(0, 0, 0, 0.4)",
-                borderRadius: "8px",
+                width: "280px",
+                height: "160px",
+                border: "2px dashed #3B82F6",
+                boxShadow: "0 0 0 9999px rgba(0, 0, 0, 0.6)",
+                borderRadius: "16px",
                 pointerEvents: "none"
               }}>
                 <div style={{
