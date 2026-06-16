@@ -14,7 +14,7 @@ import { useColors } from "../hooks/useColors";
 import { useSettings } from "../hooks/useSettings";
 import { SubscriptionLockScreen } from "../components/SubscriptionLockScreen";
 import { useTranslation } from "../contexts/LanguageContext";
-import { BrowserMultiFormatReader } from "@zxing/library";
+import { BarcodeScannerModal } from "../components/BarcodeScannerModal";
 
 interface FormValues {
   name: string;
@@ -64,11 +64,6 @@ function ProductFormScreenInner() {
 
   // Web camera barcode scanner state
   const [cameraScannerOpen, setCameraScannerOpen] = useState(false);
-  const [cameraActive, setCameraActive] = useState(false);
-  const [scanMessage, setScanMessage] = useState("");
-  const videoRef = React.useRef<HTMLVideoElement | null>(null);
-  const streamRef = React.useRef<MediaStream | null>(null);
-  const codeReaderRef = React.useRef<BrowserMultiFormatReader | null>(null);
 
   const { data: products, isLoading: productsLoading } = useGetProducts({
     query: { enabled: isEdit } as any,
@@ -156,104 +151,6 @@ function ProductFormScreenInner() {
     }
   };
 
-  // Web camera barcode scanner
-  const startCameraScanner = async () => {
-    setCameraScannerOpen(true);
-    setCameraActive(true);
-    setScanMessage(t("Kameraga ruxsat so'ralmoqda..."));
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: {
-          facingMode: "environment",
-          width: { ideal: 1920 },
-          height: { ideal: 1080 },
-          frameRate: { ideal: 30 }
-        },
-      });
-      streamRef.current = stream;
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-        videoRef.current.setAttribute("playsinline", "true");
-        videoRef.current.play();
-      }
-
-      // Optimize camera autofocus and zoom for macro-like close-up scanning (emulating APK zoom={0.15})
-      const track = stream.getVideoTracks()[0];
-      if (track) {
-        const capabilities = (track as any).getCapabilities?.() || {};
-        const advancedConstraints: any = {};
-        
-        // Continuous autofocus
-        if (capabilities.focusMode && capabilities.focusMode.includes("continuous")) {
-          advancedConstraints.focusMode = "continuous";
-        }
-        
-        // Zoom (0.15 of permitted range, matching APK setup)
-        if (capabilities.zoom && capabilities.zoom.min !== undefined && capabilities.zoom.max !== undefined) {
-          const min = capabilities.zoom.min;
-          const max = capabilities.zoom.max;
-          if (max > min) {
-            advancedConstraints.zoom = min + (max - min) * 0.15;
-          }
-        }
-        
-        if (Object.keys(advancedConstraints).length > 0) {
-          try {
-            await track.applyConstraints({ advanced: [advancedConstraints] });
-          } catch (e) {
-            console.warn("Advanced camera constraints not applied:", e);
-          }
-        }
-      }
-
-      setScanMessage(t("Kamerani shtrix-kodga qarating"));
-
-      // Initialize ZXing Multi Format Reader for ultra-sensitive real-time scanning
-      try {
-        const codeReader = new BrowserMultiFormatReader();
-        codeReaderRef.current = codeReader;
-        
-        if (videoRef.current) {
-          codeReader.decodeFromVideoElementContinuously(videoRef.current, (result: any, err: any) => {
-            if (result) {
-              const code = result.getText();
-              setForm((prev) => ({ ...prev, barcode: code }));
-              stopCameraScanner();
-            }
-          });
-        }
-      } catch (zxingErr) {
-        console.error("ZXing initialization error:", zxingErr);
-        setScanMessage(t("Skanerni faollashtirishda xatolik yuz berdi."));
-      }
-    } catch (err) {
-      setScanMessage(t("Kameraga ulanib bo'lmadi. Ruxsatlarni tekshiring."));
-    }
-  };
-
-  const stopCameraScanner = () => {
-    setCameraActive(false);
-    setCameraScannerOpen(false);
-    if (codeReaderRef.current) {
-      codeReaderRef.current.reset();
-      codeReaderRef.current = null;
-    }
-    if (streamRef.current) {
-      streamRef.current.getTracks().forEach((track) => track.stop());
-      streamRef.current = null;
-    }
-  };
-
-  useEffect(() => {
-    return () => {
-      if (codeReaderRef.current) {
-        codeReaderRef.current.reset();
-      }
-      if (streamRef.current) {
-        streamRef.current.getTracks().forEach((track) => track.stop());
-      }
-    };
-  }, []);
 
   const handleChange = (key: keyof FormValues, val: string) => {
     setForm((prev) => ({ ...prev, [key]: val }));
@@ -578,67 +475,15 @@ function ProductFormScreenInner() {
         </div>
       </div>
 
-      {/* Camera Scanner Modal Dialog */}
-      {cameraScannerOpen && (
-        <div className="modal-backdrop" onClick={stopCameraScanner}>
-          <div className="bottom-sheet" onClick={(e) => e.stopPropagation()} style={{ height: "540px", maxWidth: "500px" }}>
-            <div className="sheet-handle"></div>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "12px" }}>
-              <h3 style={{ fontSize: "16px", fontWeight: 600 }}>{t("Kamera orqali skanerlash")}</h3>
-              <button
-                onClick={stopCameraScanner}
-                style={{ background: "none", border: "none", color: colors.mutedForeground, cursor: "pointer" }}
-              >
-                <span className="material-icons">close</span>
-              </button>
-            </div>
-
-            <div style={{
-              position: "relative",
-              width: "100%",
-              height: "360px",
-              backgroundColor: "black",
-              borderRadius: "16px",
-              overflow: "hidden",
-              border: `1.5px solid ${colors.border}`,
-              boxShadow: "0 8px 32px rgba(0,0,0,0.5)"
-            }}>
-              <video
-                ref={videoRef}
-                style={{ width: "100%", height: "100%", objectFit: "cover" }}
-              />
-              {/* Scan target visual overlay */}
-              <div style={{
-                position: "absolute",
-                top: "50%",
-                left: "50%",
-                transform: "translate(-50%, -50%)",
-                width: "280px",
-                height: "160px",
-                border: "2px dashed #3B82F6",
-                boxShadow: "0 0 0 9999px rgba(0, 0, 0, 0.6)",
-                borderRadius: "16px",
-                pointerEvents: "none"
-              }}>
-                <div style={{
-                  position: "absolute",
-                  top: "50%",
-                  left: "0",
-                  right: "0",
-                  height: "2px",
-                  backgroundColor: "#5C7CFA",
-                  boxShadow: "0 0 8px #5C7CFA",
-                  animation: "scan-line 2s linear infinite"
-                }}></div>
-              </div>
-            </div>
-
-            <p style={{ fontSize: "12px", textAlign: "center", marginTop: "12px", color: colors.mutedForeground }}>
-              {scanMessage}
-            </p>
-          </div>
-        </div>
-      )}
+      {/* Universal Barcode Scanner Modal */}
+      <BarcodeScannerModal
+        isOpen={cameraScannerOpen}
+        onClose={() => setCameraScannerOpen(false)}
+        onScan={(code) => {
+          setForm((prev) => ({ ...prev, barcode: code }));
+          setCameraScannerOpen(false);
+        }}
+      />
 
       {/* Action buttons */}
       <div style={{ display: "flex", gap: "10px", marginTop: "10px" }}>

@@ -14,6 +14,7 @@ import { useAuth } from "../contexts/AuthContext";
 import { useColors } from "../hooks/useColors";
 import { useSettings } from "../hooks/useSettings";
 import { useTranslation } from "../contexts/LanguageContext";
+import { BarcodeScannerModal } from "../components/BarcodeScannerModal";
 import {
   autoSelectFormat,
   buildPrintHtml,
@@ -74,6 +75,7 @@ export function POS() {
 
   // Scanner modal state
   const [scannerOpen, setScannerOpen] = useState(false);
+  const [cameraScannerOpen, setCameraScannerOpen] = useState(false);
   const [manualBarcode, setManualBarcode] = useState("");
 
   const { managerId, role, workerName, username, managerPhone } = useAuth();
@@ -461,7 +463,7 @@ export function POS() {
           <span>Tovarlar</span>
         </div>
         <div
-          onClick={() => setScannerOpen(true)}
+          onClick={() => setCameraScannerOpen(true)}
           style={{
             padding: "0 16px",
             display: "flex",
@@ -1163,6 +1165,20 @@ export function POS() {
           </div>
         </div>
       )}
+
+      {/* Universal Camera Barcode Scanner */}
+      <BarcodeScannerModal
+        isOpen={cameraScannerOpen}
+        onClose={() => setCameraScannerOpen(false)}
+        onScan={(code) => {
+          handleScanned(code);
+          setCameraScannerOpen(false);
+        }}
+        onManualInput={() => {
+          setCameraScannerOpen(false);
+          setScannerOpen(true);
+        }}
+      />
 
       {/* Manual Scanner Dialog fallback */}
       {scannerOpen && (
