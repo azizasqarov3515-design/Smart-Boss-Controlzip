@@ -175,21 +175,31 @@ function ProductFormScreenInner() {
         videoRef.current.play();
       }
 
-      // Optimize camera autofocus for close-up scanning (8-10 cm)
+      // Optimize camera autofocus and zoom for macro-like close-up scanning (emulating APK zoom={0.15})
       const track = stream.getVideoTracks()[0];
       if (track) {
         const capabilities = (track as any).getCapabilities?.() || {};
         const advancedConstraints: any = {};
         
+        // Continuous autofocus
         if (capabilities.focusMode && capabilities.focusMode.includes("continuous")) {
           advancedConstraints.focusMode = "continuous";
+        }
+        
+        // Zoom (0.15 of permitted range, matching APK setup)
+        if (capabilities.zoom && capabilities.zoom.min !== undefined && capabilities.zoom.max !== undefined) {
+          const min = capabilities.zoom.min;
+          const max = capabilities.zoom.max;
+          if (max > min) {
+            advancedConstraints.zoom = min + (max - min) * 0.15;
+          }
         }
         
         if (Object.keys(advancedConstraints).length > 0) {
           try {
             await track.applyConstraints({ advanced: [advancedConstraints] });
           } catch (e) {
-            console.warn("Advanced focus constraints not applied:", e);
+            console.warn("Advanced camera constraints not applied:", e);
           }
         }
       }
