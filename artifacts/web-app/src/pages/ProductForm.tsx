@@ -103,11 +103,11 @@ function ProductFormScreenInner() {
       const product = products.find((p) => p.id === productId);
       if (product) {
         setForm({
-          name: product.name,
+          name: product.name ?? "",
           brand: product.brand ?? "",
-          costPrice: String(product.costPrice),
-          salePrice: String(product.salePrice),
-          quantity: String(product.quantity),
+          costPrice: product.costPrice != null ? String(product.costPrice) : "",
+          salePrice: product.salePrice != null ? String(product.salePrice) : "",
+          quantity: product.quantity != null ? String(product.quantity) : "",
           barcode: product.barcode ?? "",
           thickness: product.thickness != null ? String(product.thickness) : "",
         });

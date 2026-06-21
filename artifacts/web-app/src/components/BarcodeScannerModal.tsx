@@ -17,34 +17,56 @@ export function BarcodeScannerModal({ isOpen, onClose, onScan, onManualInput }: 
   const qrCodeScannerRef = useRef<Html5Qrcode | null>(null);
   const scannerId = "web-reader-element";
 
+  const stopInitiatedRef = useRef(false);
+
+  // Helper to safely stop the scanner once
+  const safeStop = async (scanner: Html5Qrcode) => {
+    if (stopInitiatedRef.current) return;
+    stopInitiatedRef.current = true;
+    try {
+      if (scanner.isScanning) {
+        await scanner.stop();
+      }
+      try {
+        scanner.clear();
+      } catch (e) {
+        console.warn("Scanner clear failed:", e);
+      }
+    } catch (err) {
+      console.error("Scanner stop failed:", err);
+    }
+  };
+
   // Scanner life-cycle
   useEffect(() => {
+    let isMounted = true;
+    let scannerInstance: Html5Qrcode | null = null;
+
     if (!isOpen) {
-      // Cleanup camera on close
-      if (qrCodeScannerRef.current && qrCodeScannerRef.current.isScanning) {
-        qrCodeScannerRef.current
-          .stop()
-          .then(() => {
-            qrCodeScannerRef.current?.clear();
-          })
-          .catch((err) => console.error("Camera stop error:", err));
+      if (qrCodeScannerRef.current) {
+        safeStop(qrCodeScannerRef.current);
       }
       return;
     }
 
     setScanned(false);
     setManualBarcode("");
+    stopInitiatedRef.current = false;
 
     // Start scanner with DOM mount guard
     const startScanner = () => {
       const element = document.getElementById(scannerId);
       if (!element) {
-        // Retry in next tick if react has not mounted container
-        setTimeout(startScanner, 30);
+        if (isMounted && isOpen) {
+          setTimeout(startScanner, 30);
+        }
         return;
       }
 
+      if (!isMounted || !isOpen) return;
+
       const html5Qrcode = new Html5Qrcode(scannerId);
+      scannerInstance = html5Qrcode;
       qrCodeScannerRef.current = html5Qrcode;
 
       html5Qrcode
@@ -59,29 +81,34 @@ export function BarcodeScannerModal({ isOpen, onClose, onScan, onManualInput }: 
             },
           },
           (decodedText) => {
-            handleSuccess(decodedText);
+            if (isMounted) {
+              handleSuccess(decodedText);
+            }
           },
           () => {
             // Silence scanning frame exceptions
           }
         )
-        .then(() => setCameraPermission(true))
+        .then(() => {
+          if (isMounted) {
+            setCameraPermission(true);
+          }
+        })
         .catch((err) => {
           console.error("Camera start error:", err);
-          setCameraPermission(false);
+          if (isMounted) {
+            setCameraPermission(false);
+          }
         });
     };
 
     startScanner();
 
     return () => {
-      if (qrCodeScannerRef.current && qrCodeScannerRef.current.isScanning) {
-        qrCodeScannerRef.current
-          .stop()
-          .then(() => {
-            qrCodeScannerRef.current?.clear();
-          })
-          .catch((err) => console.error("Camera stop error:", err));
+      isMounted = false;
+      qrCodeScannerRef.current = null;
+      if (scannerInstance) {
+        safeStop(scannerInstance);
       }
     };
   }, [isOpen]);
@@ -93,8 +120,8 @@ export function BarcodeScannerModal({ isOpen, onClose, onScan, onManualInput }: 
     }
 
     // Stop scanner on success
-    if (qrCodeScannerRef.current && qrCodeScannerRef.current.isScanning) {
-      qrCodeScannerRef.current.stop().catch((e) => console.warn("Stop on success failed:", e));
+    if (qrCodeScannerRef.current) {
+      safeStop(qrCodeScannerRef.current);
     }
 
     setTimeout(() => {
@@ -111,8 +138,8 @@ export function BarcodeScannerModal({ isOpen, onClose, onScan, onManualInput }: 
       navigator.vibrate(100);
     }
 
-    if (qrCodeScannerRef.current && qrCodeScannerRef.current.isScanning) {
-      qrCodeScannerRef.current.stop().catch((err) => console.error("Camera stop error:", err));
+    if (qrCodeScannerRef.current) {
+      safeStop(qrCodeScannerRef.current);
     }
 
     onScan(code);

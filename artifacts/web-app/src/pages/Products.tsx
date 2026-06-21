@@ -126,21 +126,32 @@ function ProductsScreenInner() {
 
   const filtered = (products ?? [])
     .filter((p) => {
+      if (!p) return false;
       if (unitFilter !== "all" && p.unit !== unitFilter) return false;
       if (!search.trim()) return true;
       const q = search.toLowerCase();
+      const name = p.name || "";
+      const brand = p.brand || "";
+      const barcode = p.barcode || "";
       return (
-        p.name.toLowerCase().includes(q) ||
-        p.brand.toLowerCase().includes(q) ||
+        name.toLowerCase().includes(q) ||
+        brand.toLowerCase().includes(q) ||
         String(p.id).includes(q) ||
-        p.barcode?.includes(q)
+        barcode.toLowerCase().includes(q)
       );
     })
     .sort((a: any, b: any) => {
-      const av = typeof a[sortKey] === "string" ? a[sortKey].toLowerCase() : a[sortKey];
-      const bv = typeof b[sortKey] === "string" ? b[sortKey].toLowerCase() : b[sortKey];
-      if (av < bv) return sortAsc ? -1 : 1;
-      if (av > bv) return sortAsc ? 1 : -1;
+      let av = a[sortKey];
+      let bv = b[sortKey];
+      
+      if (av === null || av === undefined) av = "";
+      if (bv === null || bv === undefined) bv = "";
+      
+      const avStr = typeof av === "string" ? av.toLowerCase() : av;
+      const bvStr = typeof bv === "string" ? bv.toLowerCase() : bv;
+      
+      if (avStr < bvStr) return sortAsc ? -1 : 1;
+      if (avStr > bvStr) return sortAsc ? 1 : -1;
       return 0;
     });
 
@@ -311,9 +322,12 @@ function ProductsScreenInner() {
       ) : (
         <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
           {filtered.map((product, idx) => {
-            const isLowStock = product.quantity < 5;
-            const profit = product.salePrice - product.costPrice;
-            const profitPct = product.costPrice > 0 ? ((profit / product.costPrice) * 100).toFixed(0) : "0";
+            const costPrice = product.costPrice ?? 0;
+            const salePrice = product.salePrice ?? 0;
+            const quantity = product.quantity ?? 0;
+            const profit = salePrice - costPrice;
+            const profitPct = costPrice > 0 ? ((profit / costPrice) * 100).toFixed(0) : "0";
+            const isLowStock = quantity < 5;
 
             return (
               <div
@@ -388,11 +402,11 @@ function ProductsScreenInner() {
                   <div style={{ display: "flex", gap: "12px", fontSize: "12px" }}>
                     <div>
                       <span className="text-muted" style={{ marginRight: "4px" }}>{t("Tan:")}</span>
-                      <span style={{ fontWeight: 600 }}>{product.costPrice.toLocaleString("uz-UZ")} UZS</span>
+                      <span style={{ fontWeight: 600 }}>{costPrice.toLocaleString("uz-UZ")} UZS</span>
                     </div>
                     <div>
                       <span className="text-muted" style={{ marginRight: "4px" }}>{t("Sotuv:")}</span>
-                      <span style={{ color: colors.primary, fontWeight: 700 }}>{product.salePrice.toLocaleString("uz-UZ")} UZS</span>
+                      <span style={{ color: colors.primary, fontWeight: 700 }}>{salePrice.toLocaleString("uz-UZ")} UZS</span>
                     </div>
                   </div>
 
@@ -418,7 +432,7 @@ function ProductsScreenInner() {
                       padding: "3px 8px",
                       borderRadius: "8px"
                     }}>
-                      {product.quantity} {product.unit ? t(product.unit.charAt(0).toUpperCase() + product.unit.slice(1)) : t("Dona")}
+                      {quantity} {product.unit ? t(product.unit.charAt(0).toUpperCase() + product.unit.slice(1)) : t("Dona")}
                     </div>
 
                     {/* Action buttons */}
