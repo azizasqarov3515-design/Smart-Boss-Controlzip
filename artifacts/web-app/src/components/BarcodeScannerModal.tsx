@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
-import { Html5Qrcode } from "html5-qrcode";
+import { Html5Qrcode, Html5QrcodeSupportedFormats } from "html5-qrcode";
 import { useTranslation } from "../contexts/LanguageContext";
 
 interface BarcodeScannerModalProps {
@@ -135,7 +135,18 @@ export function BarcodeScannerModal({ isOpen, onClose, onScan, onManualInput }: 
 
       if (!isMounted || !isOpen) return;
 
-      const html5Qrcode = new Html5Qrcode(scannerId);
+      const html5Qrcode = new Html5Qrcode(scannerId, {
+        verbose: false,
+        formatsToSupport: [
+          Html5QrcodeSupportedFormats.EAN_13,
+          Html5QrcodeSupportedFormats.EAN_8,
+          Html5QrcodeSupportedFormats.CODE_128,
+          Html5QrcodeSupportedFormats.CODE_39,
+          Html5QrcodeSupportedFormats.UPC_A,
+          Html5QrcodeSupportedFormats.UPC_E,
+          Html5QrcodeSupportedFormats.QR_CODE,
+        ]
+      });
       scannerInstance = html5Qrcode;
       qrCodeScannerRef.current = html5Qrcode;
 
@@ -158,8 +169,7 @@ export function BarcodeScannerModal({ isOpen, onClose, onScan, onManualInput }: 
               facingMode: { exact: "environment" },
               width: { ideal: 1920, min: 1280 },
               height: { ideal: 1080, min: 720 },
-              // @ts-ignore - focusMode is supported on mobile browsers
-              focusMode: "continuous",
+              advanced: [{ focusMode: "continuous" }, { focusMode: "auto" }]
             } as any,
           } as any,
           (decodedText) => {
@@ -195,6 +205,12 @@ export function BarcodeScannerModal({ isOpen, onClose, onScan, onManualInput }: 
                     const h = Math.min(viewfinderHeight, 200);
                     return { width: w, height: h };
                   },
+                  videoConstraints: {
+                    facingMode: "environment",
+                    width: { ideal: 1920, min: 1280 },
+                    height: { ideal: 1080, min: 720 },
+                    advanced: [{ focusMode: "continuous" }, { focusMode: "auto" }]
+                  } as any,
                 },
                 (decodedText) => {
                   if (isMounted) {
