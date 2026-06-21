@@ -40,7 +40,7 @@ export function POS() {
 
   // POS State
   const [tab, setTab] = useState<"cart" | "products">("cart");
-  const [cart, setCart] = useState<Map<number, { product: Product; quantity: number }>>(new Map());
+  const [cart, setCart] = useState<Map<number, { product: Product; quantity: number | string }>>(new Map());
   const [search, setSearch] = useState("");
   const [unitFilter, setUnitFilter] = useState<"all" | "dona" | "kg" | "m">("all");
 
@@ -169,6 +169,14 @@ export function POS() {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [products]);
 
+  const removeFromCart = useCallback((productId: number) => {
+    setCart((prev) => {
+      const next = new Map(prev);
+      next.delete(productId);
+      return next;
+    });
+  }, []);
+
   const addToCart = useCallback(
     (product: Product, qty = 1) => {
       if (product.quantity <= 0) {
@@ -178,7 +186,8 @@ export function POS() {
       setCart((prev) => {
         const next = new Map(prev);
         const existing = next.get(product.id);
-        const newQty = Math.round(((existing?.quantity ?? 0) + qty) * 1000) / 1000;
+        const currentQty = Number(existing?.quantity) || 0;
+        const newQty = Math.round((currentQty + qty) * 1000) / 1000;
         if (newQty > product.quantity) {
           alert(t("Stok yetarli emas. Faqat ${quantity} ${unit} mavjud").replace("${quantity}", String(product.quantity)).replace("${unit}", t(product.unit || "dona")));
           return prev;
@@ -192,18 +201,25 @@ export function POS() {
     [t]
   );
 
-  const setQty = useCallback((productId: number, qty: number) => {
+  const setQty = useCallback((productId: number, rawQty: number | string) => {
     setCart((prev) => {
       const next = new Map(prev);
       const item = next.get(productId);
       if (!item) return prev;
-      const rounded = Math.round(qty * 1000) / 1000;
-      if (rounded <= 0) {
-        next.delete(productId);
-      } else if (rounded > item.product.quantity) {
+
+      if (rawQty === "") {
+        next.set(productId, { ...item, quantity: "" });
+        return next;
+      }
+
+      const num = typeof rawQty === "string" ? parseFloat(rawQty) : rawQty;
+      if (isNaN(num)) return prev;
+
+      if (num > item.product.quantity) {
         alert(t("Stok yetarli emas. Faqat ${quantity} ${unit} mavjud").replace("${quantity}", String(item.product.quantity)).replace("${unit}", t(item.product.unit || "dona")));
+        next.set(productId, { ...item, quantity: item.product.quantity });
       } else {
-        next.set(productId, { ...item, quantity: rounded });
+        next.set(productId, { ...item, quantity: rawQty }); 
       }
       return next;
     });
@@ -236,7 +252,7 @@ export function POS() {
   );
 
   const cartItems = Array.from(cart.values()).reverse();
-  const grossTotal = Math.round(cartItems.reduce((s, i) => s + i.product.salePrice * i.quantity, 0) * 100) / 100;
+  const grossTotal = Math.round(cartItems.reduce((s, i) => s + i.product.salePrice * (Number(i.quantity) || 0), 0) * 100) / 100;
 
   let discountAmount = 0;
   if (discountInput.trim()) {
@@ -269,9 +285,9 @@ export function POS() {
 
     createSale({
       data: {
-        items: cartItems.map((i) => ({
+        items: cartItems.filter((i) => (Number(i.quantity) || 0) > 0).map((i) => ({
           productId: i.product.id,
-          quantity: i.quantity,
+          quantity: Number(i.quantity) || 0,
         })),
         paymentType,
         customerId: selectedCustomer?.id ?? undefined,
@@ -585,7 +601,7 @@ export function POS() {
                         <p className="text-muted" style={{ fontSize: "12px" }}>{product.brand}</p>
                       </div>
                       <span style={{ fontWeight: 700, color: colors.primary }}>
-                        {formatMoney(product.salePrice * quantity)}
+                        {formatMoney(product.salePrice * (Number(quantity) || 0))}
                       </span>
                     </div>
 
@@ -593,7 +609,14 @@ export function POS() {
                       <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
                         <button
                           className="btn-secondary"
-                          onClick={() => setQty(product.id, quantity - 1)}
+                          onClick={() => {
+                            const q = Number(quantity) || 0;
+                            if (q <= 1) {
+                              removeFromCart(product.id);
+                            } else {
+                              setQty(product.id, Math.max(1, q - 1));
+                            }
+                          }}
                           style={{ padding: "6px 12px" }}
                         >
                           -
@@ -602,12 +625,12 @@ export function POS() {
                           type="number"
                           className="input-field"
                           value={quantity}
-                          onChange={(e) => setQty(product.id, parseFloat(e.target.value) || 0)}
+                          onChange={(e) => setQty(product.id, e.target.value)}
                           style={{ width: "60px", textAlign: "center", padding: "6px" }}
                         />
                         <button
                           className="btn-secondary"
-                          onClick={() => setQty(product.id, quantity + 1)}
+                          onClick={() => setQty(product.id, (Number(quantity) || 0) + 1)}
                           style={{ padding: "6px 12px" }}
                         >
                           +
@@ -617,7 +640,7 @@ export function POS() {
 
                       <button
                         className="btn-secondary"
-                        onClick={() => setQty(product.id, 0)}
+                        onClick={() => removeFromCart(product.id)}
                         style={{ color: "#EF4444", border: "1px solid rgba(239, 68, 68, 0.2)" }}
                       >
                         <span className="material-icons" style={{ fontSize: "18px" }}>delete</span>
