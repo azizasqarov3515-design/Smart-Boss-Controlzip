@@ -418,6 +418,10 @@ a:hover {
 }
 
 /* Responsive Grid and POS Layout Classes */
+.hidden-mobile {
+  display: none !important;
+}
+
 .dashboard-grid {
   display: flex;
   flex-direction: column;
