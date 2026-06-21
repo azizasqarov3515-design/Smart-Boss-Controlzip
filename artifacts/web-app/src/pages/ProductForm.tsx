@@ -379,7 +379,7 @@ function ProductFormScreenInner() {
             <button
               type="button"
               className="btn-secondary"
-              onClick={startCameraScanner}
+              onClick={() => setCameraScannerOpen(true)}
               style={{ padding: "0 12px", display: "flex", alignItems: "center", justifyContent: "center" }}
             >
               <span className="material-icons">qr_code_scanner</span>
