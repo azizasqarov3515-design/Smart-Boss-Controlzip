@@ -104,7 +104,7 @@ function ProductFormScreenInner() {
       if (product) {
         setForm({
           name: product.name,
-          brand: product.brand,
+          brand: product.brand ?? "",
           costPrice: String(product.costPrice),
           salePrice: String(product.salePrice),
           quantity: String(product.quantity),

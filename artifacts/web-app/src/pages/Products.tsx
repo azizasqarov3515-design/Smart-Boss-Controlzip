@@ -22,23 +22,24 @@ function HighlightText({
   style,
   highlightStyle,
 }: {
-  text: string;
+  text: string | null | undefined;
   query: string;
   style?: React.CSSProperties;
   highlightStyle?: React.CSSProperties;
 }) {
-  if (!query.trim()) return <span style={style}>{text}</span>;
-  const lower = text.toLowerCase();
+  const safeText = text || "";
+  if (!query.trim()) return <span style={style}>{safeText}</span>;
+  const lower = safeText.toLowerCase();
   const q = query.toLowerCase();
   const idx = lower.indexOf(q);
-  if (idx === -1) return <span style={style}>{text}</span>;
+  if (idx === -1) return <span style={style}>{safeText}</span>;
   return (
     <span style={style}>
-      {text.slice(0, idx)}
+      {safeText.slice(0, idx)}
       <mark style={{ backgroundColor: "#FFF176", color: "#1A1A2E", borderRadius: "2px", padding: "0 2px", ...highlightStyle }}>
-        {text.slice(idx, idx + q.length)}
+        {safeText.slice(idx, idx + q.length)}
       </mark>
-      {text.slice(idx + q.length)}
+      {safeText.slice(idx + q.length)}
     </span>
   );
 }
