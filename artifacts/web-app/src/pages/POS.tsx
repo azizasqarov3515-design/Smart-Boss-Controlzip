@@ -183,6 +183,8 @@ export function POS() {
           alert(t("Stok yetarli emas. Faqat ${quantity} ${unit} mavjud").replace("${quantity}", String(product.quantity)).replace("${unit}", t(product.unit || "dona")));
           return prev;
         }
+        // Remove first to ensure it gets appended at the end of the insertion order
+        next.delete(product.id);
         next.set(product.id, { product, quantity: newQty });
         return next;
       });
@@ -233,7 +235,7 @@ export function POS() {
     [products, addToCart, t]
   );
 
-  const cartItems = Array.from(cart.values());
+  const cartItems = Array.from(cart.values()).reverse();
   const grossTotal = Math.round(cartItems.reduce((s, i) => s + i.product.salePrice * i.quantity, 0) * 100) / 100;
 
   let discountAmount = 0;
