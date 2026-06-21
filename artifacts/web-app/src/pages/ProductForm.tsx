@@ -450,7 +450,7 @@ function ProductFormScreenInner() {
               </div>
             )}
 
-            <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+            <div style={{ display: "flex", flexDirection: "column", gap: "8px", flex: 1 }}>
               <input
                 type="file"
                 id="product-image-file"
@@ -458,15 +458,36 @@ function ProductFormScreenInner() {
                 onChange={handleImageChange}
                 style={{ display: "none" }}
               />
-              <button
-                type="button"
-                className="btn-secondary"
-                disabled={imageUploading}
-                onClick={() => document.getElementById("product-image-file")?.click()}
-                style={{ fontSize: "12px", padding: "8px 12px" }}
-              >
-                {imageUploading ? t("Yuklanmoqda...") : t("Rasm tanlash")}
-              </button>
+              <input
+                type="file"
+                id="product-camera-file"
+                accept="image/*"
+                capture="environment"
+                onChange={handleImageChange}
+                style={{ display: "none" }}
+              />
+              <div style={{ display: "flex", gap: "8px" }}>
+                <button
+                  type="button"
+                  className="btn-secondary"
+                  disabled={imageUploading}
+                  onClick={() => document.getElementById("product-image-file")?.click()}
+                  style={{ fontSize: "12px", padding: "8px 12px", flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: "4px" }}
+                >
+                  <span className="material-icons" style={{ fontSize: "16px" }}>photo_library</span>
+                  {imageUploading ? t("...") : t("Galereya")}
+                </button>
+                <button
+                  type="button"
+                  className="btn-secondary"
+                  disabled={imageUploading}
+                  onClick={() => document.getElementById("product-camera-file")?.click()}
+                  style={{ fontSize: "12px", padding: "8px 12px", flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: "4px", backgroundColor: "#E0E7FF", color: "#4338CA", borderColor: "#C7D2FE" }}
+                >
+                  <span className="material-icons" style={{ fontSize: "16px" }}>photo_camera</span>
+                  {imageUploading ? t("...") : t("Kamera")}
+                </button>
+              </div>
               <span className="text-muted" style={{ fontSize: "11px" }}>
                 Max: 5MB (Format: JPG, PNG, WEBP)
               </span>
